@@ -1,0 +1,24 @@
+[tools]
+node = "24.22.2"
+# opencode (sst/opencode v2, npm backend — explicit to avoid clash with aqua:anomalyco/opencode v1)
+"npm:@opencode/cli" = "2.2.6"
+# openspec (spec-driven development CLI)
+"npm:@fission-ai/openspec" = "1.16.1"
+"npm:firecrawl-cli" = "1.29.0"
+
+# ── Preprod environment ─────────────────────────────────────────────────────
+# Isolated app instance for testing (port 5173, own container + data volume),
+# sending telemetry to the standalone LGTM stack (obs/compose.yaml — start it
+# first: cd obs && docker compose up -d). Production is never touched.
+[tasks.preprod-up]
+description = "Start the preprod app instance (http://localhost:5173)"
+run = "sudo docker compose -p brick-preprod -f compose.yaml -f compose.preprod.yaml up -d --build"
+
+[tasks.preprod-down]
+description = "Stop the preprod app instance (keeps its data volume)"
+run = "sudo docker compose -p brick-preprod -f compose.yaml -f compose.preprod.yaml down"
+
+[tasks.preprod-logs]
+description = "Follow preprod app logs"
+run = "sudo docker compose -p brick-preprod -f compose.yaml -f compose.preprod.yaml logs -f brick-tracker"
+
