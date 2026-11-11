@@ -6,6 +6,17 @@ node = "24.22.2"
 "npm:@fission-ai/openspec" = "1.16.1"
 "npm:firecrawl-cli" = "1.29.0"
 
+# ── Dev environment ─────────────────────────────────────────────────────────
+# Runs the API in dev mode (tsx watch) with env from .env.dev (gitignored).
+[tasks.dev]
+description = "Run the API backend and the Vite UI dev server (HMR, /api proxied)"
+run = """
+if [ -f .env.dev ]; then set -a; . ./.env.dev; set +a; fi
+npm run dev & BACKEND_PID=$!
+trap 'kill $BACKEND_PID 2>/dev/null' EXIT INT TERM
+npm run dev:web
+"""
+
 # ── Preprod environment ─────────────────────────────────────────────────────
 # Isolated app instance for testing (port 5173, own container + data volume),
 # sending telemetry to the standalone LGTM stack (obs/compose.yaml — start it

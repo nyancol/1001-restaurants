@@ -96,4 +96,15 @@ describe("POST /api/auth/dev-login", () => {
     const res = await app.inject({ method: "POST", url: "/api/auth/dev-login", payload: { user: "alice" } });
     expect(res.statusCode).toBe(404);
   });
+
+  it("GET probe reports enabled only when the route is registered", async () => {
+    await start(true);
+    const on = await app.inject({ method: "GET", url: "/api/auth/dev-login" });
+    expect(on.statusCode).toBe(200);
+    expect(on.json()).toEqual({ enabled: true });
+    await app?.close();
+    await start(false);
+    const off = await app.inject({ method: "GET", url: "/api/auth/dev-login" });
+    expect(off.statusCode).toBe(404);
+  });
 });

@@ -8,16 +8,30 @@ PocketID OIDC login, and the v1 places/tags API.
 
 ```bash
 npm install
-DATABASE_PATH=./data/app.db SESSION_SECRET=dev-only-secret-change-me-32-chars!! PORT=3000 npm run dev
-curl localhost:3000/api/health
+DATABASE_PATH=./data/app.db SESSION_SECRET=dev-only-secret-change-me-32-chars!! PORT=3232 npm run dev
+curl localhost:3232/api/health
 # {"status":"ok","db":"ok","time":"..."}
 ```
+
+### Dev with mise (recommended)
+
+```bash
+cp .env.sample .env.dev   # once — fill in GOOGLE_PLACES_KEY
+mise run dev              # backend on :3232 + Vite UI dev server on :5173 (HMR)
+```
+
+`.env.dev` is gitignored; `.env.sample` documents every variable. `mise run dev`
+starts both processes: the API backend (with the built UI) on
+http://localhost:3232, and the Vite dev server on http://localhost:5173 with
+hot-reload — `/api/*` calls from the Vite server are proxied to the backend.
+Open http://localhost:5173 for UI work and use **Use dev user** on the login
+screen (enabled by `DEV_LOGIN=true`) to sign in without OIDC.
 
 ## Environment
 
 | Var | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `PORT` | no | `3000` | HTTP listen port |
+| `PORT` | no | `3000` | HTTP listen port (`.env.dev` uses `3232`) |
 | `HOST` | no | `0.0.0.0` | HTTP bind address |
 | `DATABASE_PATH` | no | `/data/app.db` | SQLite file (WAL mode). Mount a volume at `/data` in Docker. Override locally, e.g. `./data/app.db` |
 | `SESSION_SECRET` | **yes in production** | dev fallback in non-production | HS256 key for the `oyster_session` cookie (32+ chars). Container exits at boot without it when `NODE_ENV=production` |
@@ -25,7 +39,7 @@ curl localhost:3000/api/health
 | `OIDC_ISSUER` | for login | — | PocketID issuer URL, e.g. `https://id.example.com` |
 | `OIDC_CLIENT_ID` | for login | — | PocketID client id |
 | `OIDC_CLIENT_SECRET` | for login | — | PocketID client secret (empty allowed only for public clients) |
-| `OIDC_REDIRECT_URI` | no | `http://localhost:3000/api/auth/callback` | Must match the PocketID client registration |
+| `OIDC_REDIRECT_URI` | no | `http://localhost:<PORT>/api/auth/callback` | Must match the PocketID client registration |
 | `GOOGLE_PLACES_KEY` | for Google proxy | — | Server-side Google key (never sent to the browser). Endpoints return `503 google_not_configured` without it |
 | `TRUST_PROXY` | no | `true` | Trust `X-Forwarded-Proto/Host` from the homelab reverse proxy |
 | `DEV_LOGIN` | no | `false` | **Development only.** Set `true` with a non-production `NODE_ENV` to register `POST /api/auth/dev-login`, which mints a test session without OIDC. Forced off in production (route returns `404` there even if set) |
