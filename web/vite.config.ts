@@ -13,6 +13,11 @@ export default defineConfig({
   // so `npm run dev:web` gets HMR while talking to the real API.
   server: {
     port: 5173,
+    // Listen on LAN too (default is localhost-only, unreachable from
+    // other machines on the homelab network). allowedHosts permits
+    // *.local / Tailscale names in dev (never used for builds).
+    host: true,
+    allowedHosts: true,
     proxy: {
       "/api": {
         target: `http://localhost:${process.env.PORT ?? 3232}`,
