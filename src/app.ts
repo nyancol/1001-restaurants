@@ -98,6 +98,13 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
 
   const here = path.dirname(fileURLToPath(import.meta.url));
   const publicDir = path.resolve(here, "../public");
+  let hasIndexHtml = false;
+  try {
+    const { existsSync } = await import("node:fs");
+    hasIndexHtml = existsSync(path.join(publicDir, "index.html"));
+  } catch {
+    hasIndexHtml = false;
+  }
   try {
     await app.register(fastifyStatic, { root: publicDir, prefix: "/" });
   } catch {
@@ -105,6 +112,10 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   }
   app.setNotFoundHandler(async (req, reply) => {
     if (req.url.startsWith("/api/")) return reply.code(404).send({ error: "not_found" });
+    // SPA fallback: serve the built UI for /add and any non-API route so
+    // client-side routing works behind login. Fall back to placeholder only
+    // when no built index.html exists (pre-UI).
+    if (hasIndexHtml) return (reply as any).sendFile("index.html");
     return reply.type("text/html").send("<h1>Oyster</h1><p>Foundation API running.</p>");
   });
 

@@ -85,6 +85,24 @@ export function registerPlaceRoutes(app: FastifyInstance, deps: { db: any }) {
     const userId = (req as any).userId as string;
     const { error, value } = validatePlaceInput(req.body ?? {}, false);
     if (error) return reply.code(400).send({ error });
+    // Duplicate googlePlaceId per owner: update instead of forking.
+    if (value.googlePlaceId) {
+      const dup = await db
+        .select()
+        .from(places)
+        .where(and(eq(places.ownerId, userId), eq(places.googlePlaceId, value.googlePlaceId)))
+        .limit(1);
+      if (dup.length) {
+        const patch: any = { updatedAt: Date.now() };
+        for (const k of ["name", "status", "rating", "note", "address", "lat", "lng"] as const) {
+          if (value[k] !== undefined) patch[k] = value[k];
+        }
+        if (value.tags !== undefined) patch.tagsJson = JSON.stringify(value.tags);
+        await db.update(places).set(patch).where(eq(places.id, dup[0].id));
+        const updated = await db.select().from(places).where(eq(places.id, dup[0].id)).limit(1);
+        return reply.code(200).send(toPlace(updated[0]));
+      }
+    }
     const now = Date.now();
     const id = randomUUID();
     await db.insert(places).values({

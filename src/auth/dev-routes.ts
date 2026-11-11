@@ -20,6 +20,10 @@ const NAME_RE = /^[a-zA-Z0-9_-]{1,32}$/;
 export function registerDevLoginRoute(app: FastifyInstance, deps: { config: AppConfig; db: any }) {
   const { config, db } = deps;
 
+  // Side-effect-free probe so the UI can show a dev-login form only when
+  // this route exists. Unregistered (404) in production — same gating.
+  app.get("/api/auth/dev-login", async () => ({ enabled: true }));
+
   app.post("/api/auth/dev-login", {
     schema: {
       body: {

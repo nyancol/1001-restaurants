@@ -1,16 +1,16 @@
-# Spec Delta
+# Capture Specification
 
 ## Purpose
 
 Lets the user file a known bar, cafe, or restaurant in seconds from its name, enriching the Google result with personal meaning.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Lookup then prefilled capture
 The system SHALL offer Google-based name lookup and prefill a capture form with the chosen place's name, address, and coordinates.
 
-#### Scenario: Pick from autocomplete
-- **WHEN** the user types a name and picks a suggestion
+#### Scenario: Pick from search results
+- **WHEN** the user searches a name (explicit search, min 2 chars) and picks a suggestion
 - **THEN** the system prefills name, address, coordinates, and Google place id
 
 #### Scenario: Lookup requires login
