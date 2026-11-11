@@ -7,8 +7,10 @@
 # Every value can be overridden with environment / .env file / -e.
 # SESSION_SECRET is required (no default) — the app refuses to boot in
 # production without it (see src/config.ts).
-# Behind a reverse proxy, also attach the shared proxy network like
-# compose.preprod.yaml does (networks: [default, caddy] with caddy_public external).
+# Behind a reverse proxy, the service is attached to the shared proxy
+# network (same as compose.preprod.yaml). Make sure it exists once:
+#   docker network create caddy_public
+# (Local runs without a proxy still work as long as the network exists.)
 
 name: places
 
@@ -44,6 +46,9 @@ services:
       # OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
     volumes:
       - places-data:/data
+    networks:
+      - default
+      - caddy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
@@ -53,3 +58,10 @@ services:
 
 volumes:
   places-data:
+
+# Shared reverse-proxy network (created outside this project by Caddy).
+# Attaching it here lets Caddy reach the app as http://places:${PORT}.
+networks:
+  caddy:
+    name: caddy_public
+    external: true
