@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { getTags } from "../lib/api";
 
 interface Props {
@@ -10,11 +10,99 @@ interface Props {
   // FilterBar renders its own active-filter chips above, so hide the
   // duplicate list inside the combobox in that context. Defaults to true.
   showSelected?: boolean;
+  // `combobox` (default): type-to-reveal suggestions, used in add/edit.
+  // `filter-list`: always-visible ranked list with counts for filtering,
+  // used in the desktop rail and the phone tag disclosure.
+  variant?: "combobox" | "filter-list";
 }
 
 const cache = new Map<string, { tag: string; count: number }[]>();
 
-export default function TagCombobox({ value, onChange, allowCreate = true, showSelected = true }: Props) {
+async function cachedTags(q: string): Promise<{ tag: string; count: number }[]> {
+  if (cache.has(q)) return cache.get(q)!;
+  const tags = await getTags(q);
+  cache.set(q, tags);
+  return tags;
+}
+
+export default function TagCombobox({ value, onChange, allowCreate = true, showSelected = true, variant = "combobox" }: Props) {
+  if (variant === "filter-list") {
+    return <FilterTagList value={value} onChange={onChange} />;
+  }
+  return <Combobox value={value} onChange={onChange} allowCreate={allowCreate} showSelected={showSelected} />;
+}
+
+function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: string[]) => void }) {
+  const [all, setAll] = useState<{ tag: string; count: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    cachedTags("")
+      .then((tags) => { if (!cancelled) setAll(tags); })
+      .catch(() => { if (!cancelled) setAll([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((t) => t.tag.includes(q));
+  }, [all, search]);
+
+  function toggle(tag: string) {
+    if (value.includes(tag)) onChange(value.filter((t) => t !== tag));
+    else onChange([...value, tag]);
+  }
+
+  return (
+    <div>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search tags…"
+        aria-label="search tags"
+        className="edge radius-input min-h-[44px] w-full border-line bg-bg px-3 py-2 text-base text-ink placeholder:text-muted lg:min-h-9 lg:text-sm"
+      />
+      {loading && <div className="px-1 py-2 text-sm text-muted">Loading tags…</div>}
+      {!loading && visible.length === 0 && (
+        <div className="px-1 py-2 text-sm text-muted">{all.length === 0 ? "No tags yet." : "No matches."}</div>
+      )}
+      {!loading && visible.length > 0 && (
+        <ul className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto" role="listbox" aria-label="tag filter options" aria-multiselectable="true">
+          {visible.map((s) => {
+            const active = value.includes(s.tag);
+            return (
+              <li key={s.tag}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  aria-label={`${active ? "remove" : "add"} filter ${s.tag} (${s.count} place${s.count === 1 ? "" : "s"})`}
+                  onClick={() => toggle(s.tag)}
+                  className={`edge radius-input flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-sm lg:min-h-9 ${
+                    active ? "border-accent bg-accent font-medium text-accent-ink" : "border-line bg-surface text-ink hover:bg-surface-2"
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span aria-hidden>{active ? "☑" : "☐"}</span>
+                    <span className="truncate">#{s.tag}</span>
+                  </span>
+                  <span className={`font-telemetry shrink-0 ${active ? "text-accent-ink opacity-80" : "text-muted"}`}>{s.count}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Combobox({ value, onChange, allowCreate, showSelected }: { value: string[]; onChange: (tags: string[]) => void; allowCreate: boolean; showSelected: boolean }) {
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<{ tag: string; count: number }[]>([]);
   const [open, setOpen] = useState(false);
@@ -27,14 +115,9 @@ export default function TagCombobox({ value, onChange, allowCreate = true, showS
       return;
     }
     const t = setTimeout(async () => {
-      if (cache.has(q)) {
-        setSuggestions(cache.get(q)!);
-        return;
-      }
       setLoading(true);
       try {
-        const tags = await getTags(q);
-        cache.set(q, tags);
+        const tags = await cachedTags(q);
         setSuggestions(tags);
       } catch {
         setSuggestions([]);
@@ -66,7 +149,7 @@ export default function TagCombobox({ value, onChange, allowCreate = true, showS
 
   return (
     <div className="relative">
-      <label className="mb-1 block text-sm font-medium text-ink">Tags</label>
+      <label className="mb-1 block text-sm font-medium text-ink" htmlFor="tag-input">Tags</label>
       {showSelected && (
       <div className="mb-1 flex flex-wrap gap-1">
         {value.map((t) => (
@@ -80,6 +163,7 @@ export default function TagCombobox({ value, onChange, allowCreate = true, showS
       </div>
       )}
       <input
+        id="tag-input"
         value={input}
         onChange={(e) => {
           setInput(e.target.value);

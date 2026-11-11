@@ -1,7 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { places } from "../db/schema.js";
 
+// Scoped contract (own totals): returns tags from the authenticated user's
+// own places only, ranked by total usage count desc then recency desc.
+// `q` is optional; empty/missing returns the full ranked list.
+// Each entry is `{ tag, count }` where count = number of the user's places carrying the tag.
 export function registerTagRoutes(app: FastifyInstance, deps: { db: any }) {
   const { db } = deps;
   app.get("/api/tags", {
@@ -12,8 +16,9 @@ export function registerTagRoutes(app: FastifyInstance, deps: { db: any }) {
       },
     },
   }, async (req) => {
+    const userId = (req as any).userId as string;
     const q = ((req.query as any)?.q as string | undefined)?.trim().toLowerCase() ?? "";
-    const rows = await db.select().from(places).orderBy(desc(places.updatedAt));
+    const rows = await db.select().from(places).where(eq(places.ownerId, userId)).orderBy(desc(places.updatedAt));
     const counts = new Map<string, { count: number; lastUsed: number }>();
     for (const r of rows) {
       let tags: string[] = [];

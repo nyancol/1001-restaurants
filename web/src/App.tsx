@@ -3,9 +3,43 @@ import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import AddPage from "./pages/AddPage";
 import ListPage from "./pages/ListPage";
 import { getMe, UnauthorizedError } from "./lib/api";
+import { useMediaQuery } from "./lib/useMediaQuery";
 import ThemeSwitcher from "./theme/ThemeSwitcher";
 
 const MapPage = lazy(() => import("./pages/MapPage"));
+const SplitPage = lazy(() => import("./pages/SplitPage"));
+
+function SplitFallback() {
+  return <div className="mx-auto w-full max-w-[1600px] px-4 py-10 text-sm text-muted lg:px-6">Loading…</div>;
+}
+
+function HomeRoute({ onUnauthorized }: { onUnauthorized: () => void }) {
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<SplitFallback />}>
+        <SplitPage onUnauthorized={onUnauthorized} />
+      </Suspense>
+    );
+  }
+  return <ListPage onUnauthorized={onUnauthorized} />;
+}
+
+function MapRoute({ onUnauthorized }: { onUnauthorized: () => void }) {
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  if (isDesktop) {
+    return (
+      <Suspense fallback={<SplitFallback />}>
+        <SplitPage onUnauthorized={onUnauthorized} />
+      </Suspense>
+    );
+  }
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-xl px-4 py-10 text-sm text-muted">Loading map…</div>}>
+      <MapPage onUnauthorized={onUnauthorized} />
+    </Suspense>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState<{ id: string; displayName: string | null } | null>(null);
@@ -144,44 +178,32 @@ export default function App() {
   }
 
   return (
-    <div className="font-body min-h-screen bg-bg text-ink">
+    <div className="font-body flex min-h-screen flex-col bg-bg text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center justify-between gap-2 px-4 py-2">
-          <nav className="flex gap-2 text-sm font-medium sm:gap-3">
-            <Link to="/" className="radius-input px-2 py-1 hover:bg-surface-2">
-              My places
-            </Link>
-            <Link to="/map" className="radius-input px-2 py-1 hover:bg-surface-2">
-              Map
-            </Link>
-            <Link to="/add" className="edge radius-input border-accent bg-accent px-3 py-1 text-accent-ink">
-              + Add
-            </Link>
-          </nav>
-          <div className="flex items-center gap-2 text-sm">
-            <ThemeSwitcher />
-            <span className="hidden max-w-32 truncate text-muted sm:inline">{user.displayName ?? "me"}</span>
-            <button type="button" onClick={logout} className="edge radius-input border-line bg-surface px-2 py-1 text-xs">
-              Logout
+        <div className="mx-auto flex max-w-xl items-center gap-2 px-3 py-2 lg:max-w-[1600px] lg:px-6">
+          <Link to="/" className="font-display shrink-0 text-lg font-bold text-ink" aria-label="home">Oyster</Link>
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 pl-2 text-sm">
+            <span className="min-w-0 flex-1 truncate text-right text-muted" title={user.displayName ?? "me"}>{user.displayName ?? "me"}</span>
+            <button type="button" onClick={logout} aria-label="Logout" title="Logout" className="edge radius-input inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center border-line bg-surface px-2 text-xs">
+              <span aria-hidden>⏻</span>
+              <span className="ml-1 hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </header>
-      <main>
+      <main className="flex-1">
         <Routes>
-          <Route path="/" element={<ListPage onUnauthorized={() => setUnauthorized(true)} />} />
-          <Route
-            path="/map"
-            element={
-              <Suspense fallback={<div className="mx-auto max-w-xl px-4 py-10 text-sm text-muted">Loading map…</div>}>
-                <MapPage onUnauthorized={() => setUnauthorized(true)} />
-              </Suspense>
-            }
-          />
+          <Route path="/" element={<HomeRoute onUnauthorized={() => setUnauthorized(true)} />} />
+          <Route path="/map" element={<MapRoute onUnauthorized={() => setUnauthorized(true)} />} />
           <Route path="/add" element={<AddPage onUnauthorized={() => setUnauthorized(true)} />} />
-          <Route path="*" element={<ListPage onUnauthorized={() => setUnauthorized(true)} />} />
+          <Route path="*" element={<HomeRoute onUnauthorized={() => setUnauthorized(true)} />} />
         </Routes>
       </main>
+      <footer className="border-t border-line bg-surface/95">
+        <div className="mx-auto flex max-w-xl items-center justify-center px-3 py-3 lg:max-w-[1600px] lg:px-6">
+          <ThemeSwitcher />
+        </div>
+      </footer>
     </div>
   );
 }
