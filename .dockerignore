@@ -6,3 +6,9 @@ data
 *.db-wal
 *.db-shm
 .firecrawl/
+.git
+.gitignore
+.env.dev
+.env
+compose.preprod.yaml
+obs/

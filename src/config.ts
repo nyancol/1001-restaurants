@@ -6,6 +6,7 @@ export interface AppConfig {
   sessionSecret: string;
   cookieSecure: boolean;
   devLoginEnabled: boolean;
+  appOrigin: string;
   oidcIssuer: string;
   oidcClientId: string;
   oidcClientSecret: string;
@@ -31,11 +32,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const oidcIssuer = required("OIDC_ISSUER", env.OIDC_ISSUER);
   const oidcClientId = required("OIDC_CLIENT_ID", env.OIDC_CLIENT_ID);
   const oidcClientSecret = required("OIDC_CLIENT_SECRET", env.OIDC_CLIENT_SECRET);
-  const redirectDefault = `http://localhost:${env.PORT ?? "3000"}/api/auth/callback`;
-  const oidcRedirectUri = env.OIDC_REDIRECT_URI?.trim() || redirectDefault;
+  // Public origin of the app (scheme + host + optional port, no path).
+  // Single host variable per deployment; the OIDC callback is derived from it
+  // unless OIDC_REDIRECT_URI is set explicitly (explicit value always wins).
+  const appOriginRaw = env.APP_ORIGIN?.trim() || `http://localhost:${env.PORT ?? "3000"}`;
+  const appOrigin = appOriginRaw.replace(/\/+$/, "");
+  const oidcRedirectUri = env.OIDC_REDIRECT_URI?.trim() || `${appOrigin}/api/auth/callback`;
   const oidcEnabled = Boolean(oidcIssuer && oidcClientId);
 
-  // Fail fast on malformed OIDC values when OIDC is expected.
+  // Fail fast on malformed public origin / OIDC values.
   if (env.OIDC_ISSUER !== undefined && env.OIDC_ISSUER.trim() !== "") {
     try {
       const u = new URL(oidcIssuer);
@@ -49,6 +54,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (oidcEnabled && !oidcClientSecret) {
     throw new Error(
       "Invalid OIDC config: OIDC_CLIENT_SECRET is required when OIDC_ISSUER and OIDC_CLIENT_ID are set."
+    );
+  }
+  try {
+    const u = new URL(appOrigin);
+    if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
+  } catch {
+    throw new Error(
+      `Invalid config: APP_ORIGIN is not a valid URL ("${appOrigin}"). Expected e.g. "https://app.example.com".`
     );
   }
   try {
@@ -73,6 +86,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     cookieSecure: env.COOKIE_SECURE !== undefined
       ? env.COOKIE_SECURE === "true"
       : nodeEnv === "production",
+    appOrigin,
     oidcIssuer,
     oidcClientId,
     oidcClientSecret,

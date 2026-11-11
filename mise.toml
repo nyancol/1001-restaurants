@@ -23,13 +23,13 @@ npm run dev:web
 # first: cd obs && docker compose up -d). Production is never touched.
 [tasks.preprod-up]
 description = "Start the preprod app instance (http://localhost:5173)"
-run = "sudo docker compose -p brick-preprod -f compose.yaml -f compose.preprod.yaml up -d --build"
+run = "sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml up -d --build"
 
 [tasks.preprod-down]
 description = "Stop the preprod app instance (keeps its data volume)"
-run = "sudo docker compose -p brick-preprod -f compose.yaml -f compose.preprod.yaml down"
+run = "sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml down"
 
 [tasks.preprod-logs]
 description = "Follow preprod app logs"
-run = "sudo docker compose -p brick-preprod -f compose.yaml -f compose.preprod.yaml logs -f brick-tracker"
+run = "sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml logs -f places"
 

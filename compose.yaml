@@ -1,0 +1,49 @@
+# Base compose file — production defaults, variable names mirror
+# .env.dev / .env.sample. Used as: docker compose -f compose.yaml [-f compose.preprod.yaml] up -d --build
+# Every value can be overridden with environment / .env file / -e.
+# SESSION_SECRET is required (no default) — the app refuses to boot in
+# production without it (see src/config.ts).
+
+name: places
+
+services:
+  places:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: places:latest
+    container_name: places
+    restart: unless-stopped
+    expose:
+      - "${PORT:-3000}"
+    environment:
+      NODE_ENV: "${NODE_ENV:-production}"
+      PORT: "${PORT:-3000}"
+      HOST: "${HOST:-0.0.0.0}"
+      DATABASE_PATH: "${DATABASE_PATH:-/data/app.db}"
+      SESSION_SECRET: "${SESSION_SECRET:?SESSION_SECRET must be set in the environment}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-true}"
+      DEV_LOGIN: "${DEV_LOGIN:-false}"
+      TRUST_PROXY: "${TRUST_PROXY:-true}"
+      GOOGLE_PLACES_KEY: "${GOOGLE_PLACES_KEY:-}"
+      APP_ORIGIN: "${APP_ORIGIN:-}"
+      OIDC_ISSUER: "${OIDC_ISSUER:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      OIDC_REDIRECT_URI: "${OIDC_REDIRECT_URI:-}"
+      # APP_ORIGIN is the per-deployment host variable (e.g. https://app.example.com).
+      # OIDC callback defaults to ${APP_ORIGIN}/api/auth/callback;
+      # set OIDC_REDIRECT_URI only to override it with the provider-registered value.
+      # Telemetry (standalone LGTM stack in obs/compose.yaml). Unset = no export.
+      # OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - places-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  places-data:

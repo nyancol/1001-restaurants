@@ -1,6 +1,7 @@
 .firecrawl/
 .env
 .env.dev
+.env.preprod
 node_modules/
 node_modules/
 dist/

@@ -1,0 +1,40 @@
+# Preprod override for `mise run preprod-up`:
+#   sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml up -d --build
+# Isolated instance on http://localhost:5173 with its own data volume.
+# Production is never touched. Start the LGTM stack first if you want telemetry:
+#   cd obs && docker compose up -d
+# (obs/compose.yaml is standalone; this file does not depend on its network.)
+
+services:
+  places:
+    container_name: places-staging
+    ports:
+      - "${HOST_PORT:-5173}:${PORT:-3000}"
+    networks:
+      - default
+      - caddy
+    environment:
+      # Preprod is production-like: no stub login, secure cookies.
+      # Same variable names as .env.dev so values are easy to compare.
+      NODE_ENV: production
+      DEV_LOGIN: "false"
+      COOKIE_SECURE: "${COOKIE_SECURE:-true}"
+      TRUST_PROXY: "${TRUST_PROXY:-true}"
+      DATABASE_PATH: /data/app.db
+      # Per-deployment host: callback derives as ${APP_ORIGIN}/api/auth/callback.
+      APP_ORIGIN: "${APP_ORIGIN:-http://localhost:${HOST_PORT:-5173}}"
+      # Explicit override only if the provider registration differs:
+      # OIDC_REDIRECT_URI: "http://localhost:5173/api/auth/callback"
+    volumes:
+      # Own named volume (project prefix `places-preprod` isolates it anyway).
+      - places-preprod-data:/data
+
+volumes:
+  places-preprod-data:
+
+# Shared reverse-proxy network (created outside this project by Caddy).
+# Attaching here lets Caddy reach the app as http://places-staging:${PORT}.
+networks:
+  caddy:
+    name: caddy_public
+    external: true
