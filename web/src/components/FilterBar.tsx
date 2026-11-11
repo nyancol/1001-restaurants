@@ -62,6 +62,8 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ }:
             onChange={(next) => {
               setTags(next);
             }}
+            allowCreate={false}
+            showSelected={false}
           />
         </div>
       </details>

@@ -10,6 +10,13 @@ import { ensurePinImages } from "../theme/pins";
 import { useTheme } from "../theme/ThemeContext";
 
 const PARIS = { lng: 2.3522, lat: 48.8566, zoom: 11.5 };
+const USER_ZOOM = 14;
+const GEO_OPTIONS: PositionOptions = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
+const USER_DOT = "#2E7CF6";
+const GEO_FALLBACK_NOTE = "Location unavailable — showing Paris.";
+const GEO_STAY_NOTE = "Location unavailable — staying put.";
+
+type UserPos = { lng: number; lat: number; accuracy: number };
 
 const DEFAULT_TILES = [
   "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -35,6 +42,26 @@ function toGeoJSON(places: Place[]): GeoJSON.FeatureCollection {
   };
 }
 
+function getOneShotPosition(): Promise<GeolocationPosition> {
+  if (!("geolocation" in navigator)) {
+    return Promise.reject(new Error("geolocation unsupported"));
+  }
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, GEO_OPTIONS);
+  });
+}
+
+function accuracyToPixels(accuracyMeters: number, lat: number, zoom: number): number {
+  if (!accuracyMeters || !Number.isFinite(accuracyMeters) || accuracyMeters <= 0) return 20;
+  const metersPerPixel = (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, zoom);
+  const px = accuracyMeters / Math.max(metersPerPixel, 0.01);
+  return Math.min(60, Math.max(10, px));
+}
+
+function emptyUserCollection(): GeoJSON.FeatureCollection {
+  return { type: "FeatureCollection", features: [] };
+}
+
 export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void }) {
   const { statusParam, tagsParam, qParam, status, setStatus, tags, setTags, q, setQ } = usePlaceFilters();
   const { mode } = useTheme();
@@ -47,6 +74,15 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [geoNote, setGeoNote] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [userPos, setUserPos] = useState<UserPos | null>(null);
+
+  const mapReadyRef = useRef(false);
+  const locatingRef = useRef(false);
+  const autoLocateDoneRef = useRef(false);
+  const pendingUserRef = useRef<UserPos | null>(null);
+  const userPosRef = useRef<UserPos | null>(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -78,7 +114,65 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
   const unlocatedCount = places.length - located.length;
   const selected = selectedId ? (places.find((p) => p.id === selectedId) ?? null) : null;
 
-  // Init map once. Sticky viewport lives here — nothing else moves it.
+  const syncUserSource = useCallback((pos: UserPos) => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    const source = map.getSource("user-location") as GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData({
+      type: "FeatureCollection",
+      features: [{ type: "Feature", geometry: { type: "Point", coordinates: [pos.lng, pos.lat] }, properties: {} }],
+    });
+    if (map.getLayer("user-halo")) {
+      map.setPaintProperty("user-halo", "circle-radius", accuracyToPixels(pos.accuracy, pos.lat, map.getZoom()));
+    }
+  }, []);
+
+  const centerOnUser = useCallback((pos: UserPos) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const targetZoom = Math.max(map.getZoom(), USER_ZOOM);
+    map.easeTo({ center: [pos.lng, pos.lat], zoom: targetZoom });
+  }, []);
+
+  const locate = useCallback(
+    async (opts?: { auto?: boolean }) => {
+      if (locatingRef.current) return;
+      locatingRef.current = true;
+      setLocating(true);
+      try {
+        const position = await getOneShotPosition();
+        const next: UserPos = {
+          lng: position.coords.longitude,
+          lat: position.coords.latitude,
+          accuracy: position.coords.accuracy ?? 0,
+        };
+        userPosRef.current = next;
+        setUserPos(next);
+        setGeoNote(null);
+        const map = mapRef.current;
+        if (map && mapReadyRef.current) {
+          syncUserSource(next);
+          centerOnUser(next);
+        } else {
+          pendingUserRef.current = next;
+        }
+      } catch {
+        if (opts?.auto) {
+          setGeoNote(GEO_FALLBACK_NOTE);
+        } else {
+          setGeoNote(GEO_STAY_NOTE);
+        }
+      } finally {
+        locatingRef.current = false;
+        setLocating(false);
+        if (opts?.auto) autoLocateDoneRef.current = true;
+      }
+    },
+    [centerOnUser, syncUserSource],
+  );
+
+  // Init map once. Sticky viewport lives here — only explicit locate/fit/cluster moves it.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     setWorkerUrl("/maplibre-gl-worker.mjs");
@@ -119,6 +213,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
             clusterMaxZoom: 14,
             clusterRadius: 50,
           });
+          map.addSource("user-location", { type: "geojson", data: emptyUserCollection() });
           map.addLayer({
             id: "clusters",
             type: "circle",
@@ -137,6 +232,24 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
             filter: ["has", "point_count"],
             layout: { "text-field": "{point_count_abbreviated}", "text-size": 12 },
             paint: { "text-color": "#ffffff" },
+          });
+          // User dot + halo stay unthemed blue in all themes, beneath pins.
+          map.addLayer({
+            id: "user-halo",
+            type: "circle",
+            source: "user-location",
+            paint: { "circle-color": USER_DOT, "circle-opacity": 0.15, "circle-radius": 20 },
+          });
+          map.addLayer({
+            id: "user-dot",
+            type: "circle",
+            source: "user-location",
+            paint: {
+              "circle-color": USER_DOT,
+              "circle-radius": 8,
+              "circle-stroke-color": "#ffffff",
+              "circle-stroke-width": 2.5,
+            },
           });
           // Selection halo under pins (basemap stays light in all themes).
           map.addLayer({
@@ -199,7 +312,13 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
           map.on("mouseleave", "clusters", () => {
             map.getCanvas().style.cursor = "";
           });
+          map.on("zoom", () => {
+            const pos = userPosRef.current;
+            if (!pos || !map.getLayer("user-halo")) return;
+            map.setPaintProperty("user-halo", "circle-radius", accuracyToPixels(pos.accuracy, pos.lat, map.getZoom()));
+          });
 
+          mapReadyRef.current = true;
           setMapReady(true);
         } catch (err: any) {
           setError(`Map setup failed: ${err?.message ?? err} — reload to retry.`);
@@ -210,8 +329,32 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
     return () => {
       map.remove();
       mapRef.current = null;
+      mapReadyRef.current = false;
+      setMapReady(false);
     };
   }, []);
+
+  // First-open auto-locate runs once in parallel with map init; never re-fires.
+  useEffect(() => {
+    if (autoLocateDoneRef.current) return;
+    void locate({ auto: true });
+  }, [locate]);
+
+  // Drain a position that resolved before the map finished loading.
+  useEffect(() => {
+    if (!mapReady) return;
+    const pending = pendingUserRef.current;
+    if (!pending) return;
+    pendingUserRef.current = null;
+    syncUserSource(pending);
+    centerOnUser(pending);
+  }, [mapReady, syncUserSource, centerOnUser]);
+
+  // Keep the dot source in sync (pin updates never move the viewport).
+  useEffect(() => {
+    if (!mapReady || !userPos) return;
+    syncUserSource(userPos);
+  }, [userPos, mapReady, syncUserSource]);
 
   // Push pin data without touching the viewport.
   useEffect(() => {
@@ -289,18 +432,32 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
     <div className="mx-auto max-w-xl bg-bg px-4 pb-16 pt-4">
       <div className="mb-3 flex items-center justify-between">
         <h1 className="font-display text-xl font-bold text-ink">Map</h1>
-        <button
-          type="button"
-          onClick={fitToResults}
-          disabled={!located.length}
-          className="edge radius-input border-line bg-surface px-2 py-1.5 text-sm text-ink disabled:opacity-40"
-        >
-          Fit to results
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void locate()}
+            disabled={locating}
+            aria-label="locate me"
+            className="edge radius-input border-line bg-surface px-2 py-1.5 text-sm text-ink disabled:opacity-40"
+          >
+            {locating ? "Locating…" : "◎ Locate"}
+          </button>
+          <button
+            type="button"
+            onClick={fitToResults}
+            disabled={!located.length}
+            className="edge radius-input border-line bg-surface px-2 py-1.5 text-sm text-ink disabled:opacity-40"
+          >
+            Fit to results
+          </button>
+        </div>
       </div>
       <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} />
 
       {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
+      {geoNote && (
+        <div className="edge radius-input mb-3 border-line bg-surface-2 px-3 py-2 text-xs text-muted">{geoNote}</div>
+      )}
       {!loading && unlocatedCount > 0 && (
         <div className="edge radius-input mb-3 border-line bg-surface-2 px-3 py-2 text-xs text-muted">
           {unlocatedCount} place{unlocatedCount > 1 ? "s" : ""} without location hidden from the map.

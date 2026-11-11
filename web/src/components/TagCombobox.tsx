@@ -4,11 +4,17 @@ import { getTags } from "../lib/api";
 interface Props {
   value: string[];
   onChange: (tags: string[]) => void;
+  // Filter contexts must pass false so no new tag can be coined there;
+  // creation stays in add/edit flows only. Defaults to true.
+  allowCreate?: boolean;
+  // FilterBar renders its own active-filter chips above, so hide the
+  // duplicate list inside the combobox in that context. Defaults to true.
+  showSelected?: boolean;
 }
 
 const cache = new Map<string, { tag: string; count: number }[]>();
 
-export default function TagCombobox({ value, onChange }: Props) {
+export default function TagCombobox({ value, onChange, allowCreate = true, showSelected = true }: Props) {
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<{ tag: string; count: number }[]>([]);
   const [open, setOpen] = useState(false);
@@ -61,6 +67,7 @@ export default function TagCombobox({ value, onChange }: Props) {
   return (
     <div className="relative">
       <label className="mb-1 block text-sm font-medium text-ink">Tags</label>
+      {showSelected && (
       <div className="mb-1 flex flex-wrap gap-1">
         {value.map((t) => (
           <span key={t} className="edge radius-pill inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-sm text-ink">
@@ -71,6 +78,7 @@ export default function TagCombobox({ value, onChange }: Props) {
           </span>
         ))}
       </div>
+      )}
       <input
         value={input}
         onChange={(e) => {
@@ -81,12 +89,13 @@ export default function TagCombobox({ value, onChange }: Props) {
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            if (input.trim()) addTag(input);
+            if (!input.trim()) return;
+            if (allowCreate || exactMatch) addTag(input);
           } else if (e.key === "Escape") {
             setOpen(false);
           }
         }}
-        placeholder="Type to suggest, Enter to create"
+        placeholder={allowCreate ? "Type to suggest, Enter to create" : "Type to filter by existing tags"}
         className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
         aria-label="tag input"
       />
@@ -105,7 +114,7 @@ export default function TagCombobox({ value, onChange }: Props) {
                 <span className="font-telemetry text-muted">{s.count}</span>
               </button>
             ))}
-          {!loading && input.trim() && !exactMatch && (
+          {allowCreate && !loading && input.trim() && !exactMatch && (
             <button
               type="button"
               className="w-full px-3 py-2 text-left text-sm text-accent hover:bg-surface-2"
@@ -115,7 +124,9 @@ export default function TagCombobox({ value, onChange }: Props) {
             </button>
           )}
           {!loading && input.trim() && suggestions.length === 0 && exactMatch === false && (
-            <div className="px-3 py-2 text-sm text-muted">No matches — press Enter to create.</div>
+            <div className="px-3 py-2 text-sm text-muted">
+              {allowCreate ? "No matches — press Enter to create." : "No matches."}
+            </div>
           )}
         </div>
       )}
