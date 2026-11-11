@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import AddPage from "./pages/AddPage";
 import ListPage from "./pages/ListPage";
 import { getMe, UnauthorizedError } from "./lib/api";
+
+const MapPage = lazy(() => import("./pages/MapPage"));
 
 export default function App() {
   const [user, setUser] = useState<{ id: string; displayName: string | null } | null>(null);
@@ -148,6 +150,9 @@ export default function App() {
             <Link to="/" className="rounded px-2 py-1 hover:bg-slate-100">
               My places
             </Link>
+            <Link to="/map" className="rounded px-2 py-1 hover:bg-slate-100">
+              Map
+            </Link>
             <Link to="/add" className="rounded bg-black px-3 py-1 text-white">
               + Add
             </Link>
@@ -165,6 +170,14 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<ListPage onUnauthorized={() => setUnauthorized(true)} />} />
+          <Route
+            path="/map"
+            element={
+              <Suspense fallback={<div className="mx-auto max-w-xl px-4 py-10 text-sm text-slate-500">Loading map…</div>}>
+                <MapPage onUnauthorized={() => setUnauthorized(true)} />
+              </Suspense>
+            }
+          />
           <Route path="/add" element={<AddPage onUnauthorized={() => setUnauthorized(true)} />} />
           <Route path="*" element={<ListPage onUnauthorized={() => setUnauthorized(true)} />} />
         </Routes>
