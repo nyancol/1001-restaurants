@@ -58,17 +58,17 @@ with `Invalid OIDC config: discovery failed for issuer ...` and exits non-zero.
 ## Docker (documented boot command)
 
 ```bash
-docker build -t oyster-foundation .
-docker run -d --name oyster \
+docker build -t places .
+docker run -d --name places \
   -p 3000:3000 \
-  -v oyster-data:/data \
+  -v places-data:/data \
   -e SESSION_SECRET='<32+ chars>' \
   -e OIDC_ISSUER='https://id.example.com' \
   -e OIDC_CLIENT_ID='<client-id>' \
   -e OIDC_CLIENT_SECRET='<secret>' \
   -e OIDC_REDIRECT_URI='https://app.example.com/api/auth/callback' \
   -e GOOGLE_PLACES_KEY='<key>' \
-  oyster-foundation
+  places
 curl localhost:3000/api/health
 ```
 
