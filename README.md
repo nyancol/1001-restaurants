@@ -85,7 +85,8 @@ run automatically at container start; `/api/health` reports `db: ok` once applie
 - `GET /api/auth/callback` → code+PKCE exchange, user upsert by `sub`, sets `oyster_session` cookie (`HttpOnly/Secure/SameSite=Lax`)
 - `POST /api/auth/logout`, `GET /api/auth/me`
 - `POST /api/places` (owner forced to session user; `status` defaults `WANT_TO_GO`; `rating` 0–5 or null; tags normalized)
-- `GET /api/places?owner=me|all|<userId>&status=&tags=&q=` (defaults to own)
+- `GET /api/places?owner=me|all|<userId>&status=&tags=&q=` (defaults to own; each place includes `ownerDisplayName`)
+- `GET /api/users` → `{ users: [{ id, displayName, placeCount }] }` sorted by display name (all app users are friends)
 - `GET/PATCH/DELETE /api/places/:id` (read-any, edit-own → `403` for others)
 - `GET /api/tags?q=` (global pool, frequency then recency, counts)
 - `GET /api/google/autocomplete?q=` (Places API New, `POST places:autocomplete` upstream; optional `sessionToken` for session billing), `GET /api/google/details?placeId=` (Places API New, minimal field masks), `GET /api/google/geocode?address=`
