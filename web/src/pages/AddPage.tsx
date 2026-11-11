@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LookupField from "../components/LookupField";
 import TagCombobox from "../components/TagCombobox";
+import TypeCombobox from "../components/TypeCombobox";
 import Stars from "../components/Stars";
-import { createPlace, listPlaces, patchPlace, UnauthorizedError } from "../lib/api";
+import { createPlace, listPlaces, patchPlace, UnauthorizedError, type PlaceDetails } from "../lib/api";
 
 export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
   const navigate = useNavigate();
@@ -13,21 +14,25 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
   const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
+  const [placeType, setPlaceType] = useState("restaurant");
   const [status, setStatus] = useState<"WANT_TO_GO" | "BEEN_TO">("WANT_TO_GO");
   const [tags, setTags] = useState<string[]>([]);
   const [rating, setRating] = useState<number | null>(null);
   const [note, setNote] = useState("");
+  const [enrichment, setEnrichment] = useState<PlaceDetails | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  function handlePick(d: { googlePlaceId: string; name: string; address: string | null; lat: number | null; lng: number | null }) {
+  function handlePick(d: PlaceDetails) {
     setGooglePlaceId(d.googlePlaceId);
     setName(d.name);
     setLookupText(d.name);
     setAddress(d.address ?? "");
     setLat(d.lat);
     setLng(d.lng);
+    if (d.placeType) setPlaceType(d.placeType);
+    setEnrichment(d);
   }
 
   async function handleSave() {
@@ -38,10 +43,16 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
       setError("Name is required.");
       return;
     }
+    const finalType = placeType.trim().toLowerCase();
+    if (!finalType) {
+      setError("Type is required.");
+      return;
+    }
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         name: finalName,
+        placeType: finalType,
         status,
         tags,
         rating,
@@ -50,6 +61,15 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
         address: address ? address : null,
         lat,
         lng,
+        hours: enrichment?.hours ?? null,
+        businessStatus: enrichment?.businessStatus ?? null,
+        priceLevel: enrichment?.priceLevel ?? null,
+        priceRange: enrichment?.priceRange ?? null,
+        googleRating: enrichment?.googleRating ?? null,
+        googleRatingCount: enrichment?.googleRatingCount ?? null,
+        websiteUri: enrichment?.websiteUri ?? null,
+        mapsLinks: enrichment?.mapsLinks ?? (enrichment?.googleMapsUri ? { placeUri: enrichment.googleMapsUri } : null),
+        utcOffsetMinutes: enrichment?.utcOffsetMinutes ?? null,
       };
       if (googlePlaceId) {
         try {
@@ -98,7 +118,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
   }
 
   return (
-    <div className="mx-auto max-w-xl bg-bg px-4 pb-28 pt-4">
+    <div className="mx-auto max-w-xl bg-bg px-4 pb-28 pt-4 lg:max-w-2xl">
       <h1 className="font-display mb-4 text-xl font-bold text-ink">Add a place</h1>
       {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
       {info && <div className="edge radius-input mb-3 border-info-line bg-info-bg px-3 py-2 text-sm text-info-ink">{info}</div>}
@@ -124,6 +144,30 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
             placeholder="Address (prefilled from lookup)"
           />
         </div>
+        <TypeCombobox value={placeType} onChange={setPlaceType} />
+        {enrichment && (
+          <div className="edge radius-card border-line bg-surface-2 px-3 py-2">
+            <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Google snapshot · saved with this place</div>
+            <div className="flex flex-col gap-1 text-xs text-ink">
+              {enrichment.placeType && <div>🏷️ Suggested type: <strong>{enrichment.placeType}</strong> (editable above)</div>}
+              {enrichment.priceLevel && <div>💶 Price: <strong>{enrichment.priceLevel}</strong></div>}
+              {enrichment.googleRating != null && <div>🅖 Google: <strong>{enrichment.googleRating}</strong>{enrichment.googleRatingCount != null ? ` (${enrichment.googleRatingCount} reviews)` : ""}</div>}
+              {enrichment.websiteUri && <div className="truncate">🌐 <span className="text-accent underline">{enrichment.websiteUri}</span></div>}
+              {enrichment.businessStatus && enrichment.businessStatus !== "OPERATIONAL" && <div>⚠️ Status: <strong>{enrichment.businessStatus}</strong></div>}
+              {Array.isArray(enrichment.hours?.weekdayDescriptions) && enrichment.hours.weekdayDescriptions.length > 0 && (
+                <div>
+                  <div>🕒 Hours (all 7 days saved):</div>
+                  <ul className="mt-0.5 flex flex-col gap-0.5 pl-3">
+                    {enrichment.hours.weekdayDescriptions.map((d: string, i: number) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {(enrichment.mapsLinks || enrichment.googleMapsUri) && <div>🔗 Maps link will be available via Share after save (not shown in details)</div>}
+            </div>
+          </div>
+        )}
         <div>
           <span className="mb-1 block text-sm font-medium text-ink">Status</span>
           <div className="flex gap-2" role="radiogroup" aria-label="status">
@@ -155,12 +199,12 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
           />
         </div>
       </div>
-      <div className="fixed bottom-0 left-0 right-0 border-t border-line bg-surface/95 p-3 backdrop-blur">
-        <div className="mx-auto flex max-w-xl gap-2">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-line bg-surface/95 p-3 backdrop-blur" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+        <div className="mx-auto flex max-w-xl gap-2 lg:max-w-2xl">
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="edge radius-input border-line bg-surface px-4 py-2 text-sm text-ink"
+            className="edge radius-input inline-flex min-h-[48px] items-center border-line bg-surface px-5 text-sm text-ink"
             disabled={saving}
           >
             Cancel
@@ -169,7 +213,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="edge radius-input flex-1 border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-ink disabled:opacity-50"
+            className="edge radius-input inline-flex min-h-[48px] flex-1 items-center justify-center border-accent bg-accent px-4 text-sm font-medium text-accent-ink disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save place"}
           </button>

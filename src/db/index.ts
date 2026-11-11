@@ -34,6 +34,49 @@ export const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_places_owner ON places(owner_id);
     `,
   },
+  {
+    version: 2,
+    name: "enrich places + place_types",
+    sql: `
+      ALTER TABLE places ADD COLUMN place_type TEXT NOT NULL DEFAULT 'restaurant';
+      ALTER TABLE places ADD COLUMN hours_json TEXT;
+      ALTER TABLE places ADD COLUMN business_status TEXT;
+      ALTER TABLE places ADD COLUMN price_level TEXT;
+      ALTER TABLE places ADD COLUMN price_range_json TEXT;
+      ALTER TABLE places ADD COLUMN google_rating REAL;
+      ALTER TABLE places ADD COLUMN google_rating_count INTEGER;
+      ALTER TABLE places ADD COLUMN website_uri TEXT;
+      ALTER TABLE places ADD COLUMN maps_links_json TEXT;
+      ALTER TABLE places ADD COLUMN utc_offset_minutes INTEGER;
+      CREATE TABLE IF NOT EXISTS place_types (
+        label TEXT PRIMARY KEY,
+        color TEXT NOT NULL,
+        icon TEXT NOT NULL DEFAULT 'dot',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      INSERT OR IGNORE INTO place_types (label, color, icon, created_at, updated_at) VALUES
+        ('restaurant', '#D64545', 'fork', 0, 0),
+        ('café', '#8B5E34', 'cup', 0, 0),
+        ('bar', '#7C5CBF', 'glass', 0, 0);
+      UPDATE places SET place_type = 'restaurant' WHERE place_type IS NULL OR place_type = '';
+    `,
+  },
+  {
+    version: 3,
+    name: "fixed place types restaurant/bar/café",
+    sql: `
+      UPDATE places SET place_type = 'café' WHERE lower(place_type) IN ('coffee', 'cafe', 'café', 'coffee shop');
+      UPDATE places SET place_type = 'bar' WHERE lower(place_type) IN ('bars', 'pub');
+      UPDATE places SET place_type = 'restaurant' WHERE lower(place_type) IN ('resto');
+      UPDATE places SET place_type = 'restaurant' WHERE place_type NOT IN ('restaurant', 'bar', 'café');
+      INSERT OR IGNORE INTO place_types (label, color, icon, created_at, updated_at) VALUES
+        ('restaurant', '#D64545', 'fork', 0, 0),
+        ('café', '#8B5E34', 'cup', 0, 0),
+        ('bar', '#7C5CBF', 'glass', 0, 0);
+      DELETE FROM place_types WHERE label NOT IN ('restaurant', 'bar', 'café');
+    `,
+  },
 ];
 
 export interface DbHandle {

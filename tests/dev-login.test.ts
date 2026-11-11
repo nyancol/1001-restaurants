@@ -67,7 +67,7 @@ describe("POST /api/auth/dev-login", () => {
     const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(";")[0];
 
     const create = await app.inject({
-      method: "POST", url: "/api/places", headers: { cookie }, payload: { name: "Dev spot" },
+      method: "POST", url: "/api/places", headers: { cookie }, payload: { name: "Dev spot", placeType: "restaurant" },
     });
     expect(create.statusCode).toBe(201);
     expect(create.json().ownerId).toBe(login.json().id);

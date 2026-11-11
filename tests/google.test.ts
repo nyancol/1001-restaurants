@@ -78,7 +78,13 @@ describe("google proxy (Places API New) with mocked fetch", () => {
     const res = await app.inject({ method: "GET", url: "/api/google/details?placeId=ChIJParis", headers: { cookie } });
     expect(res.statusCode).toBe(200);
     expect(res.json().id).toBe("ChIJ Paris");
-    expect(calls[0].init.headers["X-Goog-FieldMask"]).toContain("formattedAddress");
+    const mask = calls[0].init.headers["X-Goog-FieldMask"] as string;
+    expect(mask).toContain("formattedAddress");
+    expect(mask).toContain("regularOpeningHours");
+    expect(mask).toContain("priceLevel");
+    expect(mask).toContain("userRatingCount");
+    expect(mask).toContain("websiteUri");
+    expect(mask).toContain("googleMapsLinks");
     expect(calls[0].url).not.toContain("test-key");
   });
 

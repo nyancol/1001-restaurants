@@ -26,7 +26,30 @@ export function registerGoogleRoutes(
     "suggestions.placePrediction.structuredFormat",
   ].join(",");
 
-  const detailsMask = ["id", "displayName", "formattedAddress", "location", "types"].join(",");
+  const detailsMask = [
+    "id",
+    "displayName",
+    "formattedAddress",
+    "shortFormattedAddress",
+    "location",
+    "types",
+    "primaryType",
+    "primaryTypeDisplayName",
+    "businessStatus",
+    "googleMapsUri",
+    "googleMapsLinks",
+    "regularOpeningHours",
+    "currentOpeningHours",
+    "priceLevel",
+    "priceRange",
+    "rating",
+    "userRatingCount",
+    "nationalPhoneNumber",
+    "internationalPhoneNumber",
+    "websiteUri",
+    "utcOffsetMinutes",
+    "timeZone",
+  ].join(",");
 
   function requireKey(reply: any): boolean {
     if (!config.googlePlacesKey) {
