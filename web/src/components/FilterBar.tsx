@@ -17,7 +17,7 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ }:
           aria-label="status filter"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="rounded border px-2 py-1.5 text-sm"
+          className="edge radius-input border-line bg-surface px-2 py-1.5 text-sm text-ink"
         >
           <option value="">All statuses</option>
           <option value="WANT_TO_GO">Want to go</option>
@@ -28,12 +28,12 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ }:
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name…"
-          className="flex-1 rounded border px-3 py-1.5 text-sm"
+          className="edge radius-input flex-1 border-line bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-muted"
         />
         {(status || tags.length || q) && (
           <button
             type="button"
-            className="rounded border px-2 py-1.5 text-sm"
+            className="edge radius-input border-line bg-surface px-2 py-1.5 text-sm text-ink"
             onClick={() => {
               setStatus("");
               setTags([]);
@@ -46,7 +46,7 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ }:
       </div>
       <div className="flex flex-wrap gap-1">
         {tags.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1 rounded-full bg-black px-2 py-0.5 text-xs text-white">
+          <span key={t} className="edge radius-pill inline-flex items-center gap-1 border-accent bg-accent px-2 py-0.5 text-xs text-accent-ink">
             {t}
             <button type="button" aria-label={`remove filter ${t}`} onClick={() => setTags(tags.filter((x) => x !== t))}>
               ×
@@ -55,12 +55,11 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ }:
         ))}
       </div>
       <details className="text-sm">
-        <summary className="cursor-pointer text-slate-600">Filter by tags</summary>
+        <summary className="cursor-pointer text-muted">Filter by tags</summary>
         <div className="mt-2">
           <TagCombobox
             value={tags}
             onChange={(next) => {
-              // TagCombobox appends; for filters we replace wholesale.
               setTags(next);
             }}
           />

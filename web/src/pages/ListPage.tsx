@@ -35,7 +35,6 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
     }
   }, [onUnauthorized, statusParam, tagsParam, qParam]);
 
-  // Refetch when URL query changes (debounced q + status/tags immediate).
   useEffect(() => {
     void fetchList();
   }, [fetchList]);
@@ -76,24 +75,26 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
   }
 
   return (
-    <div className="mx-auto max-w-xl px-4 pb-16 pt-4">
-      <h1 className="mb-4 text-xl font-bold">My places</h1>
+    <div className="mx-auto max-w-xl bg-bg px-4 pb-16 pt-4">
+      <h1 className="font-display mb-4 text-xl font-bold text-ink">My places</h1>
       <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} />
 
-      {loading && <div className="py-8 text-center text-sm text-slate-500">Loading…</div>}
-      {error && <div className="mb-3 rounded bg-red-100 px-3 py-2 text-sm text-red-800">{error}</div>}
+      {loading && <div className="py-8 text-center text-sm text-muted">Loading…</div>}
+      {error && (
+        <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>
+      )}
       {!loading && !error && places.length === 0 && (
-        <div className="rounded border border-dashed px-4 py-10 text-center">
-          <p className="font-medium">No places yet</p>
-          <p className="mt-1 text-sm text-slate-500">Save your first spot from the Add page.</p>
-          <a href="/add" className="mt-3 inline-block rounded bg-black px-4 py-2 text-sm text-white">
+        <div className="edge radius-card border-dashed border-line bg-surface px-4 py-10 text-center">
+          <p className="font-display font-medium text-ink">No places yet</p>
+          <p className="mt-1 text-sm text-muted">Save your first spot from the Add page.</p>
+          <a href="/add" className="edge radius-input mt-3 inline-block border-accent bg-accent px-4 py-2 text-sm text-accent-ink">
             Add a place
           </a>
         </div>
       )}
       <ul className="flex flex-col gap-3">
         {places.map((p) => (
-          <li key={p.id} className="rounded border p-3">
+          <li key={p.id} className="edge radius-card border-line bg-surface p-3 shadow-theme">
             <PlaceCard place={p} onToggleStatus={flipStatus} onEdit={(pl) => setEditingId(pl.id)} />
             {editingId === p.id && (
               <PlaceEditor place={p} onSave={(patch) => saveEdit(p, patch)} onCancel={() => setEditingId(null)} />

@@ -60,20 +60,12 @@ export default function TagCombobox({ value, onChange }: Props) {
 
   return (
     <div className="relative">
-      <label className="block text-sm font-medium mb-1">Tags</label>
-      <div className="flex flex-wrap gap-1 mb-1">
+      <label className="mb-1 block text-sm font-medium text-ink">Tags</label>
+      <div className="mb-1 flex flex-wrap gap-1">
         {value.map((t) => (
-          <span
-            key={t}
-            className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-sm"
-          >
+          <span key={t} className="edge radius-pill inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-sm text-ink">
             {t}
-            <button
-              type="button"
-              aria-label={`remove ${t}`}
-              className="text-slate-600 hover:text-black"
-              onClick={() => removeTag(t)}
-            >
+            <button type="button" aria-label={`remove ${t}`} className="text-muted hover:text-ink" onClick={() => removeTag(t)}>
               ×
             </button>
           </span>
@@ -95,35 +87,35 @@ export default function TagCombobox({ value, onChange }: Props) {
           }
         }}
         placeholder="Type to suggest, Enter to create"
-        className="w-full rounded border px-3 py-2"
+        className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
         aria-label="tag input"
       />
       {open && (input.trim() || loading) && (
-        <div className="absolute z-10 mt-1 w-full rounded border bg-white shadow">
-          {loading && <div className="px-3 py-2 text-sm text-slate-500">Loading…</div>}
+        <div className="edge radius-card absolute z-10 mt-1 w-full border-line bg-surface shadow-theme">
+          {loading && <div className="px-3 py-2 text-sm text-muted">Loading…</div>}
           {!loading &&
             suggestions.map((s) => (
               <button
                 key={s.tag}
                 type="button"
-                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-100"
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-ink hover:bg-surface-2"
                 onClick={() => addTag(s.tag)}
               >
                 <span>{s.tag}</span>
-                <span className="text-slate-500">{s.count}</span>
+                <span className="font-telemetry text-muted">{s.count}</span>
               </button>
             ))}
           {!loading && input.trim() && !exactMatch && (
             <button
               type="button"
-              className="w-full px-3 py-2 text-left text-sm text-blue-700 hover:bg-blue-50"
+              className="w-full px-3 py-2 text-left text-sm text-accent hover:bg-surface-2"
               onClick={() => addTag(input)}
             >
               Create “{input.trim().toLowerCase()}” ⏎
             </button>
           )}
           {!loading && input.trim() && suggestions.length === 0 && exactMatch === false && (
-            <div className="px-3 py-2 text-sm text-slate-500">No matches — press Enter to create.</div>
+            <div className="px-3 py-2 text-sm text-muted">No matches — press Enter to create.</div>
           )}
         </div>
       )}

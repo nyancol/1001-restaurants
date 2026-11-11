@@ -1,0 +1,74 @@
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-focus: var(--focus);
+  --color-want: var(--want);
+  --color-want-ink: var(--want-ink);
+  --color-been: var(--been);
+  --color-been-ink: var(--been-ink);
+  --color-star: var(--star);
+  --color-star-idle: var(--star-idle);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-line: var(--danger-line);
+  --color-info-bg: var(--info-bg);
+  --color-info-ink: var(--info-ink);
+  --color-info-line: var(--info-line);
+  --color-surface2: var(--surface-2);
+
+  --font-body: var(--font-body);
+  --font-display: var(--font-display);
+  --font-telemetry: var(--font-mono);
+
+  --radius-input: var(--radius-sm);
+  --radius-card: var(--radius-md);
+}
+
+/* Structural helpers driven by contract vars (no hardcoded sizes in components) */
+.edge {
+  border-width: var(--edge);
+}
+.shadow-theme {
+  box-shadow: var(--shadow);
+}
+.radius-input {
+  border-radius: var(--radius-sm);
+}
+.radius-card {
+  border-radius: var(--radius-md);
+}
+.radius-pill {
+  border-radius: var(--radius-pill);
+}
+
+/* MapLibre controls inherit theme */
+.maplibre-themed .maplibregl-ctrl-group {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.maplibre-themed .maplibregl-ctrl-group button {
+  background: var(--surface);
+}
+.maplibre-themed .maplibregl-ctrl-group button span {
+  filter: none;
+}
+.maplibre-themed .maplibregl-ctrl-attrib {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  color: var(--muted);
+}
+.maplibre-themed .maplibregl-ctrl-attrib a {
+  color: var(--muted);
+}
+
+/* Visible focus in every theme */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

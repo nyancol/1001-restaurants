@@ -62,7 +62,6 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
       const body = await apiFetch(`/api/google/details?placeId=${encodeURIComponent(placeId)}`);
       onPick(parseDetails(body, placeId, label));
     } catch {
-      // Details failure: keep typed text, allow manual save without coords.
       setError("Details unavailable — kept your text, you can save without coordinates.");
       onPick({ googlePlaceId: placeId, name: label, address: null, lat: null, lng: null });
     }
@@ -70,7 +69,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
 
   return (
     <div className="relative">
-      <label className="block text-sm font-medium mb-1" htmlFor="lookup">
+      <label className="mb-1 block text-sm font-medium text-ink" htmlFor="lookup">
         Name lookup
       </label>
       <div className="flex gap-2">
@@ -91,35 +90,33 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
           }}
           placeholder="Type a name, then Search"
           autoComplete="off"
-          className="min-w-0 flex-1 rounded border px-3 py-2"
+          className="edge radius-input min-w-0 flex-1 border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
         />
         <button
           type="button"
           onClick={() => void search()}
           disabled={loading || text.trim().length < 2}
-          className="shrink-0 rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="edge radius-input shrink-0 border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-ink disabled:opacity-40"
         >
           {loading ? "…" : "Search"}
         </button>
       </div>
-      {loading && <div className="mt-1 text-sm text-slate-500">Searching…</div>}
+      {loading && <div className="mt-1 text-sm text-muted">Searching…</div>}
       {unavailable && (
-        <div className="mt-1 text-sm text-amber-700">
-          Google lookup is not configured — manual entry below works fine.
-        </div>
+        <div className="mt-1 text-sm text-want-ink">Google lookup is not configured — manual entry below works fine.</div>
       )}
-      {error && <div className="mt-1 text-sm text-amber-700">{error}</div>}
+      {error && <div className="mt-1 text-sm text-want-ink">{error}</div>}
       {open && searched && suggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded border bg-white shadow">
+        <ul className="edge radius-card absolute z-10 mt-1 max-h-60 w-full overflow-auto border-line bg-surface shadow-theme">
           {suggestions.map((s) => (
             <li key={s.placeId}>
               <button
                 type="button"
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100"
+                className="block w-full px-3 py-2 text-left text-sm text-ink hover:bg-surface-2"
                 onClick={() => pick(s.placeId, s.text)}
               >
                 <span className="block font-medium">{s.text}</span>
-                {s.secondary && <span className="block text-slate-500">{s.secondary}</span>}
+                {s.secondary && <span className="block text-muted">{s.secondary}</span>}
               </button>
             </li>
           ))}

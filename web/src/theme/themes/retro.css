@@ -1,0 +1,61 @@
+/* Retro pulp theme — chunky 2px ink, round cards, display + mono. */
+
+[data-theme="retro"] {
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-pill: 999px;
+  --edge: 2px;
+  --font-body: "Avenir Next", "Trebuchet MS", system-ui, sans-serif;
+  --font-display: Futura, "Avenir Next Condensed", "Arial Narrow", "Arial Black", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+[data-theme="retro"][data-mode="light"] {
+  --bg: #FBEDD0;
+  --surface: #FFF8E8;
+  --surface-2: #F3DFB8;
+  --ink: #2B1D12;
+  --muted: #7A5C44;
+  --line: #2B1D12;
+  --shadow: 3px 3px 0 rgba(43, 29, 18, 0.9);
+  --accent: #E85A2A;
+  --accent-ink: #FFF8E8;
+  --focus: #0E7C7B;
+  --want: #F5B942;
+  --want-ink: #2B1D12;
+  --been: #2E7D44;
+  --been-ink: #FFF8E8;
+  --star: #E85A2A;
+  --star-idle: #D9C49A;
+  --danger-bg: #F9D9C4;
+  --danger-ink: #7A1F0E;
+  --danger-line: #2B1D12;
+  --info-bg: #D8ECEC;
+  --info-ink: #0F3A3A;
+  --info-line: #2B1D12;
+}
+
+[data-theme="retro"][data-mode="dark"] {
+  --bg: #0A1E23;
+  --surface: #122E35;
+  --surface-2: #1B3D45;
+  --ink: #FBEDD0;
+  --muted: #9AB8B8;
+  --line: #4FA3A3;
+  --shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+  --accent: #F26B3A;
+  --accent-ink: #0A1E23;
+  --focus: #F5B942;
+  --want: #F5B942;
+  --want-ink: #241A00;
+  --been: #4CC07A;
+  --been-ink: #062314;
+  --star: #F26B3A;
+  --star-idle: #2E4E55;
+  --danger-bg: #3A1E14;
+  --danger-ink: #FFD9C2;
+  --danger-line: #8A4A2E;
+  --info-bg: #0F3336;
+  --info-ink: #C8ECEC;
+  --info-line: #4FA3A3;
+}

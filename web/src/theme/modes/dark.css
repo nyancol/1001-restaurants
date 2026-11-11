@@ -1,0 +1,4 @@
+/* Generic dark fallback (lower specificity than [data-theme][data-mode]). */
+[data-mode="dark"] {
+  color-scheme: dark;
+}

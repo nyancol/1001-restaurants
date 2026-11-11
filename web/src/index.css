@@ -1,1 +1,6 @@
 @import "tailwindcss";
+@import "./theme/tokens.css";
+@import "./theme/themes/xp.css";
+@import "./theme/themes/retro.css";
+@import "./theme/modes/light.css";
+@import "./theme/modes/dark.css";

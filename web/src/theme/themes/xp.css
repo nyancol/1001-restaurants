@@ -1,0 +1,61 @@
+/* XP theme — boxy, 1px edges, Tahoma. Defines both modes so a new theme is one file. */
+
+[data-theme="xp"] {
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+  --edge: 1px;
+  --font-body: Tahoma, Verdana, system-ui, sans-serif;
+  --font-display: Tahoma, Verdana, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+[data-theme="xp"][data-mode="light"] {
+  --bg: #F2F4F8;
+  --surface: #FFFFFF;
+  --surface-2: #E8EDF3;
+  --ink: #1A2230;
+  --muted: #5B6B80;
+  --line: #C7D0DD;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.12);
+  --accent: #2A6AD9;
+  --accent-ink: #FFFFFF;
+  --focus: #2A6AD9;
+  --want: #F5B942;
+  --want-ink: #3D2A00;
+  --been: #3FA15A;
+  --been-ink: #0B2E16;
+  --star: #D9930D;
+  --star-idle: #C7D0DD;
+  --danger-bg: #FDE8E8;
+  --danger-ink: #9B1C1C;
+  --danger-line: #F3B4B4;
+  --info-bg: #E3EEFF;
+  --info-ink: #1E3F7A;
+  --info-line: #B9CFF3;
+}
+
+[data-theme="xp"][data-mode="dark"] {
+  --bg: #141B26;
+  --surface: #1E293B;
+  --surface-2: #2A364C;
+  --ink: #E8EDF3;
+  --muted: #93A1B5;
+  --line: #334155;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --accent: #5B9BFF;
+  --accent-ink: #0A1420;
+  --focus: #5B9BFF;
+  --want: #F5B942;
+  --want-ink: #241A00;
+  --been: #4CC07A;
+  --been-ink: #062314;
+  --star: #F5B942;
+  --star-idle: #475569;
+  --danger-bg: #3A1A1E;
+  --danger-ink: #FFC9C9;
+  --danger-line: #7A2E35;
+  --info-bg: #16294D;
+  --info-ink: #C4D9FF;
+  --info-line: #2C4A80;
+}
