@@ -1,8 +1,14 @@
 # Base compose file — production defaults, variable names mirror
-# .env.dev / .env.sample. Used as: docker compose -f compose.yaml [-f compose.preprod.yaml] up -d --build
+# .env.dev / .env.sample. Used as:
+#   Preprod (isolated, own volume, Caddy network — see compose.preprod.yaml):
+#     docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml up -d --build
+#   Production (same pattern with your own env file / -p project name):
+#     docker compose --env-file .env.prod -p places -f compose.yaml up -d --build
 # Every value can be overridden with environment / .env file / -e.
 # SESSION_SECRET is required (no default) — the app refuses to boot in
 # production without it (see src/config.ts).
+# Behind a reverse proxy, also attach the shared proxy network like
+# compose.preprod.yaml does (networks: [default, caddy] with caddy_public external).
 
 name: places
 
@@ -26,7 +32,7 @@ services:
       DEV_LOGIN: "${DEV_LOGIN:-false}"
       TRUST_PROXY: "${TRUST_PROXY:-true}"
       GOOGLE_PLACES_KEY: "${GOOGLE_PLACES_KEY:-}"
-      APP_ORIGIN: "${APP_ORIGIN:-}"
+      APP_ORIGIN: "${APP_ORIGIN:-http://localhost:${PORT:-3000}}"
       OIDC_ISSUER: "${OIDC_ISSUER:-}"
       OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
       OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"

@@ -9,6 +9,8 @@ data
 .git
 .gitignore
 .env.dev
+.env.preprod
+.env.prod
 .env
 compose.preprod.yaml
 obs/
