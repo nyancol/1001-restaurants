@@ -3,6 +3,7 @@ import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import AddPage from "./pages/AddPage";
 import ListPage from "./pages/ListPage";
 import { getMe, UnauthorizedError } from "./lib/api";
+import ThemeSwitcher from "./theme/ThemeSwitcher";
 
 const MapPage = lazy(() => import("./pages/MapPage"));
 
@@ -37,8 +38,6 @@ export default function App() {
   const [devError, setDevError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Probe once: the GET probe only exists when DEV_LOGIN is enabled
-    // (404 otherwise), so the dev form never shows in production.
     let cancelled = false;
     fetch("/api/auth/dev-login", { credentials: "same-origin" })
       .then((res) => {
@@ -97,71 +96,72 @@ export default function App() {
   }
 
   if (!authChecked) {
-    return <div className="mx-auto max-w-xl px-4 py-10 text-sm text-slate-500">Loading…</div>;
+    return <div className="font-body mx-auto max-w-xl bg-bg px-4 py-10 text-sm text-muted">Loading…</div>;
   }
 
   if (unauthorized || !user) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold">Oyster</h1>
-        <p className="mt-2 text-sm text-slate-600">Log in to save and recall your places.</p>
-        <button
-          type="button"
-          onClick={goLogin}
-          className="mt-4 rounded bg-black px-5 py-2 text-sm font-medium text-white"
-        >
-          Log in
-        </button>
-        {devAvailable && (
-          <div className="mx-auto mt-8 max-w-xs rounded border border-dashed border-amber-400 bg-amber-50 p-4 text-left">
-            <p className="text-xs font-medium text-amber-800">Development only</p>
-            {devError && <p className="mt-1 text-xs text-red-700">{devError}</p>}
-            <div className="mt-2 flex gap-2">
-              <input
-                value={devUser}
-                onChange={(e) => setDevUser(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void devLogin();
-                }}
-                placeholder="dev username"
-                aria-label="dev username"
-                className="min-w-0 flex-1 rounded border px-2 py-1.5 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => void devLogin()}
-                disabled={devBusy}
-                className="shrink-0 rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-              >
-                {devBusy ? "…" : "Use dev user"}
-              </button>
+      <div className="font-body min-h-screen bg-bg text-ink">
+        <div className="mx-auto max-w-xl px-4 py-16 text-center">
+          <h1 className="font-display text-2xl font-bold">Oyster</h1>
+          <p className="mt-2 text-sm text-muted">Log in to save and recall your places.</p>
+          <button
+            type="button"
+            onClick={goLogin}
+            className="edge radius-input mt-4 border-accent bg-accent px-5 py-2 text-sm font-medium text-accent-ink"
+          >
+            Log in
+          </button>
+          {devAvailable && (
+            <div className="edge radius-card mx-auto mt-8 max-w-xs border-info-line bg-info-bg p-4 text-left">
+              <p className="text-xs font-medium text-info-ink">Development only</p>
+              {devError && <p className="mt-1 text-xs text-danger-ink">{devError}</p>}
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={devUser}
+                  onChange={(e) => setDevUser(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void devLogin();
+                  }}
+                  placeholder="dev username"
+                  aria-label="dev username"
+                  className="radius-input edge min-w-0 flex-1 border-line bg-surface px-2 py-1.5 text-sm text-ink"
+                />
+                <button
+                  type="button"
+                  onClick={() => void devLogin()}
+                  disabled={devBusy}
+                  className="radius-input edge shrink-0 border-accent bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-50"
+                >
+                  {devBusy ? "…" : "Use dev user"}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <header className="sticky top-0 z-10 border-b bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-2">
-          <nav className="flex gap-3 text-sm font-medium">
-            <Link to="/" className="rounded px-2 py-1 hover:bg-slate-100">
+    <div className="font-body min-h-screen bg-bg text-ink">
+      <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
+        <div className="mx-auto flex max-w-xl items-center justify-between gap-2 px-4 py-2">
+          <nav className="flex gap-2 text-sm font-medium sm:gap-3">
+            <Link to="/" className="radius-input px-2 py-1 hover:bg-surface-2">
               My places
             </Link>
-            <Link to="/map" className="rounded px-2 py-1 hover:bg-slate-100">
+            <Link to="/map" className="radius-input px-2 py-1 hover:bg-surface-2">
               Map
             </Link>
-            <Link to="/add" className="rounded bg-black px-3 py-1 text-white">
+            <Link to="/add" className="edge radius-input border-accent bg-accent px-3 py-1 text-accent-ink">
               + Add
             </Link>
           </nav>
           <div className="flex items-center gap-2 text-sm">
-            <span className="hidden max-w-32 truncate text-slate-500 sm:inline">
-              {user.displayName ?? "me"}
-            </span>
-            <button type="button" onClick={logout} className="rounded border px-2 py-1 text-xs">
+            <ThemeSwitcher />
+            <span className="hidden max-w-32 truncate text-muted sm:inline">{user.displayName ?? "me"}</span>
+            <button type="button" onClick={logout} className="edge radius-input border-line bg-surface px-2 py-1 text-xs">
               Logout
             </button>
           </div>
@@ -173,7 +173,7 @@ export default function App() {
           <Route
             path="/map"
             element={
-              <Suspense fallback={<div className="mx-auto max-w-xl px-4 py-10 text-sm text-slate-500">Loading map…</div>}>
+              <Suspense fallback={<div className="mx-auto max-w-xl px-4 py-10 text-sm text-muted">Loading map…</div>}>
                 <MapPage onUnauthorized={() => setUnauthorized(true)} />
               </Suspense>
             }

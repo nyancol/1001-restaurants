@@ -51,15 +51,12 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
         lat,
         lng,
       };
-      // Duplicate googlePlaceId per owner → update-confirm, no silent fork.
       if (googlePlaceId) {
         try {
           const mine = await listPlaces({ owner: "me" });
           const existing = mine.find((p) => p.googlePlaceId === googlePlaceId);
           if (existing) {
-            const ok = window.confirm(
-              `You already saved “${existing.name}”. Update it instead of creating a duplicate?`
-            );
+            const ok = window.confirm(`You already saved “${existing.name}”. Update it instead of creating a duplicate?`);
             if (!ok) {
               setSaving(false);
               return;
@@ -71,13 +68,11 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
           }
         } catch (e: any) {
           if (e instanceof UnauthorizedError) throw e;
-          // Fall through to POST; server also guards duplicates.
         }
       }
       try {
         await createPlace(payload);
       } catch (e: any) {
-        // Server-side duplicate guard returns 200-updated or 409 with existing id.
         if (e?.status === 409 && e?.body?.existingId) {
           const ok = window.confirm("You already saved this place. Update it instead?");
           if (ok) {
@@ -103,34 +98,34 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
   }
 
   return (
-    <div className="mx-auto max-w-xl px-4 pb-28 pt-4">
-      <h1 className="mb-4 text-xl font-bold">Add a place</h1>
-      {error && <div className="mb-3 rounded bg-red-100 px-3 py-2 text-sm text-red-800">{error}</div>}
-      {info && <div className="mb-3 rounded bg-blue-100 px-3 py-2 text-sm text-blue-800">{info}</div>}
+    <div className="mx-auto max-w-xl bg-bg px-4 pb-28 pt-4">
+      <h1 className="font-display mb-4 text-xl font-bold text-ink">Add a place</h1>
+      {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
+      {info && <div className="edge radius-input mb-3 border-info-line bg-info-bg px-3 py-2 text-sm text-info-ink">{info}</div>}
       <div className="flex flex-col gap-4">
         <LookupField text={lookupText} onTextChange={(t) => { setLookupText(t); if (!name || t === "") setName(t); }} onPick={handlePick} />
         <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="name">Name *</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="name">Name *</label>
           <input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded border px-3 py-2"
+            className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
             placeholder="Place name"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="address">Address</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="address">Address</label>
           <input
             id="address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="w-full rounded border px-3 py-2"
+            className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
             placeholder="Address (prefilled from lookup)"
           />
         </div>
         <div>
-          <span className="block text-sm font-medium mb-1">Status</span>
+          <span className="mb-1 block text-sm font-medium text-ink">Status</span>
           <div className="flex gap-2" role="radiogroup" aria-label="status">
             {(["WANT_TO_GO", "BEEN_TO"] as const).map((s) => (
               <button
@@ -139,7 +134,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
                 role="radio"
                 aria-checked={status === s}
                 onClick={() => setStatus(s)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium ${status === s ? "bg-black text-white" : "bg-slate-200 text-slate-800"}`}
+                className={`edge radius-pill px-4 py-1.5 text-sm font-medium ${status === s ? "border-accent bg-accent text-accent-ink" : "border-line bg-surface-2 text-ink"}`}
               >
                 {s === "WANT_TO_GO" ? "Want to go" : "Been to"}
               </button>
@@ -149,23 +144,23 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
         <TagCombobox value={tags} onChange={setTags} />
         <Stars value={rating} onChange={setRating} />
         <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="note">Note</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="note">Note</label>
           <textarea
             id="note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full rounded border px-3 py-2"
+            className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
             rows={3}
             placeholder="A note…"
           />
         </div>
       </div>
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white/95 p-3 backdrop-blur">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-line bg-surface/95 p-3 backdrop-blur">
         <div className="mx-auto flex max-w-xl gap-2">
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="rounded border px-4 py-2 text-sm"
+            className="edge radius-input border-line bg-surface px-4 py-2 text-sm text-ink"
             disabled={saving}
           >
             Cancel
@@ -174,7 +169,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="edge radius-input flex-1 border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-ink disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save place"}
           </button>
