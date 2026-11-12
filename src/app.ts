@@ -7,6 +7,14 @@ import { fileURLToPath } from "node:url";
 import { discoverOidc, registerAuthRoutes } from "./auth/routes.js";
 import { registerDevLoginRoute } from "./auth/dev-routes.js";
 import { sessionCookieName, verifySession } from "./auth/session.js";
+import {
+  getBearerToken,
+  hasScope,
+  isPlacesPath,
+  requiredScopeForPlaces,
+  verifyPlacesBearer,
+  type KeyResolver,
+} from "./auth/places-bearer.js";
 import { type AppConfig } from "./config.js";
 import { dbHealth, openDb, runMigrations } from "./db/index.js";
 import { registerGoogleRoutes, type GoogleFetch } from "./google/routes.js";
@@ -34,6 +42,7 @@ export interface BuildOptions {
   config: AppConfig;
   googleFetch?: GoogleFetch;
   skipOidcDiscovery?: boolean;
+  placesKeyResolver?: KeyResolver;
 }
 
 export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstance; oidcFailed?: Error }> {
@@ -57,10 +66,33 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   });
 
   // Session guard: all /api/* require session except allowlist.
+  // M2M Bearer (Pocket ID client-credentials) is accepted on /api/places* only.
   app.addHook("onRequest", async (req, reply) => {
     const urlPath = req.url.split("?")[0];
     if (!urlPath.startsWith("/api/")) return;
     if (isPublic(urlPath)) return;
+    const bearer = getBearerToken(req.headers.authorization);
+    if (bearer && isPlacesPath(urlPath)) {
+      const required = requiredScopeForPlaces(req.method, urlPath);
+      let principal: any;
+      try {
+        const issuer = config.oidcIssuer ?? "";
+        principal = await verifyPlacesBearer(bearer, {
+          resource: (config as any).placesApiResource ?? "",
+          issuer,
+          jwksUrl: issuer ? `${issuer.replace(/\/+$/, "")}/.well-known/jwks.json` : "",
+          resolveKey: opts.placesKeyResolver,
+        });
+      } catch (err: any) {
+        return reply.code(err?.code === 403 ? 403 : 401).send({ error: "unauthorized" });
+      }
+      if (required === null) return reply.code(403).send({ error: "forbidden" });
+      if (required && !hasScope(principal.scopes, required)) {
+        return reply.code(403).send({ error: "forbidden" });
+      }
+      (req as any).servicePrincipal = principal;
+      return;
+    }
     const token = req.cookies?.[sessionCookieName()];
     const userId = token ? await verifySession(config.sessionSecret, token) : null;
     if (!userId) return reply.code(401).send({ error: "unauthorized" });
@@ -94,7 +126,7 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
     app.log.warn("DEV_LOGIN enabled — POST /api/auth/dev-login mints test sessions. Never enable in production.");
     registerDevLoginRoute(app, { config, db });
   }
-  registerPlaceRoutes(app, { db });
+  registerPlaceRoutes(app, { db, config, googleFetch: opts.googleFetch });
   registerUserRoutes(app, { db });
   registerPlaceTypeRoutes(app, { db });
   registerTagRoutes(app, { db });

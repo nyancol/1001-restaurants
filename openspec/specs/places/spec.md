@@ -67,7 +67,7 @@ The system SHALL require `placeType` on create, accept it on patch by the owner,
 - **THEN** the system persists the normalized value and updated timestamp
 
 ### Requirement: Google enrichment snapshot
-The system SHALL persist the Google snapshot fields sent at save (`hoursJson` with periods plus weekday descriptions, `businessStatus`, `priceLevel`, `priceRange`, `googleRating`, `googleRatingCount`, `websiteUri`, `mapsLinks`, `googlePlaceId`, `address`, `lat`, `lng`) without live revalidation, and return them on read.
+The system SHALL persist the Google snapshot fields sent at save (`hoursJson` with periods plus weekday descriptions, `businessStatus`, `priceLevel`, `priceRange`, `googleRating`, `googleRatingCount`, `websiteUri`, `mapsLinks`, `googlePlaceId`, `address`, `lat`, `lng`) without live revalidation on read, and refresh them only via explicit save or `POST /api/places/:id/refresh`, which rewrites pure-snapshot columns and bumps `updatedAt`.
 
 #### Scenario: Snapshot stored at create
 - **WHEN** a place is created with hours periods and Google rating `4.3 (1200)`
@@ -76,6 +76,14 @@ The system SHALL persist the Google snapshot fields sent at save (`hoursJson` wi
 #### Scenario: Snapshot updated only on explicit save
 - **WHEN** a place is read days later
 - **THEN** the system returns the stored snapshot unchanged without calling Google
+
+#### Scenario: Snapshot refreshed via refresh endpoint
+- **WHEN** `POST /api/places/:id/refresh` succeeds for a row with a stored `googlePlaceId`
+- **THEN** the system replaces pure-snapshot columns with fresh Google values, bumps `updatedAt`, and leaves user fields unchanged
+
+#### Scenario: Refresh without Google id rejected
+- **WHEN** refresh is posted for a place with no stored `googlePlaceId`
+- **THEN** the system responds `422` and changes nothing
 
 ### Requirement: Open-state inference and filtering
 The system SHALL infer open or closed from snapshotted hours periods for a given datetime, and list filtering SHALL support `placeType` plus `openAt` (ISO datetime, default now when the open filter is enabled); places with unknown hours SHALL be excluded whenever the open filter is active, and places with `businessStatus` closed (temporary or permanent) SHALL be excluded from open-filtered results.

@@ -115,8 +115,62 @@ function validatePlaceInput(body: any, isPatch: boolean): { error?: string; valu
   return { value: v };
 }
 
-export function registerPlaceRoutes(app: FastifyInstance, deps: { db: any }) {
-  const { db } = deps;
+export const REFRESH_SNAPSHOT_FIELDS = [
+  "hoursJson",
+  "businessStatus",
+  "priceLevel",
+  "priceRangeJson",
+  "googleRating",
+  "googleRatingCount",
+  "websiteUri",
+  "mapsLinksJson",
+  "utcOffsetMinutes",
+] as const;
+
+export const REFRESH_DETAILS_MASK = [
+  "id",
+  "businessStatus",
+  "googleMapsUri",
+  "googleMapsLinks",
+  "regularOpeningHours",
+  "currentOpeningHours",
+  "priceLevel",
+  "priceRange",
+  "rating",
+  "userRatingCount",
+  "websiteUri",
+  "utcOffsetMinutes",
+].join(",");
+
+type GoogleFetch = typeof fetch;
+
+/** Map a Places API (New) Place payload to snapshot-only columns. */
+export function mapGoogleDetailsToSnapshot(body: any): Record<string, any> {
+  const hours = body?.regularOpeningHours ?? body?.currentOpeningHours ?? null;
+  const mapsLinks = body?.googleMapsLinks ?? null;
+  const priceRange = body?.priceRange ?? null;
+  return {
+    hoursJson: hours ? JSON.stringify({
+      periods: hours.periods ?? [],
+      weekdayDescriptions: hours.weekdayDescriptions ?? [],
+    }) : null,
+    businessStatus: body?.businessStatus ?? null,
+    priceLevel: body?.priceLevel ?? null,
+    priceRangeJson: priceRange ? JSON.stringify(priceRange) : null,
+    googleRating: typeof body?.rating === "number" ? body.rating : null,
+    googleRatingCount: typeof body?.userRatingCount === "number" ? body.userRatingCount : null,
+    websiteUri: body?.websiteUri ?? null,
+    mapsLinksJson: mapsLinks ? JSON.stringify(mapsLinks) : null,
+    utcOffsetMinutes: typeof body?.utcOffsetMinutes === "number" ? body.utcOffsetMinutes : null,
+  };
+}
+
+export function registerPlaceRoutes(
+  app: FastifyInstance,
+  deps: { db: any; config?: any; googleFetch?: GoogleFetch },
+) {
+  const { db, config, googleFetch } = deps;
+  const gfetch: GoogleFetch = googleFetch ?? fetch;
 
   app.post("/api/places", {
     schema: {
@@ -138,6 +192,7 @@ export function registerPlaceRoutes(app: FastifyInstance, deps: { db: any }) {
       },
     },
   }, async (req, reply) => {
+    if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
     const userId = (req as any).userId as string;
     const { error, value } = validatePlaceInput(req.body ?? {}, false);
     if (error) return reply.code(400).send({ error });
@@ -210,13 +265,16 @@ export function registerPlaceRoutes(app: FastifyInstance, deps: { db: any }) {
       },
     },
   }, async (req) => {
-    const userId = (req as any).userId as string;
+    const userId = (req as any).userId as string | undefined;
+    const servicePrincipal = (req as any).servicePrincipal as { scopes: string[] } | undefined;
     const q = req.query as any;
     const owner: string = q.owner ?? "me";
     const rows = await db.select().from(places).orderBy(desc(places.updatedAt));
     const names = await ownerNameMap(db);
     let filtered: ReturnType<typeof toPlace>[] = rows.map((r: any) => toPlace(r, names.get(r.ownerId) ?? null));
-    if (owner === "me") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === userId);
+    if (servicePrincipal) {
+      if (owner !== "all" && owner !== "me") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === owner);
+    } else if (owner === "me") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === userId);
     else if (owner !== "all") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === owner);
     if (q.status) filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.status === q.status);
     if (q.placeType) {
@@ -257,7 +315,50 @@ export function registerPlaceRoutes(app: FastifyInstance, deps: { db: any }) {
     return toPlace(rows[0], names.get(rows[0].ownerId) ?? null);
   });
 
+  app.post("/api/places/:id/refresh", async (req, reply) => {
+    const servicePrincipal = (req as any).servicePrincipal as { scopes: string[] } | undefined;
+    const userId = (req as any).userId as string | undefined;
+    const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
+    if (!rows.length) return reply.code(404).send({ error: "not_found" });
+    if (servicePrincipal) {
+      if (!servicePrincipal.scopes.includes("refresh:places")) {
+        return reply.code(403).send({ error: "forbidden" });
+      }
+    } else {
+      if (!userId || rows[0].ownerId !== userId) return reply.code(403).send({ error: "forbidden" });
+    }
+    const googlePlaceId = (rows[0] as any).googlePlaceId as string | null;
+    if (!googlePlaceId) return reply.code(422).send({ error: "missing_google_id" });
+    if (!config?.googlePlacesKey) return reply.code(503).send({ error: "google_not_configured" });
+    let details: any;
+    try {
+      const res = await gfetch(
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}`,
+        {
+          headers: {
+            "X-Goog-Api-Key": config.googlePlacesKey,
+            "X-Goog-FieldMask": REFRESH_DETAILS_MASK,
+          },
+          signal: AbortSignal.timeout(10_000),
+        },
+      );
+      if (res.status === 429) return reply.code(429).send({ error: "google_rate_limited" });
+      if (!res.ok) return reply.code(502).send({ error: "google_unavailable" });
+      details = await res.json();
+    } catch {
+      return reply.code(502).send({ error: "google_unavailable" });
+    }
+    const snapshot = mapGoogleDetailsToSnapshot(details);
+    const patch: any = { updatedAt: Date.now() };
+    for (const k of REFRESH_SNAPSHOT_FIELDS) patch[k] = (snapshot as any)[k];
+    await db.update(places).set(patch).where(eq(places.id, rows[0].id));
+    const updated = await db.select().from(places).where(eq(places.id, rows[0].id)).limit(1);
+    const names = await ownerNameMap(db);
+    return toPlace(updated[0], names.get(updated[0].ownerId) ?? null);
+  });
+
   app.patch("/api/places/:id", async (req, reply) => {
+    if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
     const userId = (req as any).userId as string;
     const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
     if (!rows.length) return reply.code(404).send({ error: "not_found" });
@@ -277,6 +378,7 @@ export function registerPlaceRoutes(app: FastifyInstance, deps: { db: any }) {
   });
 
   app.delete("/api/places/:id", async (req, reply) => {
+    if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
     const userId = (req as any).userId as string;
     const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
     if (!rows.length) return reply.code(404).send({ error: "not_found" });

@@ -13,6 +13,7 @@ export interface AppConfig {
   oidcRedirectUri: string;
   oidcEnabled: boolean;
   googlePlacesKey: string;
+  placesApiResource: string;
   trustProxy: boolean;
 }
 
@@ -39,6 +40,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const appOrigin = appOriginRaw.replace(/\/+$/, "");
   const oidcRedirectUri = env.OIDC_REDIRECT_URI?.trim() || `${appOrigin}/api/auth/callback`;
   const oidcEnabled = Boolean(oidcIssuer && oidcClientId);
+  const placesApiResource = (env.PLACES_API_RESOURCE ?? "").trim().replace(/\/+$/, "");
 
   // Fail fast on malformed public origin / OIDC values.
   if (env.OIDC_ISSUER !== undefined && env.OIDC_ISSUER.trim() !== "") {
@@ -71,6 +73,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       `Invalid OIDC config: OIDC_REDIRECT_URI is not a valid URL ("${oidcRedirectUri}").`
     );
   }
+  if (placesApiResource) {
+    try {
+      const u = new URL(placesApiResource);
+      if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
+    } catch {
+      throw new Error(
+        `Invalid Places API config: PLACES_API_RESOURCE is not a valid URL ("${placesApiResource}").`
+      );
+    }
+    if (!oidcIssuer) {
+      throw new Error(
+        "Invalid Places API config: OIDC_ISSUER is required when PLACES_API_RESOURCE is set."
+      );
+    }
+  }
 
   // Dev-only stub login: double-gated — explicit opt-in AND non-production.
   // The route is not registered at all unless this is true.
@@ -93,6 +110,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     oidcRedirectUri,
     oidcEnabled,
     googlePlacesKey: env.GOOGLE_PLACES_KEY?.trim() ?? "",
+    placesApiResource,
     trustProxy: (env.TRUST_PROXY ?? "true") === "true",
   };
 }
