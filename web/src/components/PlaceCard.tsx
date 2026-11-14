@@ -215,11 +215,11 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
         )}
       </dl>
 
-      {p.tags.length > 0 && (
+      {(p.tags ?? []).length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
-          {p.tags.map((t) => (
-            <span key={t} className="edge radius-pill border-line bg-surface-2 px-2 py-0.5 text-xs text-ink">
-              #{t}
+          {(p.tags ?? []).map((tag) => (
+            <span key={tag} className="edge radius-pill border-line bg-surface-2 px-2 py-0.5 text-xs text-ink">
+              #{tag}
             </span>
           ))}
         </div>

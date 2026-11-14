@@ -155,10 +155,10 @@ function Combobox({ value, onChange, allowCreate, showSelected }: { value: strin
       <label className="mb-1 block text-sm font-medium text-ink" htmlFor="tag-input">{t["tags.label"]}</label>
       {showSelected && (
       <div className="mb-1 flex flex-wrap gap-1">
-        {value.map((t) => (
-          <span key={t} className="edge radius-pill inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-sm text-ink">
-            {t}
-            <button type="button" aria-label={t["tags.removeTag"](t)} className="text-muted hover:text-ink" onClick={() => removeTag(t)}>
+        {value.map((tag) => (
+          <span key={tag} className="edge radius-pill inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-sm text-ink">
+            {tag}
+            <button type="button" aria-label={t["tags.removeTag"](tag)} className="text-muted hover:text-ink" onClick={() => removeTag(tag)}>
               ×
             </button>
           </span>

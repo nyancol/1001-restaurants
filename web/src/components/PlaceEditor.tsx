@@ -14,7 +14,7 @@ interface Props {
 
 export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Props) {
   const { t } = useLanguage();
-  const [tags, setTags] = useState<string[]>(p.tags);
+  const [tags, setTags] = useState<string[]>(p.tags ?? []);
   const [rating, setRating] = useState<number | null>(p.rating);
   const [note, setNote] = useState(p.note ?? "");
   const [placeType, setPlaceType] = useState(p.placeType ?? "restaurant");

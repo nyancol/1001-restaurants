@@ -60,3 +60,19 @@ describe("TagCombobox filter-list variant", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+describe("TagCombobox edit variant", () => {
+  beforeEach(() => vi.resetAllMocks());
+  afterEach(() => cleanup());
+
+  it("renders selected tags with working remove buttons (regression: no black screen)", async () => {
+    (api.getTags as any).mockResolvedValue([]);
+    const onChange = vi.fn();
+    renderEn(<TagCombobox value={["japonais", "bistrot"]} onChange={onChange} />);
+    // Both selected tags render with localized remove labels.
+    const removeBistrot = await screen.findByRole("button", { name: "remove bistrot" });
+    expect(screen.getByText("japonais")).toBeTruthy();
+    fireEvent.click(removeBistrot);
+    expect(onChange).toHaveBeenCalledWith(["japonais"]);
+  });
+});
