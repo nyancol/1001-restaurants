@@ -1,5 +1,5 @@
-/** Fixed place-type vocabulary: restaurant, bar, café. */
-export const PLACE_TYPES = ["restaurant", "bar", "café"] as const;
+/** Fixed place-type vocabulary: restaurant, bar, café, bakery. */
+export const PLACE_TYPES = ["restaurant", "bar", "café", "bakery"] as const;
 export type PlaceType = (typeof PLACE_TYPES)[number];
 
 const ALIASES: Record<string, PlaceType> = {
@@ -11,6 +11,9 @@ const ALIASES: Record<string, PlaceType> = {
   cafe: "café",
   coffee: "café",
   "coffee shop": "café",
+  bakery: "bakery",
+  bakeries: "bakery",
+  boulangerie: "bakery",
 };
 
 /** Normalize a place type to the fixed vocabulary (accepts cafe/coffee aliases). */
@@ -30,6 +33,7 @@ export function defaultLookFor(label: string): { color: string; icon: string } {
   if (label === "restaurant") return { color: "#D64545", icon: "fork" };
   if (label === "café") return { color: "#8B5E34", icon: "cup" };
   if (label === "bar") return { color: "#7C5CBF", icon: "glass" };
+  if (label === "bakery") return { color: "#D9932B", icon: "bread" };
   return { color: "#666666", icon: "dot" };
 }
 

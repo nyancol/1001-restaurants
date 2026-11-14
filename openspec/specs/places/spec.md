@@ -7,7 +7,7 @@ Stores each user's personal restaurant/bar/cafe memory (status, tags, rating, no
 ## Requirements
 
 ### Requirement: Place CRUD with ownership
-The system SHALL store places with Google link fields, status, placeType, tags, rating, note, snapshotted Google enrichment (hours, businessStatus, priceLevel, priceRange, Google rating and count, website, Maps links), `ownerId`, and `ownerDisplayName` on read, forcing `ownerId` to the authenticated user on create. Listing SHALL support `owner=me|all|<userId>` with `owner=all` returning every user's places.
+The system SHALL store places with Google link fields, status, placeType, tags, rating, note, snapshotted Google enrichment (hours, businessStatus, priceLevel, priceRange, Google rating and count, website, Maps links), `ownerId`, and `ownerDisplayName` on read, forcing `ownerId` to the authenticated user on create. Listing SHALL support `owner=me|all|<userId>` with `owner=all` returning every user's places. Owner `DELETE` SHALL permanently remove the owned place.
 
 #### Scenario: Create own place
 - **WHEN** an authenticated user posts a valid place payload
@@ -32,6 +32,10 @@ The system SHALL store places with Google link fields, status, placeType, tags, 
 #### Scenario: Default list is own places
 - **WHEN** an authenticated user lists places without an owner filter
 - **THEN** the system returns only places owned by that user
+
+#### Scenario: Delete own place
+- **WHEN** the owner sends `DELETE /api/places/:id` for a place they own
+- **THEN** the system permanently deletes that row and returns `{ok:true}`, and subsequent reads no longer return it
 
 ### Requirement: Status toggle replaces Pending/Approved tags
 The system SHALL expose `status` as `WANT_TO_GO` or `BEEN_TO`, defaulting to `WANT_TO_GO` on create.

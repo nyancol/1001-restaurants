@@ -4,6 +4,7 @@ export const TYPE_COLORS: Record<string, string> = {
   restaurant: "#D64545",
   "café": "#8B5E34",
   bar: "#7C5CBF",
+  bakery: "#D9932B",
 };
 
 const FALLBACK = ["#2E7CF6", "#3FA15A", "#D9932B", "#4FA3A3", "#C86AA0"];
@@ -20,12 +21,14 @@ export const TYPE_EMOJI: Record<string, string> = {
   restaurant: "🍴",
   "café": "☕",
   bar: "🍸",
+  bakery: "🥖",
 };
 
 const TYPE_LETTERS: Record<string, string> = {
   restaurant: "R",
   "café": "C",
   bar: "B",
+  bakery: "P",
 };
 
 export function emojiFor(type: string): string {
@@ -52,7 +55,7 @@ function dropSvg(fill: string, letter: string): string {
 const ADDED = new Set<string>();
 
 export function knownTypes(): string[] {
-  return ["restaurant", "café", "bar"];
+  return ["restaurant", "café", "bar", "bakery"];
 }
 
 async function addImage(map: any, mode: string, name: string, url: string): Promise<void> {

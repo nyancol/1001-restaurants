@@ -7,12 +7,14 @@ import ViewToggle from "../components/ViewToggle";
 import { usePlaceFilters } from "../lib/usePlaceFilters";
 import { usePlaces } from "../lib/usePlaces";
 import { displayNameFor, useUsers } from "../lib/useUsers";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void }) {
   const { owner, setOwner, statusParam, tagsParam, qParam, placeTypeParam, openAtParam, openNowParam, status, setStatus, tags, setTags, q, setQ, placeType, setPlaceType, openEnabled, setOpenEnabled, openAt, setOpenAt } = usePlaceFilters();
   const { me, users } = useUsers();
+  const { t } = useLanguage();
 
-  const { places, loading, error, setError, flipStatus, saveEdit, refreshOne, refreshingIds } = usePlaces(
+  const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds } = usePlaces(
     { owner, status: statusParam, placeType: placeTypeParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam },
     onUnauthorized,
   );
@@ -22,15 +24,15 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
   const locatedCount = places.filter((p) => p.lat != null && p.lng != null).length;
   const unlocatedCount = places.length - locatedCount;
   const readOnly = owner !== "me";
-  const scopeName = owner === "me" ? "Me" : owner === "all" ? "Everyone" : (displayNameFor(owner, me, users) ?? "User");
+  const scopeName = owner === "me" ? t["scope.me"] : owner === "all" ? t["scope.everyone"] : (displayNameFor(owner, me, users) ?? t["scope.userFallback"]);
 
   return (
     <div className="mx-auto max-w-xl bg-bg px-4 pb-16 pt-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-display text-xl font-bold text-ink">Map · Viewing {scopeName}</h1>
+        <h1 className="font-display text-xl font-bold text-ink">{t["scope.viewingMap"](scopeName)}</h1>
         {!loading && (
           <p className="text-xs text-muted" aria-live="polite">
-            {locatedCount} shown{unlocatedCount > 0 ? ` · ${unlocatedCount} without location hidden` : ""}{readOnly ? " · read-only" : ""}
+            {t["scope.mapSummary"](locatedCount, unlocatedCount, readOnly)}
           </p>
         )}
       </div>
@@ -43,7 +45,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
           to="/add"
           className="edge radius-input mb-3 inline-flex min-h-[48px] w-full items-center justify-center border-accent bg-accent text-sm font-medium text-accent-ink"
         >
-          + Add a place
+          {t["action.addPlacePlus"]}
         </Link>
       )}
       <div className="mb-4">
@@ -56,7 +58,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
       )}
       {!loading && unlocatedCount > 0 && (
         <div className="edge radius-input mb-3 border-line bg-surface-2 px-3 py-2 text-xs text-muted">
-          {unlocatedCount} place{unlocatedCount > 1 ? "s" : ""} without location hidden from the map.
+          {t["map.unlocatedHidden"](unlocatedCount)}
         </div>
       )}
 
@@ -66,6 +68,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
         onError={setError}
         onFlipStatus={(p) => void flipStatus(p)}
         onSaveEdit={saveEdit}
+        onDelete={deleteOne}
         onRefresh={(p) => refreshOne(p)}
         refreshingIds={refreshingIds}
         selectedId={selectedId}

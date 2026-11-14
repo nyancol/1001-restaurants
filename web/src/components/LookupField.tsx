@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { apiFetch, parseAutocomplete, parseDetails, type PlaceDetails } from "../lib/api";
+import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
   text: string;
@@ -12,6 +13,7 @@ interface Props {
 const cache = new Map<string, { placeId: string; text: string; secondary?: string }[]>();
 
 export default function LookupField({ text, onTextChange, onPick }: Props) {
+  const { t } = useLanguage();
   const [suggestions, setSuggestions] = useState<{ placeId: string; text: string; secondary?: string }[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
   async function search() {
     const q = text.trim();
     if (q.length < 2) {
-      setError("Type at least 2 characters, then Search.");
+      setError(t["lookup.minChars"]);
       return;
     }
     setError(null);
@@ -42,13 +44,13 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
       setOpen(true);
       setSearched(true);
       setUnavailable(false);
-      if (parsed.length === 0) setError("No matches — adjust your search or save manually below.");
+      if (parsed.length === 0) setError(t["lookup.noMatches"]);
     } catch (err: any) {
       if (err?.status === 503) {
         setUnavailable(true);
         setSuggestions([]);
       } else if (err?.name !== "UnauthorizedError") {
-        setError("Lookup failed — you can still save manually below.");
+        setError(t["lookup.failed"]);
       }
     } finally {
       setLoading(false);
@@ -62,7 +64,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
       const body = await apiFetch(`/api/google/details?placeId=${encodeURIComponent(placeId)}`);
       onPick(parseDetails(body, placeId, label));
     } catch {
-      setError("Details unavailable — kept your text, you can save without coordinates.");
+      setError(t["lookup.detailsFailed"]);
       onPick({ googlePlaceId: placeId, name: label, address: null, lat: null, lng: null });
     }
   }
@@ -70,7 +72,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
   return (
     <div className="relative">
       <label className="mb-1 block text-sm font-medium text-ink" htmlFor="lookup">
-        Name lookup
+        {t["lookup.label"]}
       </label>
       <div className="flex gap-2">
         <input
@@ -88,7 +90,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
               setOpen(false);
             }
           }}
-          placeholder="Type a name, then Search"
+          placeholder={t["lookup.placeholder"]}
           autoComplete="off"
           className="edge radius-input min-w-0 flex-1 border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
         />
@@ -98,12 +100,12 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
           disabled={loading || text.trim().length < 2}
           className="edge radius-input shrink-0 border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-ink disabled:opacity-40"
         >
-          {loading ? "…" : "Search"}
+          {loading ? "…" : t["lookup.search"]}
         </button>
       </div>
-      {loading && <div className="mt-1 text-sm text-muted">Searching…</div>}
+      {loading && <div className="mt-1 text-sm text-muted">{t["lookup.searching"]}</div>}
       {unavailable && (
-        <div className="mt-1 text-sm text-want-ink">Google lookup is not configured — manual entry below works fine.</div>
+        <div className="mt-1 text-sm text-want-ink">{t["lookup.unavailable"]}</div>
       )}
       {error && <div className="mt-1 text-sm text-want-ink">{error}</div>}
       {open && searched && suggestions.length > 0 && (

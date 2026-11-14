@@ -1,5 +1,6 @@
 import { getMe, listUsers, type DirectoryUser } from "../lib/api";
 import { useEffect, useState } from "react";
+import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
   owner: string;
@@ -12,6 +13,7 @@ interface Props {
  * so the same owner scope drives the shared list-equals-pins fetch.
  */
 export default function OwnerPicker({ owner, setOwner }: Props) {
+  const { t } = useLanguage();
   const [users, setUsers] = useState<DirectoryUser[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
   const [meName, setMeName] = useState<string | null>(null);
@@ -49,23 +51,23 @@ export default function OwnerPicker({ owner, setOwner }: Props) {
 
   return (
     <label className="flex flex-col gap-1 text-xs text-muted">
-      Users
+      {t["owner.label"]}
       <select
-        aria-label="Users scope"
+        aria-label={t["owner.scopeAria"]}
         value={selectValue}
         onChange={(e) => setOwner(e.target.value)}
         disabled={loading && users.length === 0}
         className="edge radius-input min-h-[44px] w-full border-line bg-bg px-2 text-sm text-ink"
       >
-        <option value="me">Me{meName ? ` (${meName})` : ""}</option>
+        <option value="me">{t["owner.meWithName"](meName)}</option>
         {others.map((u) => (
           <option key={u.id} value={u.id}>
             {u.displayName ?? u.id} ({u.placeCount})
           </option>
         ))}
-        {selectValue === "all" && <option value="all">Everyone (legacy)</option>}
+        {selectValue === "all" && <option value="all">{t["owner.everyoneLegacy"]}</option>}
         {!isKnown && selectValue !== "all" && (
-          <option value={selectValue}>Unknown user ({selectValue.slice(0, 8)})</option>
+          <option value={selectValue}>{t["owner.unknownUser"](selectValue)}</option>
         )}
       </select>
     </label>

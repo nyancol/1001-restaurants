@@ -6,14 +6,15 @@ import PlaceEditor from "./PlaceEditor";
 import type { Place } from "../lib/api";
 import { ensurePinImages } from "../theme/pins";
 import { useTheme } from "../theme/ThemeContext";
+import { useLanguage } from "../i18n/LanguageContext";
 import { useMediaQuery } from "../lib/useMediaQuery";
 
 const PARIS = { lng: 2.3522, lat: 48.8566, zoom: 11.5 };
 const USER_ZOOM = 14;
 const GEO_OPTIONS: PositionOptions = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
 const USER_DOT = "#2E7CF6";
-const GEO_FALLBACK_NOTE = "Location unavailable — showing Paris.";
-const GEO_STAY_NOTE = "Location unavailable — staying put.";
+const GEO_FALLBACK_KEY = "map.geoFallback" as const;
+const GEO_STAY_KEY = "map.geoStay" as const;
 
 type UserPos = { lng: number; lat: number; accuracy: number };
 
@@ -67,6 +68,7 @@ interface MapViewProps {
   onError: (msg: string) => void;
   onFlipStatus: (p: Place) => void;
   onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) => Promise<void>;
+  onDelete?: (p: Place) => Promise<void> | void;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshingIds?: string[];
   selectedId: string | null;
@@ -88,6 +90,7 @@ export default function MapView({
   onError,
   onFlipStatus,
   onSaveEdit,
+  onDelete,
   onRefresh,
   refreshingIds,
   selectedId,
@@ -97,6 +100,7 @@ export default function MapView({
   readOnly,
 }: MapViewProps) {
   const { mode } = useTheme();
+  const { t } = useLanguage();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -163,7 +167,7 @@ export default function MapView({
           pendingUserRef.current = next;
         }
       } catch {
-        onGeoNote?.(opts?.auto ? GEO_FALLBACK_NOTE : GEO_STAY_NOTE);
+        onGeoNote?.(opts?.auto ? t[GEO_FALLBACK_KEY] : t[GEO_STAY_KEY]);
       } finally {
         locatingRef.current = false;
         setLocating(false);
@@ -192,13 +196,13 @@ export default function MapView({
         zoom: PARIS.zoom,
       });
     } catch (err: any) {
-      errorRef.current(`Map failed to start: ${err?.message ?? err} — this browser may lack WebGL2.`);
+      errorRef.current(t["map.failedToStart"](String(err?.message ?? err)));
       return;
     }
     map.addControl(new NavigationControl(), "top-right");
     map.on("error", (e: any) => {
       const msg = e?.error?.message ?? "map error";
-      errorRef.current(`Map error: ${msg} — check connection/tiles, then reload.`);
+      errorRef.current(t["map.error"](msg));
     });
     mapRef.current = map;
 
@@ -272,7 +276,7 @@ export default function MapView({
             source: "places",
             filter: ["!", ["has", "point_count"]],
             layout: {
-              "icon-image": ["match", ["get", "placeType"], "bar", "drop-bar", "café", "drop-café", "restaurant", "drop-restaurant", "drop-generic"],
+              "icon-image": ["match", ["get", "placeType"], "bar", "drop-bar", "café", "drop-café", "restaurant", "drop-restaurant", "bakery", "drop-bakery", "drop-generic"],
               "icon-anchor": "bottom",
               "icon-size": 1,
               "icon-allow-overlap": true,
@@ -323,7 +327,7 @@ export default function MapView({
           mapReadyRef.current = true;
           setMapReady(true);
         } catch (err: any) {
-          errorRef.current(`Map setup failed: ${err?.message ?? err} — reload to retry.`);
+          errorRef.current(t["map.setupFailed"](String(err?.message ?? err)));
         }
       })();
     });
@@ -422,21 +426,31 @@ export default function MapView({
       await onSaveEdit(p, patch);
     } catch (err: any) {
       setEditing(true);
-      onError(err?.message ?? "Update failed — rolled back.");
+      onError(err?.message ?? t["editor.updateFailed"]);
+    }
+  }
+
+  async function handleDelete(p: Place) {
+    try {
+      await onDelete?.(p);
+      setEditing(false);
+      onSelect(null);
+    } catch (err: any) {
+      onError(err?.message ?? t["editor.deleteFailed"]);
     }
   }
 
   return (
     <div className="edge radius-card relative overflow-hidden border-line">
-      <div ref={containerRef} className={`maplibre-themed w-full ${mapHeightClass}`} aria-label="places map" />
+      <div ref={containerRef} className={`maplibre-themed w-full ${mapHeightClass}`} aria-label={t["map.placesMapAria"]} />
       {/* Floating map actions top-left: NavigationControl lives top-right, so this avoids overlap */}
       <div className="absolute left-3 top-3 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => void locate()}
           disabled={locating}
-          aria-label="locate me"
-          title="Locate me"
+          aria-label={t["map.locateMe"]}
+          title={t["map.locateMeTitle"]}
           className="edge radius-input inline-flex min-h-[48px] min-w-[48px] items-center justify-center border-line bg-surface/95 text-lg text-ink shadow-theme backdrop-blur disabled:opacity-40"
         >
           {locating ? "…" : "◎"}
@@ -445,33 +459,33 @@ export default function MapView({
           type="button"
           onClick={fitToResults}
           disabled={!located.length}
-          aria-label="fit map to results"
-          title="Fit to results"
+          aria-label={t["map.fitAria"]}
+          title={t["map.fitTitle"]}
           className="edge radius-input inline-flex min-h-[48px] min-w-[48px] items-center justify-center border-line bg-surface/95 text-lg text-ink shadow-theme backdrop-blur disabled:opacity-40"
         >
           ⤢
         </button>
       </div>
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm text-muted">Loading…</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm text-muted">{t["map.loading"]}</div>
       )}
       {selected && (
         <div className="radius-card absolute inset-x-0 bottom-0 max-h-[55%] overflow-y-auto border-t border-line bg-surface p-3 shadow-theme lg:inset-x-auto lg:bottom-3 lg:right-3 lg:top-3 lg:max-h-none lg:w-96 lg:border lg:pt-2">
           <div className="mb-2 flex justify-end">
             <button
               type="button"
-              aria-label="close details"
+              aria-label={t["map.closeDetailsAria"]}
               className="edge radius-input border-line bg-surface px-2 py-0.5 text-xs text-ink"
               onClick={() => {
                 onSelect(null);
                 setEditing(false);
               }}
             >
-              Close
+              {t["map.closeDetails"]}
             </button>
           </div>
           <PlaceCard place={selected} onToggleStatus={onFlipStatus} onEdit={() => { if (!readOnly) setEditing(true); }} readOnly={readOnly} onRefresh={onRefresh} refreshing={refreshingIds?.includes(selected.id)} />
-          {!readOnly && editing && <PlaceEditor place={selected} onSave={(patch) => handleSave(selected, patch)} onCancel={() => setEditing(false)} />}
+          {!readOnly && editing && <PlaceEditor place={selected} onSave={(patch) => handleSave(selected, patch)} onCancel={() => setEditing(false)} onDelete={onDelete ? () => handleDelete(selected) : undefined} />}
         </div>
       )}
     </div>

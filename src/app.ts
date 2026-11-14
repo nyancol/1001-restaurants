@@ -61,7 +61,7 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   await app.register(swagger, {
     openapi: {
       openapi: "3.0.3",
-      info: { title: "Oyster API", version: "0.1.0" },
+      info: { title: "In my Belly API", version: "0.1.0" },
     },
   });
 
@@ -144,7 +144,7 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   try {
     await app.register(fastifyStatic, { root: publicDir, prefix: "/" });
   } catch {
-    app.get("/", async (_req, reply) => reply.type("text/html").send("<h1>Oyster</h1><p>Foundation API running.</p>"));
+    app.get("/", async (_req, reply) => reply.type("text/html").send("<h1>In my Belly</h1><p>Foundation API running.</p>"));
   }
   app.setNotFoundHandler(async (req, reply) => {
     if (req.url.startsWith("/api/")) return reply.code(404).send({ error: "not_found" });
@@ -152,7 +152,7 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
     // client-side routing works behind login. Fall back to placeholder only
     // when no built index.html exists (pre-UI).
     if (hasIndexHtml) return (reply as any).sendFile("index.html");
-    return reply.type("text/html").send("<h1>Oyster</h1><p>Foundation API running.</p>");
+    return reply.type("text/html").send("<h1>In my Belly</h1><p>Foundation API running.</p>");
   });
 
   return { app, oidcFailed };

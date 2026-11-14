@@ -66,8 +66,8 @@ function validatePlaceInput(body: any, isPatch: boolean): { error?: string; valu
   if (!isPatch || body.placeType !== undefined) {
     const t = normalizePlaceType(body.placeType);
     if (!t || !isValidPlaceType(t)) {
-      if (!isPatch) return { error: "placeType must be restaurant, bar, or café" };
-      if (body.placeType !== undefined) return { error: "placeType must be restaurant, bar, or café" };
+      if (!isPatch) return { error: "placeType must be restaurant, bar, café, or bakery" };
+      if (body.placeType !== undefined) return { error: "placeType must be restaurant, bar, café, or bakery" };
     } else v.placeType = t;
   }
   if (body.status !== undefined) {

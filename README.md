@@ -1,6 +1,6 @@
-# 1001-restaurants — Oyster Foundation
+# In my Belly
 
-Foundation service for the Oyster restaurant memory app: Fastify + TypeScript API
+Foundation service for the In my Belly restaurant memory app: Fastify + TypeScript API
 serving a static placeholder page, SQLite persistence (Drizzle + better-sqlite3),
 PocketID OIDC login, and the v1 places/tags API.
 

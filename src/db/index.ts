@@ -77,6 +77,14 @@ export const MIGRATIONS = [
       DELETE FROM place_types WHERE label NOT IN ('restaurant', 'bar', 'café');
     `,
   },
+  {
+    version: 4,
+    name: "add bakery place type",
+    sql: `
+      INSERT OR IGNORE INTO place_types (label, color, icon, created_at, updated_at) VALUES
+        ('bakery', '#D9932B', 'bread', 0, 0);
+    `,
+  },
 ];
 
 export interface DbHandle {

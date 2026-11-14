@@ -5,8 +5,10 @@ import TagCombobox from "../components/TagCombobox";
 import TypeCombobox from "../components/TypeCombobox";
 import Stars from "../components/Stars";
 import { createPlace, listPlaces, patchPlace, UnauthorizedError, type PlaceDetails } from "../lib/api";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [lookupText, setLookupText] = useState("");
   const [name, setName] = useState("");
@@ -40,12 +42,12 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
     setInfo(null);
     const finalName = (name || lookupText).trim();
     if (!finalName) {
-      setError("Name is required.");
+      setError(t["add.nameRequired"]);
       return;
     }
     const finalType = placeType.trim().toLowerCase();
     if (!finalType) {
-      setError("Type is required.");
+      setError(t["add.typeRequired"]);
       return;
     }
     setSaving(true);
@@ -76,13 +78,13 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
           const mine = await listPlaces({ owner: "me" });
           const existing = mine.find((p) => p.googlePlaceId === googlePlaceId);
           if (existing) {
-            const ok = window.confirm(`You already saved “${existing.name}”. Update it instead of creating a duplicate?`);
+            const ok = window.confirm(t["add.duplicateNamed"](existing.name));
             if (!ok) {
               setSaving(false);
               return;
             }
             await patchPlace(existing.id, payload);
-            setInfo("Updated your existing entry.");
+            setInfo(t["add.updatedExisting"]);
             navigate("/");
             return;
           }
@@ -94,7 +96,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
         await createPlace(payload);
       } catch (e: any) {
         if (e?.status === 409 && e?.body?.existingId) {
-          const ok = window.confirm("You already saved this place. Update it instead?");
+          const ok = window.confirm(t["add.duplicateGeneric"]);
           if (ok) {
             await patchPlace(e.body.existingId, payload);
             navigate("/");
@@ -111,7 +113,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
         onUnauthorized();
         return;
       }
-      setError(err?.message ?? "Save failed.");
+      setError(err?.message ?? t["add.saveFailed"]);
     } finally {
       setSaving(false);
     }
@@ -119,44 +121,44 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
 
   return (
     <div className="mx-auto max-w-xl bg-bg px-4 pb-28 pt-4 lg:max-w-2xl">
-      <h1 className="font-display mb-4 text-xl font-bold text-ink">Add a place</h1>
+      <h1 className="font-display mb-4 text-xl font-bold text-ink">{t["add.title"]}</h1>
       {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
       {info && <div className="edge radius-input mb-3 border-info-line bg-info-bg px-3 py-2 text-sm text-info-ink">{info}</div>}
       <div className="flex flex-col gap-4">
         <LookupField text={lookupText} onTextChange={(t) => { setLookupText(t); if (!name || t === "") setName(t); }} onPick={handlePick} />
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="name">Name *</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="name">{t["add.name"]}</label>
           <input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
-            placeholder="Place name"
+            placeholder={t["add.namePlaceholder"]}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="address">Address</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="address">{t["add.address"]}</label>
           <input
             id="address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
-            placeholder="Address (prefilled from lookup)"
+            placeholder={t["add.addressPlaceholder"]}
           />
         </div>
         <TypeCombobox value={placeType} onChange={setPlaceType} />
         {enrichment && (
           <div className="edge radius-card border-line bg-surface-2 px-3 py-2">
-            <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Google snapshot · saved with this place</div>
+            <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">{t["add.googleSnapshot"]}</div>
             <div className="flex flex-col gap-1 text-xs text-ink">
-              {enrichment.placeType && <div>🏷️ Suggested type: <strong>{enrichment.placeType}</strong> (editable above)</div>}
-              {enrichment.priceLevel && <div>💶 Price: <strong>{enrichment.priceLevel}</strong></div>}
-              {enrichment.googleRating != null && <div>🅖 Google: <strong>{enrichment.googleRating}</strong>{enrichment.googleRatingCount != null ? ` (${enrichment.googleRatingCount} reviews)` : ""}</div>}
+              {enrichment.placeType && <div>🏷️ {t["add.suggestedType"]} <strong>{enrichment.placeType}</strong> {t["add.editableAbove"]}</div>}
+              {enrichment.priceLevel && <div>💶 {t["add.price"]} <strong>{enrichment.priceLevel}</strong></div>}
+              {enrichment.googleRating != null && <div>🅖 {t["add.google"]} <strong>{enrichment.googleRating}</strong>{enrichment.googleRatingCount != null ? t["add.reviews"](enrichment.googleRatingCount) : ""}</div>}
               {enrichment.websiteUri && <div className="truncate">🌐 <span className="text-accent underline">{enrichment.websiteUri}</span></div>}
-              {enrichment.businessStatus && enrichment.businessStatus !== "OPERATIONAL" && <div>⚠️ Status: <strong>{enrichment.businessStatus}</strong></div>}
+              {enrichment.businessStatus && enrichment.businessStatus !== "OPERATIONAL" && <div>⚠️ {t["add.statusLabel"]} <strong>{enrichment.businessStatus}</strong></div>}
               {Array.isArray(enrichment.hours?.weekdayDescriptions) && enrichment.hours.weekdayDescriptions.length > 0 && (
                 <div>
-                  <div>🕒 Hours (all 7 days saved):</div>
+                  <div>{t["add.hoursSaved"]}</div>
                   <ul className="mt-0.5 flex flex-col gap-0.5 pl-3">
                     {enrichment.hours.weekdayDescriptions.map((d: string, i: number) => (
                       <li key={i}>{d}</li>
@@ -164,13 +166,13 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
                   </ul>
                 </div>
               )}
-              {(enrichment.mapsLinks || enrichment.googleMapsUri) && <div>🔗 Maps link will be available via Share after save (not shown in details)</div>}
+              {(enrichment.mapsLinks || enrichment.googleMapsUri) && <div>{t["add.mapsLinkNote"]}</div>}
             </div>
           </div>
         )}
         <div>
-          <span className="mb-1 block text-sm font-medium text-ink">Status</span>
-          <div className="flex gap-2" role="radiogroup" aria-label="status">
+          <span className="mb-1 block text-sm font-medium text-ink">{t["add.status"]}</span>
+          <div className="flex gap-2" role="radiogroup" aria-label={t["add.statusAria"]}>
             {(["WANT_TO_GO", "BEEN_TO"] as const).map((s) => (
               <button
                 key={s}
@@ -180,7 +182,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
                 onClick={() => setStatus(s)}
                 className={`edge radius-pill px-4 py-1.5 text-sm font-medium ${status === s ? "border-accent bg-accent text-accent-ink" : "border-line bg-surface-2 text-ink"}`}
               >
-                {s === "WANT_TO_GO" ? "Want to go" : "Been to"}
+                {s === "WANT_TO_GO" ? t["add.wantToGo"] : t["add.beenTo"]}
               </button>
             ))}
           </div>
@@ -188,14 +190,14 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
         <TagCombobox value={tags} onChange={setTags} />
         <Stars value={rating} onChange={setRating} />
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="note">Note</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="note">{t["add.note"]}</label>
           <textarea
             id="note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
             rows={3}
-            placeholder="A note…"
+            placeholder={t["add.notePlaceholder"]}
           />
         </div>
       </div>
@@ -207,7 +209,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
             className="edge radius-input inline-flex min-h-[48px] items-center border-line bg-surface px-5 text-sm text-ink"
             disabled={saving}
           >
-            Cancel
+            {t["add.cancel"]}
           </button>
           <button
             type="button"
@@ -215,7 +217,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
             disabled={saving}
             className="edge radius-input inline-flex min-h-[48px] flex-1 items-center justify-center border-accent bg-accent px-4 text-sm font-medium text-accent-ink disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Save place"}
+            {saving ? t["add.saving"] : t["add.save"]}
           </button>
         </div>
       </div>

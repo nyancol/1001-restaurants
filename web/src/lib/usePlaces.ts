@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listPlaces, patchPlace, refreshPlace, UnauthorizedError, type Place } from "./api";
+import { listPlaces, patchPlace, refreshPlace, deletePlace, UnauthorizedError, type Place } from "./api";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export interface PlaceFilterParams {
   owner?: string;
@@ -20,6 +21,7 @@ export type PlacePatch = Partial<Pick<Place, "status" | "tags" | "rating" | "not
  * and rollback on failure.
  */
 export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void) {
+  const { t } = useLanguage();
   const { owner, status, placeType, tags, q, openAt, openNow } = params;
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
         unauthRef.current();
         return;
       }
-      setError(err?.message ?? "Failed to load places.");
+      setError(err?.message ?? t["error.loadPlaces"]);
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
           unauthRef.current();
           return;
         }
-        const msg = err?.message ?? "Update failed — rolled back.";
+        const msg = err?.message ?? t["editor.updateFailed"];
         await fetchList();
         setError(msg);
       }
@@ -94,7 +96,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
           return;
         }
         setPlaces((cur) => cur.map((x) => (x.id === p.id ? { ...x, ...prev, id: x.id } : x)));
-        setError(err?.message ?? "Update failed — rolled back.");
+        setError(err?.message ?? t["editor.updateFailed"]);
         throw err;
       }
     },
@@ -117,5 +119,28 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
     }
   }, []);
 
-  return { places, setPlaces, loading, error, setError, fetchList, flipStatus, saveEdit, refreshOne, refreshingIds };
+  const deleteOne = useCallback(
+    async (p: Place): Promise<void> => {
+      setPlaces((cur) => cur.filter((x) => x.id !== p.id));
+      try {
+        await deletePlace(p.id);
+      } catch (err: any) {
+        if (err instanceof UnauthorizedError) {
+          unauthRef.current();
+          await fetchList();
+          return;
+        }
+        // Already gone server-side: keep it removed locally.
+        if (err?.status === 404) {
+          return;
+        }
+        await fetchList();
+        setError(err?.message ?? t["editor.deleteFailed"]);
+        throw err;
+      }
+    },
+    [fetchList, t],
+  );
+
+  return { places, setPlaces, loading, error, setError, fetchList, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds };
 }

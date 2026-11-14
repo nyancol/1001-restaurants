@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getTags } from "../lib/api";
+import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
   value: string[];
@@ -33,6 +34,7 @@ export default function TagCombobox({ value, onChange, allowCreate = true, showS
 }
 
 function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: string[]) => void }) {
+  const { t } = useLanguage();
   const [all, setAll] = useState<{ tag: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -63,16 +65,16 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search tags…"
-        aria-label="search tags"
+        placeholder={t["tags.searchPlaceholder"]}
+        aria-label={t["tags.searchAria"]}
         className="edge radius-input min-h-[44px] w-full border-line bg-bg px-3 py-2 text-base text-ink placeholder:text-muted lg:min-h-9 lg:text-sm"
       />
-      {loading && <div className="px-1 py-2 text-sm text-muted">Loading tags…</div>}
+      {loading && <div className="px-1 py-2 text-sm text-muted">{t["tags.loadingTags"]}</div>}
       {!loading && visible.length === 0 && (
-        <div className="px-1 py-2 text-sm text-muted">{all.length === 0 ? "No tags yet." : "No matches."}</div>
+        <div className="px-1 py-2 text-sm text-muted">{all.length === 0 ? t["tags.noTags"] : t["tags.noMatches"]}</div>
       )}
       {!loading && visible.length > 0 && (
-        <ul className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto" role="listbox" aria-label="tag filter options" aria-multiselectable="true">
+        <ul className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto" role="listbox" aria-label={t["tags.filterOptionsAria"]} aria-multiselectable="true">
           {visible.map((s) => {
             const active = value.includes(s.tag);
             return (
@@ -81,7 +83,7 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
                   type="button"
                   role="option"
                   aria-selected={active}
-                  aria-label={`${active ? "remove" : "add"} filter ${s.tag} (${s.count} place${s.count === 1 ? "" : "s"})`}
+                  aria-label={t["tags.filterOption"](active ? t["tags.removeAction"] : t["tags.addAction"], s.tag, s.count)}
                   onClick={() => toggle(s.tag)}
                   className={`edge radius-input flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-sm lg:min-h-9 ${
                     active ? "border-accent bg-accent font-medium text-accent-ink" : "border-line bg-surface text-ink hover:bg-surface-2"
@@ -103,6 +105,7 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
 }
 
 function Combobox({ value, onChange, allowCreate, showSelected }: { value: string[]; onChange: (tags: string[]) => void; allowCreate: boolean; showSelected: boolean }) {
+  const { t } = useLanguage();
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<{ tag: string; count: number }[]>([]);
   const [open, setOpen] = useState(false);
@@ -149,13 +152,13 @@ function Combobox({ value, onChange, allowCreate, showSelected }: { value: strin
 
   return (
     <div className="relative">
-      <label className="mb-1 block text-sm font-medium text-ink" htmlFor="tag-input">Tags</label>
+      <label className="mb-1 block text-sm font-medium text-ink" htmlFor="tag-input">{t["tags.label"]}</label>
       {showSelected && (
       <div className="mb-1 flex flex-wrap gap-1">
         {value.map((t) => (
           <span key={t} className="edge radius-pill inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-sm text-ink">
             {t}
-            <button type="button" aria-label={`remove ${t}`} className="text-muted hover:text-ink" onClick={() => removeTag(t)}>
+            <button type="button" aria-label={t["tags.removeTag"](t)} className="text-muted hover:text-ink" onClick={() => removeTag(t)}>
               ×
             </button>
           </span>
@@ -179,13 +182,13 @@ function Combobox({ value, onChange, allowCreate, showSelected }: { value: strin
             setOpen(false);
           }
         }}
-        placeholder={allowCreate ? "Type to suggest, Enter to create" : "Type to filter by existing tags"}
+        placeholder={allowCreate ? t["tags.suggestCreate"] : t["tags.filterExisting"]}
         className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
-        aria-label="tag input"
+        aria-label={t["tags.tagInputAria"]}
       />
       {open && (input.trim() || loading) && (
         <div className="edge radius-card absolute z-10 mt-1 w-full border-line bg-surface shadow-theme">
-          {loading && <div className="px-3 py-2 text-sm text-muted">Loading…</div>}
+          {loading && <div className="px-3 py-2 text-sm text-muted">{t["tags.loading"]}</div>}
           {!loading &&
             suggestions.map((s) => (
               <button
@@ -204,12 +207,12 @@ function Combobox({ value, onChange, allowCreate, showSelected }: { value: strin
               className="w-full px-3 py-2 text-left text-sm text-accent hover:bg-surface-2"
               onClick={() => addTag(input)}
             >
-              Create “{input.trim().toLowerCase()}” ⏎
+              {t["tags.createPrompt"](input)}
             </button>
           )}
           {!loading && input.trim() && suggestions.length === 0 && exactMatch === false && (
             <div className="px-3 py-2 text-sm text-muted">
-              {allowCreate ? "No matches — press Enter to create." : "No matches."}
+              {allowCreate ? t["tags.noMatchesCreate"] : t["tags.noMatches"]}
             </div>
           )}
         </div>

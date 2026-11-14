@@ -2,6 +2,7 @@ import type { Place } from "../lib/api";
 import { mapsUrlFor } from "../lib/api";
 import { useState } from "react";
 import { colorForType, emojiFor } from "../theme/pins";
+import { useLanguage, type Dict } from "../i18n/LanguageContext";
 
 interface Props {
   place: Place;
@@ -77,6 +78,7 @@ function priceLabel(p: Place): string | null {
 }
 
 export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, onRefresh, refreshing }: Props) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [busyLocal, setBusyLocal] = useState(false);
@@ -104,19 +106,19 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
     setTimeout(() => setCopied(false), 1500);
   }
 
-  function refreshMessage(err: any): string {
+  function refreshMessage(err: any, googlePlaceId: string | null, t: Dict): string {
     const status = err?.status;
-    if (status === 422 || (!p.googlePlaceId && !status)) return "No Google link — refresh unavailable";
-    if (status === 429) return "Rate-limited — try again later";
-    if (status === 503 || status === 502) return "Google unavailable — try again later";
-    if (status === 403) return "Not allowed for this place";
-    return err?.message ?? "Refresh failed — try again";
+    if (status === 422 || (!googlePlaceId && !status)) return t["card.noGoogle"];
+    if (status === 429) return t["card.rateLimited"];
+    if (status === 503 || status === 502) return t["card.googleUnavailable"];
+    if (status === 403) return t["card.notAllowed"];
+    return err?.message ?? t["card.refreshFailed"];
   }
 
   async function handleRefresh() {
     if (busy || !onRefresh) return;
     if (!p.googlePlaceId) {
-      setRefreshError("No Google link — refresh unavailable");
+      setRefreshError(t["card.noGoogle"]);
       return;
     }
     setRefreshError(null);
@@ -124,7 +126,7 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
     try {
       await onRefresh(p);
     } catch (err: any) {
-      setRefreshError(refreshMessage(err));
+      setRefreshError(refreshMessage(err, p.googlePlaceId, t));
     } finally {
       setBusyLocal(false);
     }
@@ -132,13 +134,13 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
 
   return (
     <div className={cardTone}>
-      {closed && <div className="edge radius-pill mb-2 inline-block border-danger-line bg-danger-bg px-2 py-0.5 text-xs font-medium text-danger-ink">⛔ Closed permanently</div>}
+      {closed && <div className="edge radius-pill mb-2 inline-block border-danger-line bg-danger-bg px-2 py-0.5 text-xs font-medium text-danger-ink">{t["card.closed"]}</div>}
       {tempClosed && (
         <div
           className="edge radius-pill mb-2 inline-block border-want bg-want px-2 py-0.5 text-xs font-medium text-want-ink"
           style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.08) 6px, rgba(0,0,0,0.08) 12px)" }}
         >
-          🚧 Temporarily closed
+          {t["card.tempClosed"]}
         </div>
       )}
       <div className={`flex items-start justify-between gap-2 ${closed ? "grayscale" : ""}`}>
@@ -147,14 +149,14 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
             <span
               className="edge radius-pill inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-white"
               style={{ backgroundColor: typeColor, borderColor: typeColor }}
-              title={`Type: ${p.placeType}`}
+              title={t["card.typeTitle"](p.placeType)}
             >
               <span aria-hidden>{typeEmoji}</span> {p.placeType || "restaurant"}
             </span>
             <span
               className={`edge radius-pill px-2 py-0.5 text-xs ${p.status === "BEEN_TO" ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}
             >
-              {p.status === "BEEN_TO" ? "✓ Been to" : "○ Want to go"}
+              {p.status === "BEEN_TO" ? t["card.beenTo"] : t["card.wantToGo"]}
             </span>
           </div>
           <div className="font-display mt-1 text-base font-medium leading-tight text-ink">{p.name}</div>
@@ -165,9 +167,9 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
             type="button"
             onClick={() => onToggleStatus(p)}
             className="edge radius-input shrink-0 border-line bg-surface px-2 py-1 text-xs text-ink"
-            aria-label={p.status === "WANT_TO_GO" ? "mark visited" : "mark want to go"}
+            aria-label={p.status === "WANT_TO_GO" ? t["card.markVisited"] : t["card.markWant"]}
           >
-            {p.status === "WANT_TO_GO" ? "✓ visited" : "↩ want"}
+            {p.status === "WANT_TO_GO" ? t["card.visitedShort"] : t["card.wantShort"]}
           </button>
         )}
       </div>
@@ -177,7 +179,7 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
           <details className="edge radius-input border-line bg-surface-2 px-2 py-1">
             <summary className="cursor-pointer text-ink">
               <span aria-hidden>🕒</span> {openLabel(p.hours)}
-              <span className="ml-1 text-muted">· all 7 days</span>
+              <span className="ml-1 text-muted">{t["card.all7days"]}</span>
             </summary>
             <ul className="mt-1 flex flex-col gap-0.5">
               {weekLines(p.hours).map((d, i) => (
@@ -186,13 +188,13 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
                 </li>
               ))}
             </ul>
-            <dt className="sr-only">Hours</dt>
+            <dt className="sr-only">{t["card.hoursSr"]}</dt>
           </details>
         )}
         {priceLabel(p) && (
           <div className="flex items-center gap-1.5">
             <span aria-hidden>💶</span>
-            <dt className="sr-only">Price</dt>
+            <dt className="sr-only">{t["card.priceSr"]}</dt>
             <dd className="text-ink">{priceLabel(p)}</dd>
           </div>
         )}
@@ -201,11 +203,11 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
             {p.rating != null && (
               <span className="edge radius-pill border-line bg-surface-2 px-2 py-0.5 text-ink">
                 <span className="text-star">{"★".repeat(Math.max(0, Math.min(5, Math.round(p.rating))))}</span>
-                <span className="ml-1 text-muted">you</span>
+                <span className="ml-1 text-muted">{t["card.you"]}</span>
               </span>
             )}
             {p.googleRating != null && (
-              <span className="edge radius-pill border-line bg-surface-2 px-2 py-0.5 text-ink" title="Google rating">
+              <span className="edge radius-pill border-line bg-surface-2 px-2 py-0.5 text-ink" title={t["card.googleRatingTitle"]}>
                 <span aria-hidden>🅖</span> {p.googleRating}{p.googleRatingCount != null ? <span className="text-muted"> ({p.googleRatingCount})</span> : null}
               </span>
             )}
@@ -227,7 +229,7 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
       <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
         {!readOnly && (
           <button type="button" className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-ink" onClick={() => onEdit(p)}>
-            ✏️ Edit
+            {t["card.edit"]}
           </button>
         )}
         {!readOnly && onRefresh && (
@@ -236,20 +238,20 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
             className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-ink disabled:opacity-50"
             onClick={() => void handleRefresh()}
             disabled={busy || !p.googlePlaceId}
-            title={!p.googlePlaceId ? "No Google link — refresh unavailable" : "Re-fetch Google details"}
-            aria-label={busy ? "refreshing place" : "refresh place from Google"}
+            title={!p.googlePlaceId ? t["card.noGoogle"] : t["card.refreshTitle"]}
+            aria-label={busy ? t["card.refreshingAria"] : t["card.refreshAria"]}
           >
-            {busy ? "↻ Refreshing…" : "↻ Refresh"}
+            {busy ? t["card.refreshing"] : t["card.refresh"]}
           </button>
         )}
         {p.websiteUri && (
           <a href={p.websiteUri} target="_blank" rel="noreferrer" className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-accent">
-            🌐 Website
+            {t["card.website"]}
           </a>
         )}
         {mapsUrlFor(p) && (
-          <button type="button" className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-ink" onClick={() => void shareMaps()} aria-label="copy Google Maps link">
-            {copied ? "✓ Link copied" : "🔗 Share Maps link"}
+          <button type="button" className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-ink" onClick={() => void shareMaps()} aria-label={t["card.shareAria"]}>
+            {copied ? t["card.copied"] : t["card.share"]}
           </button>
         )}
       </div>
@@ -258,7 +260,7 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
           {refreshError}
         </div>
       )}
-      <div className="sr-only" aria-live="polite">{copied ? "Google Maps link copied" : ""}</div>
+      <div className="sr-only" aria-live="polite">{copied ? t["card.copiedLive"] : ""}</div>
     </div>
   );
 }

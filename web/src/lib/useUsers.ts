@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getMe, listUsers, type DirectoryUser } from "./api";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export interface UsersState {
   me: { id: string; displayName: string | null } | null;
@@ -9,6 +10,7 @@ export interface UsersState {
 }
 
 export function useUsers(): UsersState {
+  const { t } = useLanguage();
   const [me, setMe] = useState<{ id: string; displayName: string | null } | null>(null);
   const [users, setUsers] = useState<DirectoryUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ export function useUsers(): UsersState {
         setUsers(userList);
       } catch (err: any) {
         if (cancelled) return;
-        setError(err?.message ?? "Failed to load users.");
+        setError(err?.message ?? t["error.loadUsers"]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -39,9 +41,10 @@ export function useUsers(): UsersState {
   return { me, users, loading, error };
 }
 
-export function displayNameFor(owner: string, me: UsersState["me"], users: DirectoryUser[]): string | null {
-  if (owner === "me") return me?.displayName ?? "Me";
-  if (owner === "all") return "Everyone";
+export function displayNameFor(owner: string, me: UsersState["me"], users: DirectoryUser[], fallback?: { me: string; everyone: string }): string | null {
+  const fb = fallback ?? (typeof document !== "undefined" && document.documentElement.lang === "fr" ? { me: "Moi", everyone: "Tout le monde" } : { me: "Me", everyone: "Everyone" });
+  if (owner === "me") return me?.displayName ?? fb.me;
+  if (owner === "all") return fb.everyone;
   const found = users.find((u) => u.id === owner);
   return found ? (found.displayName ?? found.id) : null;
 }

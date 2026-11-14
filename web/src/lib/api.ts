@@ -131,6 +131,12 @@ export async function refreshPlace(id: string): Promise<Place> {
   });
 }
 
+export async function deletePlace(id: string): Promise<{ ok: true }> {
+  return apiFetch(`/api/places/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
 export interface TagCount {
   tag: string;
   count: number;
@@ -194,6 +200,7 @@ export interface PlaceDetails {
 function mapGoogleType(t: unknown): string | null {
   if (typeof t !== "string" || !t) return null;
   const v = t.toLowerCase();
+  if (v.includes("bakery") || v.includes("boulanger")) return "bakery";
   if (v.includes("coffee") || v === "cafe" || v.includes("café")) return "café";
   if (v.includes("bar") || v.includes("pub") || v.includes("cocktail") || v.includes("wine")) return "bar";
   if (v.includes("restaurant") || v.includes("food") || v.includes("brunch") || v.includes("bistro") || v.includes("izakaya")) return "restaurant";
