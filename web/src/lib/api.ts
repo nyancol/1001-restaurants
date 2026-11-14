@@ -125,6 +125,12 @@ export async function patchPlace(id: string, patch: Partial<Place> & Record<stri
   });
 }
 
+export async function refreshPlace(id: string): Promise<Place> {
+  return apiFetch(`/api/places/${encodeURIComponent(id)}/refresh`, {
+    method: "POST",
+  });
+}
+
 export interface TagCount {
   tag: string;
   count: number;

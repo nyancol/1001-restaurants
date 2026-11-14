@@ -9,6 +9,8 @@ interface Props {
   error: string | null;
   onToggleStatus: (p: Place) => void;
   onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) => Promise<void> | void;
+  onRefresh?: (p: Place) => Promise<unknown>;
+  refreshingIds?: string[];
   onError?: (msg: string) => void;
   focusedId?: string | null;
   listRef?: (el: HTMLUListElement | null) => void;
@@ -21,7 +23,7 @@ interface Props {
 }
 
 /** Scrollable list of place cards with inline editing. Shared by phone list and desktop split pane. */
-export default function PlaceListPane({ places, loading, error, onToggleStatus, onSaveEdit, onError, focusedId, listRef, emptyHint, onCardSelect, readOnly, emptyTitle, emptySubtitle }: Props) {
+export default function PlaceListPane({ places, loading, error, onToggleStatus, onSaveEdit, onRefresh, refreshingIds, onError, focusedId, listRef, emptyHint, onCardSelect, readOnly, emptyTitle, emptySubtitle }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) {
@@ -60,7 +62,7 @@ export default function PlaceListPane({ places, loading, error, onToggleStatus, 
           }}
           className={`edge radius-card border-line bg-surface p-3 shadow-theme ${focusedId === p.id ? "outline-2 outline-accent" : ""}`}
         >
-          <PlaceCard place={p} onToggleStatus={onToggleStatus} onEdit={(pl) => { if (!readOnly) setEditingId(pl.id); }} readOnly={readOnly} />
+          <PlaceCard place={p} onToggleStatus={onToggleStatus} onEdit={(pl) => { if (!readOnly) setEditingId(pl.id); }} readOnly={readOnly} onRefresh={onRefresh} refreshing={refreshingIds?.includes(p.id)} />
           {!readOnly && editingId === p.id && (
             <PlaceEditor place={p} onSave={(patch) => handleSave(p, patch)} onCancel={() => setEditingId(null)} />
           )}

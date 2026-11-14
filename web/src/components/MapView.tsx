@@ -67,6 +67,8 @@ interface MapViewProps {
   onError: (msg: string) => void;
   onFlipStatus: (p: Place) => void;
   onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) => Promise<void>;
+  onRefresh?: (p: Place) => Promise<unknown>;
+  refreshingIds?: string[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onGeoNote?: (note: string | null) => void;
@@ -86,6 +88,8 @@ export default function MapView({
   onError,
   onFlipStatus,
   onSaveEdit,
+  onRefresh,
+  refreshingIds,
   selectedId,
   onSelect,
   onGeoNote,
@@ -466,7 +470,7 @@ export default function MapView({
               Close
             </button>
           </div>
-          <PlaceCard place={selected} onToggleStatus={onFlipStatus} onEdit={() => { if (!readOnly) setEditing(true); }} readOnly={readOnly} />
+          <PlaceCard place={selected} onToggleStatus={onFlipStatus} onEdit={() => { if (!readOnly) setEditing(true); }} readOnly={readOnly} onRefresh={onRefresh} refreshing={refreshingIds?.includes(selected.id)} />
           {!readOnly && editing && <PlaceEditor place={selected} onSave={(patch) => handleSave(selected, patch)} onCancel={() => setEditing(false)} />}
         </div>
       )}

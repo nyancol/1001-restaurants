@@ -17,7 +17,7 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
   const { owner, setOwner, statusParam, tagsParam, qParam, placeTypeParam, openAtParam, openNowParam, status, setStatus, tags, setTags, q, setQ, placeType, setPlaceType, openEnabled, setOpenEnabled, openAt, setOpenAt } = usePlaceFilters();
   const { me, users } = useUsers();
 
-  const { places, loading, error, setError, flipStatus, saveEdit } = usePlaces(
+  const { places, loading, error, setError, flipStatus, saveEdit, refreshOne, refreshingIds } = usePlaces(
     { owner, status: statusParam, placeType: placeTypeParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam },
     onUnauthorized,
   );
@@ -87,6 +87,8 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             error={error}
             onToggleStatus={(p) => void flipStatus(p)}
             onSaveEdit={saveEdit}
+            onRefresh={(p) => refreshOne(p)}
+            refreshingIds={refreshingIds}
             onError={setError}
             focusedId={selectedId}
             onCardSelect={setSelectedId}
@@ -108,6 +110,8 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             onError={setError}
             onFlipStatus={(p) => void flipStatus(p)}
             onSaveEdit={saveEdit}
+            onRefresh={(p) => refreshOne(p)}
+            refreshingIds={refreshingIds}
             selectedId={selectedId}
             onSelect={handleSelect}
             onGeoNote={setGeoNote}

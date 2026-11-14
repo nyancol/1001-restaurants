@@ -8,6 +8,8 @@ interface Props {
   onToggleStatus: (p: Place) => void;
   onEdit: (p: Place) => void;
   readOnly?: boolean;
+  onRefresh?: (p: Place) => Promise<unknown>;
+  refreshing?: boolean;
 }
 
 const DAY_NAMES: string[][] = [
@@ -74,8 +76,11 @@ function priceLabel(p: Place): string | null {
   return rangeText;
 }
 
-export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly }: Props) {
+export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, onRefresh, refreshing }: Props) {
   const [copied, setCopied] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [busyLocal, setBusyLocal] = useState(false);
+  const busy = (refreshing ?? false) || busyLocal;
   const closed = p.businessStatus === "CLOSED_PERMANENTLY";
   const tempClosed = p.businessStatus === "CLOSED_TEMPORARILY";
   const typeColor = colorForType(p.placeType || "restaurant");
@@ -97,6 +102,32 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly }
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  function refreshMessage(err: any): string {
+    const status = err?.status;
+    if (status === 422 || (!p.googlePlaceId && !status)) return "No Google link — refresh unavailable";
+    if (status === 429) return "Rate-limited — try again later";
+    if (status === 503 || status === 502) return "Google unavailable — try again later";
+    if (status === 403) return "Not allowed for this place";
+    return err?.message ?? "Refresh failed — try again";
+  }
+
+  async function handleRefresh() {
+    if (busy || !onRefresh) return;
+    if (!p.googlePlaceId) {
+      setRefreshError("No Google link — refresh unavailable");
+      return;
+    }
+    setRefreshError(null);
+    setBusyLocal(true);
+    try {
+      await onRefresh(p);
+    } catch (err: any) {
+      setRefreshError(refreshMessage(err));
+    } finally {
+      setBusyLocal(false);
+    }
   }
 
   return (
@@ -199,6 +230,18 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly }
             ✏️ Edit
           </button>
         )}
+        {!readOnly && onRefresh && (
+          <button
+            type="button"
+            className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-ink disabled:opacity-50"
+            onClick={() => void handleRefresh()}
+            disabled={busy || !p.googlePlaceId}
+            title={!p.googlePlaceId ? "No Google link — refresh unavailable" : "Re-fetch Google details"}
+            aria-label={busy ? "refreshing place" : "refresh place from Google"}
+          >
+            {busy ? "↻ Refreshing…" : "↻ Refresh"}
+          </button>
+        )}
         {p.websiteUri && (
           <a href={p.websiteUri} target="_blank" rel="noreferrer" className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-accent">
             🌐 Website
@@ -210,6 +253,11 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly }
           </button>
         )}
       </div>
+      {refreshError && (
+        <div className="edge radius-input mt-2 border-danger-line bg-danger-bg px-2 py-1 text-xs text-danger-ink" role="alert">
+          {refreshError}
+        </div>
+      )}
       <div className="sr-only" aria-live="polite">{copied ? "Google Maps link copied" : ""}</div>
     </div>
   );

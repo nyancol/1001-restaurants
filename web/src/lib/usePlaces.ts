@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listPlaces, patchPlace, UnauthorizedError, type Place } from "./api";
+import { listPlaces, patchPlace, refreshPlace, UnauthorizedError, type Place } from "./api";
 
 export interface PlaceFilterParams {
   owner?: string;
@@ -24,6 +24,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshingIds, setRefreshingIds] = useState<string[]>([]);
   // Stable ref: inline `onUnauthorized` arrows in routes must not retrigger fetches.
   const unauthRef = useRef(onUnauthorized);
   unauthRef.current = onUnauthorized;
@@ -100,5 +101,21 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
     [],
   );
 
-  return { places, setPlaces, loading, error, setError, fetchList, flipStatus, saveEdit };
+  const refreshOne = useCallback(async (p: Place): Promise<Place> => {
+    setRefreshingIds((cur) => (cur.includes(p.id) ? cur : [...cur, p.id]));
+    try {
+      const updated = await refreshPlace(p.id);
+      setPlaces((cur) => cur.map((x) => (x.id === p.id ? updated : x)));
+      return updated;
+    } catch (err: any) {
+      if (err instanceof UnauthorizedError) {
+        unauthRef.current();
+      }
+      throw err;
+    } finally {
+      setRefreshingIds((cur) => cur.filter((id) => id !== p.id));
+    }
+  }, []);
+
+  return { places, setPlaces, loading, error, setError, fetchList, flipStatus, saveEdit, refreshOne, refreshingIds };
 }

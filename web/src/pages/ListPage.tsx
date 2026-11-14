@@ -11,7 +11,7 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
   const { owner, setOwner, statusParam, tagsParam, qParam, placeTypeParam, openAtParam, openNowParam, status, setStatus, tags, setTags, q, setQ, placeType, setPlaceType, openEnabled, setOpenEnabled, openAt, setOpenAt } = usePlaceFilters();
   const { me, users } = useUsers();
 
-  const { places, loading, error, setError, flipStatus, saveEdit } = usePlaces(
+  const { places, loading, error, setError, flipStatus, saveEdit, refreshOne, refreshingIds } = usePlaces(
     { owner, status: statusParam, placeType: placeTypeParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam },
     onUnauthorized,
   );
@@ -50,6 +50,8 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         error={error}
         onToggleStatus={(p) => void flipStatus(p)}
         onSaveEdit={saveEdit}
+        onRefresh={(p) => refreshOne(p)}
+        refreshingIds={refreshingIds}
         onError={setError}
         readOnly={readOnly}
         emptyTitle={readOnly ? `${scopeName} has no places${places.length === 0 ? "" : " matching these filters"}` : emptyTitle}
