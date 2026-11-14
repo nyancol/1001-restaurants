@@ -43,13 +43,19 @@ services:
       # APP_ORIGIN is the per-deployment host variable (e.g. https://app.example.com).
       # OIDC callback defaults to ${APP_ORIGIN}/api/auth/callback;
       # set OIDC_REDIRECT_URI only to override it with the provider-registered value.
-      # Telemetry (standalone LGTM stack in obs/compose.yaml). Unset = no export.
-      # OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      # Telemetry (homelab LGTM stack over the external `telemetry` network).
+      # Unset OTEL_EXPORTER_OTLP_ENDPOINT = no export (preprod/dev stay dark).
+      # Prod values live in the Arcane-managed .env, never committed.
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-places}"
+      DEPLOYMENT_ENVIRONMENT: "${DEPLOYMENT_ENVIRONMENT:-production}"
+      OTEL_SERVICE_VERSION: "${OTEL_SERVICE_VERSION:-unknown}"
     volumes:
       - places-data:/data
     networks:
       - default
       - caddy
+      - telemetry
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
@@ -65,4 +71,12 @@ volumes:
 networks:
   caddy:
     name: caddy_public
+    external: true
+# Shared observability network (homelab LGTM stack lives here as `lgtm`).
+# Created on the host outside this project: `docker network create telemetry`.
+# Attaching here lets prod reach the collector as http://lgtm:4318.
+# Preprod inherits the attachment via merge but exports nothing — its env
+# never sets OTEL_EXPORTER_OTLP_ENDPOINT, so the SDK stays a no-op there.
+  telemetry:
+    name: telemetry
     external: true

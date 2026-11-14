@@ -17,6 +17,8 @@ import {
 } from "./auth/places-bearer.js";
 import { type AppConfig } from "./config.js";
 import { dbHealth, openDb, runMigrations } from "./db/index.js";
+import { buildPinoOptions, OtlpBridgeStream } from "./observability/logger.js";
+import { multistream } from "pino";
 import { registerGoogleRoutes, type GoogleFetch } from "./google/routes.js";
 import { registerPlaceRoutes } from "./places/routes.js";
 import { registerUserRoutes } from "./users/routes.js";
@@ -47,7 +49,15 @@ export interface BuildOptions {
 
 export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstance; oidcFailed?: Error }> {
   const { config } = opts;
-  const app = Fastify({ logger: true, trustProxy: config.trustProxy });
+  // Redaction + trace mixin live in buildPinoOptions. When OTEL is enabled,
+  // tee records to the OTLP bridge (global LoggerProvider is registered by
+  // observability/register.ts before this runs in production). Otherwise
+  // plain stdout — byte-compatible with the pre-OTEL format.
+  const pinoOptions = buildPinoOptions() as any;
+  const logger = (config as any).otelEnabled
+    ? { ...pinoOptions, stream: multistream([{ stream: process.stdout }, { stream: new OtlpBridgeStream() }]) }
+    : pinoOptions;
+  const app = Fastify({ logger, trustProxy: config.trustProxy });
 
   const { sqlite, db } = openDb(config.databasePath);
   runMigrations(sqlite);

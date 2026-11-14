@@ -1,3 +1,5 @@
+import { parseOtelEnv } from "./observability/env.js";
+
 export interface AppConfig {
   port: number;
   host: string;
@@ -15,6 +17,11 @@ export interface AppConfig {
   googlePlacesKey: string;
   placesApiResource: string;
   trustProxy: boolean;
+  otelEndpoint: string;
+  otelServiceName: string;
+  otelEnvironment: string;
+  otelServiceVersion: string;
+  otelEnabled: boolean;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -93,6 +100,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   // The route is not registered at all unless this is true.
   const devLoginEnabled = (env.DEV_LOGIN ?? "false") === "true" && nodeEnv !== "production";
 
+  // OTEL telemetry: lenient by design — never throws. Presence of a valid
+  // http(s) endpoint enables export; unset/empty/invalid disables silently
+  // (preprod/dev stay dark). Both prod and preprod run NODE_ENV=production,
+  // so endpoint presence (not NODE_ENV) is the switch.
+  // Parsing lives in observability/env.ts (shared with register.ts).
+  const otel = parseOtelEnv(env as NodeJS.ProcessEnv);
+
   return {
     port: Number(env.PORT ?? 3000),
     host: env.HOST ?? "0.0.0.0",
@@ -112,5 +126,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     googlePlacesKey: env.GOOGLE_PLACES_KEY?.trim() ?? "",
     placesApiResource,
     trustProxy: (env.TRUST_PROXY ?? "true") === "true",
+    otelEndpoint: otel.endpoint,
+    otelServiceName: otel.serviceName,
+    otelEnvironment: otel.environment,
+    otelServiceVersion: otel.serviceVersion,
+    otelEnabled: otel.enabled,
   };
 }

@@ -5,6 +5,7 @@ import type { AppConfig } from "../config.js";
 import { users } from "../db/schema.js";
 import { signSession, sessionCookieName } from "./session.js";
 import { eq } from "drizzle-orm";
+import { withSpan } from "../observability/trace.js";
 
 interface OidcDeps {
   config: AppConfig;
@@ -16,11 +17,23 @@ interface OidcDeps {
 /** Discover OIDC config at boot; throws with a clear message on failure (fail-fast). */
 export async function discoverOidc(config: AppConfig): Promise<client.Configuration | null> {
   if (!config.oidcEnabled) return null;
+  const issuerHost = (() => {
+    try {
+      return new URL(config.oidcIssuer).host;
+    } catch {
+      return "unknown";
+    }
+  })();
   try {
-    return await client.discovery(
-      new URL(config.oidcIssuer),
-      config.oidcClientId,
-      config.oidcClientSecret || undefined
+    return await withSpan(
+      "oidc.discovery",
+      { "peer.service": issuerHost, endpoint: "discovery" },
+      async () =>
+        client.discovery(
+          new URL(config.oidcIssuer),
+          config.oidcClientId,
+          config.oidcClientSecret || undefined
+        )
     );
   } catch (err: any) {
     throw new Error(
@@ -60,10 +73,22 @@ export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc
     const state = (req.query as any)?.state as string | undefined;
     const stored = state ? pkceStore.get(state) : undefined;
     try {
-      const tokens = await client.authorizationCodeGrant(oidc, fullUrl, {
-        pkceCodeVerifier: stored?.verifier,
-        expectedState: stored ? state : undefined,
-      });
+      const issuerHost = (() => {
+        try {
+          return new URL(config.oidcIssuer).host;
+        } catch {
+          return "unknown";
+        }
+      })();
+      const tokens = await withSpan(
+        "oidc.callback",
+        { "peer.service": issuerHost, endpoint: "authorization_code_grant" },
+        async () =>
+          client.authorizationCodeGrant(oidc, fullUrl, {
+            pkceCodeVerifier: stored?.verifier,
+            expectedState: stored ? state : undefined,
+          })
+      );
       const claims = tokens.claims();
       if (!claims?.sub) return reply.code(401).send({ error: "invalid_token" });
       const sub = claims.sub;

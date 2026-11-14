@@ -6,6 +6,7 @@ import { places, users } from "../db/schema.js";
 import { normalizeTags } from "../tags/normalize.js";
 import { normalizePlaceType, isValidPlaceType, ensurePlaceType } from "../place-types/looks.js";
 import { isOpenAt, parseHoursJson } from "./open.js";
+import { withSpan } from "../observability/trace.js";
 
 export const STATUSES = ["WANT_TO_GO", "BEEN_TO"] as const;
 const CLOSED = new Set(["CLOSED_PERMANENTLY", "CLOSED_TEMPORARILY"]);
@@ -332,15 +333,23 @@ export function registerPlaceRoutes(
     if (!config?.googlePlacesKey) return reply.code(503).send({ error: "google_not_configured" });
     let details: any;
     try {
-      const res = await gfetch(
-        `https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}`,
-        {
-          headers: {
-            "X-Goog-Api-Key": config.googlePlacesKey,
-            "X-Goog-FieldMask": REFRESH_DETAILS_MASK,
-          },
-          signal: AbortSignal.timeout(10_000),
-        },
+      const res = await withSpan(
+        "google.place-refresh",
+        { "peer.service": "places.googleapis.com", endpoint: "places.get" },
+        async (span: any) =>
+          gfetch(
+            `https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}`,
+            {
+              headers: {
+                "X-Goog-Api-Key": config.googlePlacesKey,
+                "X-Goog-FieldMask": REFRESH_DETAILS_MASK,
+              },
+              signal: AbortSignal.timeout(10_000),
+            },
+          ).then((r: Response) => {
+            span.setAttribute("http.status_code", r.status);
+            return r;
+          })
       );
       if (res.status === 429) return reply.code(429).send({ error: "google_rate_limited" });
       if (!res.ok) return reply.code(502).send({ error: "google_unavailable" });

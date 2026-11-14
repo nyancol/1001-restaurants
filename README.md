@@ -94,6 +94,43 @@ run automatically at container start; `/api/health` reports `db: ok` once applie
 All `/api/*` except health/login/callback/openapi-docs require a session and
 return `401` without one.
 
+## Telemetry (OTEL → homelab LGTM, prod only)
+
+The service ships traces, metrics, and correlated logs via OTLP/HTTP to the
+homelab `lgtm` stack (`grafana/otel-lgtm`) over the external `telemetry`
+Docker network. Preprod/dev export nothing.
+
+| Var | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | prod only (via Arcane) | — (unset = telemetry disabled) | e.g. `http://lgtm:4318`. Presence of a valid `http(s)` URL is the switch — `NODE_ENV` is `production` in both prod and preprod, so it cannot be the switch |
+| `OTEL_SERVICE_NAME` | no | `places` | `service.name` on every signal |
+| `DEPLOYMENT_ENVIRONMENT` | no | `NODE_ENV` | `deployment.environment` (`production` in prod) |
+| `OTEL_SERVICE_VERSION` | no | `unknown` | `service.version` (wire the git sha at Arcane build time when available) |
+
+- Activation is fail-open: the SDK starts before instrumented imports
+  (`src/observability/register.ts` is the first import in `src/index.ts`);
+  exporter errors, timeouts, or an unreachable collector never fail requests
+  or prevent boot, and shutdown flush is capped at 5s. Rollback = unset
+  `OTEL_EXPORTER_OTLP_ENDPOINT` and redeploy.
+- `GET /api/health` is excluded from trace export (Docker/Caddy noise).
+- Redaction (both stdout JSON and OTLP): `cookie`, `authorization`,
+  `set-cookie` headers and any `*secret*` / `*token*` / `*key*` field
+  (covers `SESSION_SECRET`, `OIDC_CLIENT_SECRET`, `GOOGLE_PLACES_KEY`,
+  `X-Goog-Api-Key`, bearer tokens) are replaced with `[Redacted]` via
+  `PINO_REDACT_PATHS` (`src/observability/logger.ts`) plus
+  `sanitizeAttributes()` on span/log attributes
+  (`src/observability/sanitize.ts`). Metric views keep only
+  `http.method`, `http.route`, `http.status_code` (+ client peer/url).
+- Sampling: none — 100% of non-excluded signals are exported.
+
+Arcane rollout: attach `places` to the external `telemetry` network (from
+`compose.yaml` in git), set the four vars above in the Arcane prod `.env`
+(`OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318`,
+`OTEL_SERVICE_NAME=places`, `DEPLOYMENT_ENVIRONMENT=production`,
+`OTEL_SERVICE_VERSION=<sha>`), redeploy. Verify in Grafana (`:3001`):
+Tempo `service.name=places`, Loki `{service_name="places"}`, Mimir
+`http.server.duration`.
+
 ## Tests
 
 ```bash

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { AppConfig } from "../config.js";
+import { withSpan } from "../observability/trace.js";
 
 export type GoogleFetch = typeof fetch;
 
@@ -78,15 +79,23 @@ export function registerGoogleRoutes(
     const body: Record<string, unknown> = { input: q };
     if (query.sessionToken) body.sessionToken = query.sessionToken;
     try {
-      const res = await gfetch("https://places.googleapis.com/v1/places:autocomplete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": config.googlePlacesKey,
-          "X-Goog-FieldMask": autocompleteMask,
-        },
-        body: JSON.stringify(body),
-      });
+      const res = await withSpan(
+        "google.autocomplete",
+        { "peer.service": "places.googleapis.com", endpoint: "places:autocomplete" },
+        async (span: any) =>
+          gfetch("https://places.googleapis.com/v1/places:autocomplete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": config.googlePlacesKey,
+              "X-Goog-FieldMask": autocompleteMask,
+            },
+            body: JSON.stringify(body),
+          }).then((r: Response) => {
+            span.setAttribute("http.status_code", r.status);
+            return r;
+          })
+      );
       return relay(res, reply);
     } catch (err) {
       req.log.error({ err }, "google autocomplete failed");
@@ -100,14 +109,22 @@ export function registerGoogleRoutes(
     const placeId = query?.placeId ?? query?.place_id;
     if (!placeId) return reply.code(400).send({ error: "placeId is required" });
     try {
-      const res = await gfetch(
-        `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
-        {
-          headers: {
-            "X-Goog-Api-Key": config.googlePlacesKey,
-            "X-Goog-FieldMask": detailsMask,
-          },
-        }
+      const res = await withSpan(
+        "google.details",
+        { "peer.service": "places.googleapis.com", endpoint: "places.get" },
+        async (span: any) =>
+          gfetch(
+            `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+            {
+              headers: {
+                "X-Goog-Api-Key": config.googlePlacesKey,
+                "X-Goog-FieldMask": detailsMask,
+              },
+            }
+          ).then((r: Response) => {
+            span.setAttribute("http.status_code", r.status);
+            return r;
+          })
       );
       return relay(res, reply);
     } catch (err) {
@@ -123,7 +140,15 @@ export function registerGoogleRoutes(
     if (!address) return reply.code(400).send({ error: "address is required" });
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${config.googlePlacesKey}`;
     try {
-      const res = await gfetch(url);
+      const res = await withSpan(
+        "google.geocode",
+        { "peer.service": "maps.googleapis.com", endpoint: "geocode" },
+        async (span: any) =>
+          gfetch(url).then((r: Response) => {
+            span.setAttribute("http.status_code", r.status);
+            return r;
+          })
+      );
       return relay(res, reply);
     } catch (err) {
       req.log.error({ err }, "google geocode failed");
