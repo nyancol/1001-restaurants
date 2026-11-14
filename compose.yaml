@@ -39,6 +39,7 @@ services:
       OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
       OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
       OIDC_REDIRECT_URI: "${OIDC_REDIRECT_URI:-}"
+      PLACES_API_RESOURCE: "${PLACES_API_RESOURCE:-}"
       # APP_ORIGIN is the per-deployment host variable (e.g. https://app.example.com).
       # OIDC callback defaults to ${APP_ORIGIN}/api/auth/callback;
       # set OIDC_REDIRECT_URI only to override it with the provider-registered value.
