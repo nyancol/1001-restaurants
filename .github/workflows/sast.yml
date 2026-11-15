@@ -1,0 +1,24 @@
+name: SAST Security Scan
+
+on:
+  push:
+    branches: [ "main"]
+  pull_request:
+    branches: [ "main"]
+
+jobs:
+  semgrep-sast:
+    name: Run Semgrep SAST
+    runs-on: [selfhosted-runner]
+    
+    container:
+      image: semgrep/semgrep:latest # Runs Semgrep inside an isolated container natively on your runner
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep Scan
+        run: semgrep ci --metrics=off
+        env:
+          SEMGREP_RULES: p/default
