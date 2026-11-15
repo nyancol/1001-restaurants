@@ -45,22 +45,34 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Pr
         rows={2}
         placeholder={t["tags.notePlaceholder"]}
       />
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         {onDelete && (
           <button
             type="button"
-            className="edge radius-input mr-auto border-danger-line bg-danger-bg px-3 py-1.5 text-sm font-medium text-danger-ink transition hover:brightness-95"
+            className="edge radius-input inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center border-danger-line bg-danger-bg text-danger-ink transition hover:brightness-95"
             onClick={() => setConfirmOpen(true)}
+            aria-label={t["editor.delete"]}
+            title={t["editor.delete"]}
           >
-            🗑️ {t["editor.delete"]}
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" x2="10" y1="11" y2="17" />
+              <line x1="14" x2="14" y1="11" y2="17" />
+            </svg>
           </button>
         )}
-        <button type="button" className="edge radius-input border-line bg-surface px-3 py-1.5 text-sm text-ink" onClick={onCancel}>
+        <button
+          type="button"
+          className="edge radius-input inline-flex min-h-[44px] flex-1 items-center justify-center border-line bg-surface px-4 text-sm font-medium text-ink transition hover:bg-surface-2"
+          onClick={onCancel}
+        >
           {t["editor.cancel"]}
         </button>
         <button
           type="button"
-          className="edge radius-input border-accent bg-accent px-3 py-1.5 text-sm text-accent-ink"
+          className="edge radius-input inline-flex min-h-[44px] flex-1 items-center justify-center border-accent bg-accent px-4 text-sm font-semibold text-accent-ink transition hover:brightness-95 active:brightness-90"
           onClick={() => onSave({ tags, rating, note: note || null, icon: icon.trim().toLowerCase() || "fork" })}
         >
           {t["editor.save"]}

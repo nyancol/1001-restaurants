@@ -153,25 +153,27 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
             >
               <IconGlyph id={iconId} size={22} />
             </span>
-            <span
-              className={`edge radius-pill px-2 py-0.5 text-xs ${p.status === "BEEN_TO" ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}
-            >
-              {p.status === "BEEN_TO" ? t["card.beenTo"] : t["card.wantToGo"]}
-            </span>
+            {readOnly ? (
+              <span
+                className={`edge radius-pill px-2 py-0.5 text-xs ${p.status === "BEEN_TO" ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}
+              >
+                {p.status === "BEEN_TO" ? t["card.beenTo"] : t["card.wantToGo"]}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onToggleStatus(p)}
+                className={`edge radius-pill cursor-pointer px-2 py-0.5 text-xs transition-opacity hover:opacity-75 ${p.status === "BEEN_TO" ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}
+                aria-label={p.status === "WANT_TO_GO" ? t["card.markVisited"] : t["card.markWant"]}
+                title={p.status === "WANT_TO_GO" ? t["card.markVisited"] : t["card.markWant"]}
+              >
+                {p.status === "BEEN_TO" ? t["card.beenTo"] : t["card.wantToGo"]}
+              </button>
+            )}
           </div>
           <div className="font-display mt-1 text-base font-medium leading-tight text-ink">{p.name}</div>
           {p.address && <div className="truncate text-sm text-muted">📍 {p.address}</div>}
         </div>
-        {!readOnly && (
-          <button
-            type="button"
-            onClick={() => onToggleStatus(p)}
-            className="edge radius-input shrink-0 border-line bg-surface px-2 py-1 text-xs text-ink"
-            aria-label={p.status === "WANT_TO_GO" ? t["card.markVisited"] : t["card.markWant"]}
-          >
-            {p.status === "WANT_TO_GO" ? t["card.visitedShort"] : t["card.wantShort"]}
-          </button>
-        )}
       </div>
 
       <dl className="mt-2 flex flex-col gap-1 text-xs">
@@ -228,30 +230,74 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
 
       <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
         {!readOnly && (
-          <button type="button" className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-ink" onClick={() => onEdit(p)}>
-            {t["card.edit"]}
+          <button
+            type="button"
+            className="edge radius-input inline-flex min-h-[40px] min-w-[40px] items-center justify-center border-line bg-surface px-3 text-ink"
+            onClick={() => onEdit(p)}
+            aria-label={t["card.edit"]}
+            title={t["card.edit"]}
+          >
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+              <path d="m15 5 4 4" />
+            </svg>
           </button>
         )}
         {!readOnly && onRefresh && (
           <button
             type="button"
-            className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-ink disabled:opacity-50"
+            className="edge radius-input inline-flex min-h-[40px] items-center justify-center gap-1.5 border-line bg-surface px-3 text-xs text-ink disabled:opacity-50"
             onClick={() => void handleRefresh()}
             disabled={busy || !p.googlePlaceId}
             title={!p.googlePlaceId ? t["card.noGoogle"] : t["card.refreshTitle"]}
             aria-label={busy ? t["card.refreshingAria"] : t["card.refreshAria"]}
           >
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" className={busy ? "animate-spin" : undefined}>
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+              <path d="M8 16H3v5" />
+            </svg>
             {busy ? t["card.refreshing"] : t["card.refresh"]}
           </button>
         )}
         {p.websiteUri && (
-          <a href={p.websiteUri} target="_blank" rel="noreferrer" className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-accent">
-            {t["card.website"]}
+          <a
+            href={p.websiteUri}
+            target="_blank"
+            rel="noreferrer"
+            className="edge radius-input inline-flex min-h-[40px] min-w-[40px] items-center justify-center border-line bg-surface px-3 text-accent"
+            aria-label={t["card.website"]}
+            title={t["card.website"]}
+          >
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+              <path d="M2 12h20" />
+            </svg>
           </a>
         )}
         {mapsUrlFor(p) && (
-          <button type="button" className="edge radius-input inline-flex min-h-[40px] items-center border-line bg-surface px-3 text-xs text-ink" onClick={() => void shareMaps()} aria-label={t["card.shareAria"]}>
-            {copied ? t["card.copied"] : t["card.share"]}
+          <button
+            type="button"
+            className="edge radius-input inline-flex min-h-[40px] min-w-[40px] items-center justify-center border-line bg-surface px-3 text-ink"
+            onClick={() => void shareMaps()}
+            aria-label={t["card.shareAria"]}
+            title={copied ? t["card.copied"] : t["card.share"]}
+          >
+            {copied ? (
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+                <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+              </svg>
+            )}
           </button>
         )}
       </div>
