@@ -61,6 +61,13 @@ length ok`).
   `:8093 -> places:5173`), no host publication. The Arcane-managed prod
   `.env` MUST NOT set `HOST_PORT` (base `compose.yaml` only `expose:`s it;
   the variable is dead weight that invites a harmful publish).
+* Docker access: `scripts/lib-docker.sh` (sourced by the preprod scripts)
+  auto-detects — runs docker directly when `docker info` already works,
+  sudo only when needed. `mise run preprod-up/down/logs` honor the same
+  rule. Override explicitly per host: `DOCKER_SUDO=""` (never sudo) or
+  `DOCKER_SUDO="sudo"` (always sudo). If a box's sudo demands a TTY
+  password, non-interactive runs must use `DOCKER_SUDO=""` (when docker
+  allows it) or fix group membership — never pipe a password.
 * Telemetry is fail-open and batched: a LGTM outage appears as a gap in
   signals with steady `200`s — never as app `5xx`.
 
@@ -299,6 +306,17 @@ mise run preprod-deploy --branch <name> --fresh-db [--evict]
 # Without --evict, a slot owned by another branch is refused, not replaced.
 ```
 
+CI trigger (`.github/workflows/preprod-preview.yml`, self-hosted runner):
+the `preview` label on a PR to `main` is the trigger — pushes without it
+build nothing. Label added (or slot owned by another branch) deploys with
+`--fresh-db --evict`; `synchronize` on the already-deployed branch rebuilds
+and keeps the DB (requestor rows survive iteration). Every deploy, eviction,
+teardown, and red verdict is posted as a PR comment via `gh` (branch, SHA,
+health body, green/red cause — never secrets). On PR close or label removal
+the workflow tears the preview down only if that PR's branch owns the slot.
+Same-repo branches only; fork PRs are refused. Manual `mise run
+preprod-deploy` stays available as fallback and re-records the slot.
+
 Rules:
 
 - The wrapper never switches branches: current checkout must equal
@@ -326,6 +344,11 @@ Read-only check any time (also used by Hermes drills):
 mise run preprod-verify                 # all green signals
 EXPECT_FIXTURE=1 mise run preprod-verify # additionally require 6-place seed
 ```
+
+Exit codes: `0` = green, `1` = red, `2` = check errored (docker
+unreachable, indeterminate — NOT a red, do not alert as down, fix access
+and re-run). Only exit-1 runs count toward the watch's consecutive-failure
+threshold (capability 4).
 
 ### 3.3 Evidence post (Discord)
 

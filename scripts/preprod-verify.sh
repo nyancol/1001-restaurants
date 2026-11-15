@@ -1,20 +1,34 @@
 #!/usr/bin/env bash
 # Verify preprod green (see spec Requirement: Preprod green definition).
-# Read-only: never rebuilds, reseeds, or evicts. Exit 0 = green, 1 = red.
+# Read-only: never rebuilds, reseeds, or evicts.
+# Exit 0 = green, 1 = red, 2 = check errored (docker unreachable, indeterminate
+# — NOT a red: do not alert as down, fix access and re-run).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SUDO="${DOCKER_SUDO-sudo}" # empty DOCKER_SUDO runs docker directly (no sudo)
-COMPOSE="$SUDO docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml"
+# shellcheck disable=SC1091
+. ./scripts/lib-docker.sh # sets SUDO/COMPOSE, auto-detecting docker access
 FAIL=0
+CHECK_ERR=0
 say() { printf '%s\n' "$*"; }
 fail() { printf 'RED: %s\n' "$*"; FAIL=1; }
 pass() { printf 'GREEN: %s\n' "$*"; }
+cerr() { printf 'ERROR: %s\n' "$*"; CHECK_ERR=1; }
 
 HOST_PORT="${HOST_PORT:-$(grep -E '^HOST_PORT=' .env.preprod 2>/dev/null | cut -d= -f2)}"
 HOST_PORT="${HOST_PORT:-5174}"
 
-STARTED="$($COMPOSE ps --format json places 2>/dev/null | head -n 1 || true)"
-if [ -z "$STARTED" ]; then fail "container places-staging is not running"; else pass "container running"; fi
+# shellcheck disable=SC2086
+if PS_OUT="$($COMPOSE ps --format json places 2>&1)"; then PS_RC=0; else PS_RC=$?; fi
+DOWN=0
+if [ "$PS_RC" -ne 0 ]; then
+  cerr "docker check failed (exit $PS_RC): $PS_OUT"
+  cerr "container state unknown — fix docker access (see DOCKER_SUDO) and re-run; not a red"
+elif [ -z "$PS_OUT" ]; then
+  fail "container places-staging is not running"
+  DOWN=1
+else
+  pass "container running"
+fi
 
 HEALTH="$(curl -fsS -m 10 "http://localhost:${HOST_PORT}/api/health" 2>/dev/null || true)"
 if printf '%s' "$HEALTH" | grep -q '"db":"ok"'; then pass "health db:ok ($HEALTH)"; else fail "health not ok: ${HEALTH:-unreachable}"; fi
@@ -26,7 +40,11 @@ else
   fail "OIDC login reachable check got HTTP $LOGIN_CODE (want 3xx redirect; 503 = OIDC misconfigured)"
 fi
 
-if $COMPOSE logs --no-log-prefix --tail 200 places 2>/dev/null | grep -q "Invalid config"; then
+# shellcheck disable=SC2086
+if LOGS="$($COMPOSE logs --no-log-prefix --tail 200 places 2>&1)"; then LOGS_RC=0; else LOGS_RC=$?; fi
+if [ "$LOGS_RC" -ne 0 ]; then
+  cerr "docker logs check failed (exit $LOGS_RC): $LOGS"
+elif printf '%s' "$LOGS" | grep -q "Invalid config"; then
   fail "boot logs contain 'Invalid config'"
 else
   pass "boot logs clean of 'Invalid config'"
@@ -50,12 +68,23 @@ else
 fi
 
 if [ "${EXPECT_FIXTURE:-0}" = "1" ]; then
-  COUNTS="$($COMPOSE exec -T places node -e "const D=require('better-sqlite3');const db=D('/data/app.db',{readonly:true});console.log(JSON.stringify({places:db.prepare('select count(*) c from places').get().c,users:db.prepare('select count(*) c from users').get().c}));db.close()" 2>/dev/null || true)"
-  PLACES_N="$(printf '%s' "$COUNTS" | grep -o '"places":[0-9]*' | grep -o '[0-9]*')"
-  if [ "${PLACES_N:-}" = "6" ]; then pass "fixture places=6 ($COUNTS)"; else fail "fixture places!=6: ${COUNTS:-unreadable}"; fi
+  # shellcheck disable=SC2086
+  if COUNTS="$($COMPOSE exec -T places node -e "const D=require('better-sqlite3');const db=D('/data/app.db',{readonly:true});console.log(JSON.stringify({places:db.prepare('select count(*) c from places').get().c,users:db.prepare('select count(*) c from users').get().c}));db.close()" 2>&1)"; then EXEC_RC=0; else EXEC_RC=$?; fi
+  if [ "$EXEC_RC" -ne 0 ]; then
+    if [ "$DOWN" -eq 1 ]; then
+      say "SKIP fixture count (container is down; query expectedly failed)"
+    else
+      cerr "fixture query failed (exit $EXEC_RC): $COUNTS"
+    fi
+  else
+    PLACES_N="$(printf '%s' "$COUNTS" | grep -o '"places":[0-9]*' | grep -o '[0-9]*')"
+    if [ "${PLACES_N:-}" = "6" ]; then pass "fixture places=6 ($COUNTS)"; else fail "fixture places!=6: ${COUNTS:-unreadable}"; fi
+  fi
 else
   say "SKIP fixture count (set EXPECT_FIXTURE=1 to require the 6-place demo seed)"
 fi
 
-say "---"; if [ "$FAIL" -eq 0 ]; then say "preprod GREEN"; else say "preprod RED"; fi
+say "---"
+if [ "$CHECK_ERR" -ne 0 ]; then say "preprod UNKNOWN (check errored, not a red)"; exit 2; fi
+if [ "$FAIL" -eq 0 ]; then say "preprod GREEN"; else say "preprod RED"; fi
 exit "$FAIL"

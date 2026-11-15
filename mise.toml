@@ -32,7 +32,7 @@ npm run dev:web
 # on 5173) and preprod bind together. See hermes.yaml for the canonical map.
 [tasks.preprod-up]
 description = "Start the preprod app instance (http://localhost:5174)"
-run = "sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml up -d --build"
+run = "${DOCKER_SUDO-sudo} docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml up -d --build"
 
 [tasks.preprod-deploy]
 description = "Deploy a branch to the single preprod preview slot (refuses to evict without --evict)"
@@ -54,9 +54,9 @@ run = "./scripts/preprod-verify.sh"
 
 [tasks.preprod-down]
 description = "Stop the preprod app instance (keeps its data volume)"
-run = "sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml down"
+run = "${DOCKER_SUDO-sudo} docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml down"
 
 [tasks.preprod-logs]
 description = "Follow preprod app logs"
-run = "sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml logs -f places"
+run = "${DOCKER_SUDO-sudo} docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml logs -f places"
 

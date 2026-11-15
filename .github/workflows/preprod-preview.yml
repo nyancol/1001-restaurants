@@ -1,0 +1,165 @@
+# Preprod preview: label-gated PR deploys to the single staging slot (B1).
+# Trigger is the `preview` label (maintainer opt-in): pushes without it build
+# nothing. Same-repo branches only — PR head code runs on the homelab host
+# with staging secrets in env, so forks are refused outright.
+# See skill capability 3 (skills/ops/SKILL.md) and hermes.yaml for the contract.
+name: Preprod preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled, closed]
+    branches: [main]
+
+concurrency:
+  group: preprod-slot
+  cancel-in-progress: true # preview value is always the latest head; stale runs die before deploying
+
+permissions:
+  contents: read
+  pull-requests: write # evidence / eviction / teardown comments
+
+env:
+  # Gitignored staging env, staged into the workspace per run (never committed).
+  PREPROD_ENV_SOURCE: /home/yann/Documents/1001-restaurants/.env.preprod
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  preview:
+    name: Deploy PR head to staging slot
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.action != 'unlabeled' &&
+      contains(github.event.pull_request.labels.*.name, 'preview')
+    runs-on: [self-hosted]
+    steps:
+      - name: Refuse forks
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "Fork PRs are not deployed to preprod (staging secrets live on the homelab host)." >&2
+          gh pr comment "${{ github.event.pull_request.number }}" --body \
+            "Preview refused: fork PRs are not deployed (staging secrets live on the homelab host)."
+          exit 1
+
+      - name: Checkout PR head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Recreate PR branch locally
+        # preprod-deploy.sh refuses unless the checkout branch equals --branch.
+        run: git checkout -B "${{ github.event.pull_request.head.ref }}"
+
+      - name: Stage staging env
+        run: |
+          if [ -f "$PREPROD_ENV_SOURCE" ]; then
+            cp "$PREPROD_ENV_SOURCE" .env.preprod
+          else
+            echo "::error::Missing staging env at $PREPROD_ENV_SOURCE (gitignored file on the homelab host)."
+            exit 1
+          fi
+
+      - name: Deploy to slot
+        id: deploy
+        run: |
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
+          ARGS="--branch $HEAD_REF --evict"
+          if [ "${{ github.event.action }}" = "labeled" ]; then
+            ARGS="$ARGS --fresh-db"
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          elif [ -f .preprod-slot ]; then
+            # shellcheck disable=SC1091
+            . ./.preprod-slot
+            if [ "${SLOT_BRANCH:-}" != "$HEAD_REF" ]; then
+              ARGS="$ARGS --fresh-db"
+              echo "fresh=true" >> "$GITHUB_OUTPUT"
+              echo "evicted=${SLOT_BRANCH:-unknown}" >> "$GITHUB_OUTPUT"
+              PREV_PR="$(gh pr list --head "${SLOT_BRANCH:-}" --state open --json number --jq '.[0].number // empty')"
+              echo "evicted_pr=$PREV_PR" >> "$GITHUB_OUTPUT"
+            else
+              echo "fresh=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            ARGS="$ARGS --fresh-db"
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          fi
+          ./scripts/preprod-deploy.sh $ARGS
+
+      - name: Verify green
+        id: verify
+        run: |
+          if [ "${{ steps.deploy.outputs.fresh }}" = "true" ]; then export EXPECT_FIXTURE=1; fi
+          set +e
+          OUT="$(./scripts/preprod-verify.sh 2>&1)"; RC=$?
+          set -e
+          printf '%s\n' "$OUT"
+          {
+            echo "verify_rc=$RC"
+            echo "verify_out<<EOF"
+            printf '%s\n' "$OUT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          exit "$RC"
+
+      - name: Comment evidence on PR
+        if: always()
+        run: |
+          PR="${{ github.event.pull_request.number }}"
+          SHA="${{ github.event.pull_request.head.sha }}"
+          if [ "${{ steps.verify.outputs.verify_rc }}" = "0" ]; then
+            STATUS="GREEN"
+          elif [ "${{ steps.verify.outputs.verify_rc }}" = "2" ]; then
+            STATUS="UNKNOWN (check errored, not a red — see skill capability 3)"
+          else
+            STATUS="RED (exit ${{ steps.verify.outputs.verify_rc }})"
+          fi
+          gh pr comment "$PR" --body "$(printf '[PREVIEW] branch %s @ %s — %s\nstaging: %s direct: http://localhost:5174\n```\n%s\n```' \
+            "${{ github.event.pull_request.head.ref }}" "${SHA:0:7}" "$STATUS" \
+            "$(grep -E '^APP_ORIGIN=' .env.preprod | cut -d= -f2-)" \
+            "${{ steps.verify.outputs.verify_out }}")"
+
+      - name: Comment eviction on previous owner's PR
+        if: steps.deploy.outputs.evicted_pr != ''
+        run: |
+          gh pr comment "${{ steps.deploy.outputs.evicted_pr }}" --body "$(printf \
+            '[PREVIEW] evicted: branch %s claimed the single slot (now @ %s). Re-add the `preview` label to reclaim it.' \
+            "${{ github.event.pull_request.head.ref }}" "${{ github.event.pull_request.head.sha }}")"
+
+  teardown:
+    name: Guarded teardown of staging slot
+    if: >-
+      github.event.action == 'closed' ||
+      (github.event.action == 'unlabeled' && github.event.label.name == 'preview')
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout base (head may be gone)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Tear down only if this PR owns the slot
+        run: |
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
+          if [ ! -f .preprod-slot ]; then
+            echo "No slot record — nothing to tear down."
+            exit 0
+          fi
+          # shellcheck disable=SC1091
+          . ./.preprod-slot
+          if [ "${SLOT_BRANCH:-}" != "$HEAD_REF" ]; then
+            echo "Slot owned by '${SLOT_BRANCH:-unknown}', not '$HEAD_REF' — leaving it alone."
+            exit 0
+          fi
+          if [ -f "$PREPROD_ENV_SOURCE" ]; then
+            cp "$PREPROD_ENV_SOURCE" .env.preprod
+          else
+            echo "::error::Missing staging env at $PREPROD_ENV_SOURCE."
+            exit 1
+          fi
+          ${DOCKER_SUDO-sudo} docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml down
+          rm -f .preprod-slot
+          REASON="closed"
+          if [ "${{ github.event.action }}" = "closed" ] && [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+            REASON="merged — promoted to prod via main"
+          fi
+          gh pr comment "${{ github.event.pull_request.number }}" --body \
+            "[PREVIEW] torn down ($REASON). Slot is free."
