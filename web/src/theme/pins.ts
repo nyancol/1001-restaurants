@@ -1,61 +1,88 @@
+import { ICON_SVG, ICON_IDS } from "./iconSvg";
+
 export type PinStatus = "WANT_TO_GO" | "BEEN_TO";
 
+export const PIN_FILL = "#1F6F5B";
+
+export const ICONS = [...ICON_IDS];
+
+export const ICON_EMOJI: Record<string, string> = {
+  fork: "🍴",
+  burger: "🍔",
+  pizza: "🍕",
+  soup: "🍲",
+  hotdog: "🌭",
+  bagel: "🥯",
+  croissant: "🥐",
+  "ice-cream": "🍨",
+  cocktail: "🍸",
+  wine: "🍷",
+  beer: "🍺",
+  coffee: "☕",
+};
+
+// Back-compat shims for removed type vocabulary.
 export const TYPE_COLORS: Record<string, string> = {
-  restaurant: "#D64545",
-  "café": "#8B5E34",
-  bar: "#7C5CBF",
-  bakery: "#D9932B",
+  restaurant: PIN_FILL,
+  "café": PIN_FILL,
+  cafe: PIN_FILL,
+  bar: PIN_FILL,
+  bakery: PIN_FILL,
+  fork: PIN_FILL,
+  burger: PIN_FILL,
+  pizza: PIN_FILL,
+  soup: PIN_FILL,
+  hotdog: PIN_FILL,
+  bagel: PIN_FILL,
+  croissant: PIN_FILL,
+  "ice-cream": PIN_FILL,
+  cocktail: PIN_FILL,
+  wine: PIN_FILL,
+  beer: PIN_FILL,
+  coffee: PIN_FILL,
 };
 
-const FALLBACK = ["#2E7CF6", "#3FA15A", "#D9932B", "#4FA3A3", "#C86AA0"];
+export const TYPE_EMOJI: Record<string, string> = { ...ICON_EMOJI };
 
-export function colorForType(type: string): string {
-  const t = (type ?? "").trim().toLowerCase() || "restaurant";
-  if (TYPE_COLORS[t]) return TYPE_COLORS[t];
-  let h = 0;
-  for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return FALLBACK[h % FALLBACK.length];
+export function colorForType(_type: string): string {
+  return PIN_FILL;
 }
 
-export const TYPE_EMOJI: Record<string, string> = {
-  restaurant: "🍴",
-  "café": "☕",
-  bar: "🍸",
-  bakery: "🥖",
-};
-
-const TYPE_LETTERS: Record<string, string> = {
-  restaurant: "R",
-  "café": "C",
-  bar: "B",
-  bakery: "P",
-};
-
-export function emojiFor(type: string): string {
-  return TYPE_EMOJI[(type ?? "").trim().toLowerCase()] ?? "📍";
+export function emojiFor(icon: string): string {
+  return ICON_EMOJI[(icon ?? "").trim().toLowerCase()] ?? "📍";
 }
 
-/** Letter drawn inside the map pin (reliable in canvas images, unlike emoji). */
-export function glyphFor(type: string): string {
-  const t = (type ?? "").trim().toLowerCase();
-  return TYPE_LETTERS[t] ?? "•";
+/** Icon glyph id drawn inside the map pin (bold vector path, not emoji). */
+export function glyphFor(icon: string): string {
+  const t = (icon ?? "").trim().toLowerCase() || "fork";
+  return (ICONS as string[]).includes(t) ? t : "fork";
 }
 
-/** Mirror of CSS contract for canvas pins. Fill encodes place type; icon adds a second channel. */
-export function pinsFor(_theme: string, _mode: string, typeOrStatus: string): string {
-  return colorForType(typeOrStatus);
+/** Inner SVG markup for an icon id (single-color silhouette). */
+export function iconSvgFor(icon: string): string {
+  const t = (icon ?? "").trim().toLowerCase() || "fork";
+  return ICON_SVG[t] ?? ICON_SVG.fork;
 }
 
-function dropSvg(fill: string, letter: string): string {
-  const safe = letter.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48"><path d="M18 1 C9 1 2.5 7.5 2.5 15.5 C2.5 26 18 47 18 47 C18 47 33.5 26 33.5 15.5 C33.5 7.5 27 1 18 1 Z" fill="${fill}" stroke="white" stroke-width="2.5"/><circle cx="18" cy="15.5" r="8.5" fill="white" fill-opacity="0.92"/><text x="18" y="20" font-size="11" font-weight="700" font-family="system-ui,sans-serif" text-anchor="middle" fill="${fill}">${safe}</text></svg>`;
+/** Mirror of CSS contract for canvas pins. Single neutral fill. */
+export function pinsFor(_theme: string, _mode: string, _iconOrStatus: string): string {
+  return PIN_FILL;
+}
+
+function dropSvg(fill: string, iconId: string): string {
+  const inner = ICON_SVG[iconId] ?? ICON_SVG.fork;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48"><path d="M18 1 C9 1 2.5 7.5 2.5 15.5 C2.5 26 18 47 18 47 C18 47 33.5 26 33.5 15.5 C33.5 7.5 27 1 18 1 Z" fill="${fill}" stroke="white" stroke-width="2.5"/><circle cx="18" cy="15.5" r="9.5" fill="white"/><g transform="translate(11, 8.5) scale(0.5833)" fill="none" color="${fill}" stroke="${fill}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">${inner}</g></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 const ADDED = new Set<string>();
 
 export function knownTypes(): string[] {
-  return ["restaurant", "café", "bar", "bakery"];
+  return [...ICONS];
+}
+
+export function knownIcons(): string[] {
+  return [...ICONS];
 }
 
 async function addImage(map: any, mode: string, name: string, url: string): Promise<void> {
@@ -77,17 +104,21 @@ async function addImage(map: any, mode: string, name: string, url: string): Prom
 }
 
 export async function ensurePinImages(map: any, mode: string, extraTypes: string[] = []): Promise<void> {
-  const all = [...new Set([...knownTypes(), ...extraTypes.map((t) => (t ?? "").trim().toLowerCase()).filter(Boolean)])];
-  const defs: [string, string][] = all.map((t) => [`drop-${t}`, dropSvg(colorForType(t), glyphFor(t))]);
-  defs.push(["drop-generic", dropSvg("#666666", "•")]);
-  // Back-compat: old status-based names resolve to neutral type fills.
-  defs.push(["drop-WANT_TO_GO", dropSvg(colorForType("restaurant"), glyphFor("restaurant"))]);
-  defs.push(["drop-BEEN_TO", dropSvg(colorForType("café"), glyphFor("café"))]);
+  const all = [...new Set([...knownIcons(), ...extraTypes.map((t) => (t ?? "").trim().toLowerCase()).filter(Boolean)])];
+  const defs: [string, string][] = all.map((t) => [`drop-${t}`, dropSvg(PIN_FILL, glyphFor(t))]);
+  defs.push(["drop-generic", dropSvg(PIN_FILL, "🍴")]);
+  // Legacy aliases: old type/status pin names resolve to new icons.
+  defs.push(["drop-restaurant", dropSvg(PIN_FILL, glyphFor("fork"))]);
+  defs.push(["drop-café", dropSvg(PIN_FILL, glyphFor("coffee"))]);
+  defs.push(["drop-bar", dropSvg(PIN_FILL, glyphFor("cocktail"))]);
+  defs.push(["drop-bakery", dropSvg(PIN_FILL, glyphFor("croissant"))]);
+  defs.push(["drop-WANT_TO_GO", dropSvg(PIN_FILL, glyphFor("fork"))]);
+  defs.push(["drop-BEEN_TO", dropSvg(PIN_FILL, glyphFor("coffee"))]);
   await Promise.all(defs.map(([name, url]) => addImage(map, mode, name, url)));
 }
 
-export function pinImageFor(placeType: string): string {
-  const t = (placeType ?? "").trim().toLowerCase() || "restaurant";
-  if (knownTypes().includes(t)) return `drop-${t}`;
+export function pinImageFor(icon: string): string {
+  const t = (icon ?? "").trim().toLowerCase() || "fork";
+  if ((knownIcons() as string[]).includes(t)) return `drop-${t}`;
   return "drop-generic";
 }

@@ -39,7 +39,7 @@ export interface Place {
   lat: number | null;
   lng: number | null;
   status: "WANT_TO_GO" | "BEEN_TO";
-  placeType: string;
+  icon: string;
   tags: string[];
   rating: number | null;
   note: string | null;
@@ -75,7 +75,6 @@ export async function listUsers(): Promise<DirectoryUser[]> {
 export async function listPlaces(params: {
   owner?: string;
   status?: string;
-  placeType?: string;
   tags?: string;
   q?: string;
   openAt?: string;
@@ -84,7 +83,6 @@ export async function listPlaces(params: {
   const sp = new URLSearchParams();
   sp.set("owner", params.owner ?? "me");
   if (params.status) sp.set("status", params.status);
-  if (params.placeType) sp.set("placeType", params.placeType);
   if (params.tags) sp.set("tags", params.tags);
   if (params.q) sp.set("q", params.q);
   if (params.openAt) sp.set("openAt", params.openAt);
@@ -97,7 +95,7 @@ export async function listPlaces(params: {
 
 export async function createPlace(input: {
   name: string;
-  placeType: string;
+  icon?: string;
   status?: string;
   tags?: string[];
   rating?: number | null;
@@ -153,11 +151,6 @@ export interface PlaceTypeCount {
   count: number;
 }
 
-export async function getPlaceTypes(q = ""): Promise<PlaceTypeCount[]> {
-  const body = await apiFetch(`/api/place-types${q ? `?q=${encodeURIComponent(q)}` : ""}`);
-  return body.placeTypes ?? [];
-}
-
 export interface AutocompleteSuggestion {
   placeId: string;
   text: string;
@@ -185,7 +178,7 @@ export interface PlaceDetails {
   address: string | null;
   lat: number | null;
   lng: number | null;
-  placeType?: string | null;
+  icon?: string | null;
   hours?: any;
   businessStatus?: string | null;
   priceLevel?: string | null;
@@ -198,14 +191,44 @@ export interface PlaceDetails {
   utcOffsetMinutes?: number | null;
 }
 
-function mapGoogleType(t: unknown): string | null {
-  if (typeof t !== "string" || !t) return null;
-  const v = t.toLowerCase();
-  if (v.includes("bakery") || v.includes("boulanger")) return "bakery";
-  if (v.includes("coffee") || v === "cafe" || v.includes("café")) return "café";
-  if (v.includes("bar") || v.includes("pub") || v.includes("cocktail") || v.includes("wine")) return "bar";
-  if (v.includes("restaurant") || v.includes("food") || v.includes("brunch") || v.includes("bistro") || v.includes("izakaya")) return "restaurant";
-  return null;
+const PRIMARY_TYPE_TO_ICON: Record<string, string> = {
+  hamburger_restaurant: "burger",
+  pizza_restaurant: "pizza",
+  ramen_restaurant: "soup",
+  noodle_shop: "soup",
+  pho_restaurant: "soup",
+  soup_restaurant: "soup",
+  hot_dog_restaurant: "hotdog",
+  hotdog_restaurant: "hotdog",
+  bagel_shop: "bagel",
+  bakery: "croissant",
+  patisserie: "croissant",
+  croissant_shop: "croissant",
+  boulangerie: "croissant",
+  ice_cream_shop: "ice-cream",
+  gelateria: "ice-cream",
+  dessert_shop: "ice-cream",
+  yogurt_shop: "ice-cream",
+  cocktail_bar: "cocktail",
+  pub: "cocktail",
+  speakeasy: "cocktail",
+  wine_bar: "wine",
+  brewery: "beer",
+  beer_garden: "beer",
+  irish_pub: "beer",
+  sports_bar: "beer",
+  cafe: "coffee",
+  coffee_shop: "coffee",
+  tea_house: "coffee",
+  brunch_restaurant: "coffee",
+};
+
+export function inferIcon(primaryType: unknown, types: unknown): string {
+  const pick = (v: unknown): string | null => {
+    if (typeof v !== "string" || !v) return null;
+    return PRIMARY_TYPE_TO_ICON[v.trim().toLowerCase()] ?? null;
+  };
+  return pick(primaryType) ?? (Array.isArray(types) ? (types.map(pick).find(Boolean) as string | undefined) : undefined) ?? "fork";
 }
 
 export function parseDetails(body: any, fallbackPlaceId: string, fallbackText: string): PlaceDetails {
@@ -224,7 +247,8 @@ export function parseDetails(body: any, fallbackPlaceId: string, fallbackText: s
     body?.result?.geometry?.location?.lng ??
     null;
   const googlePlaceId = body?.id ?? body?.place_id ?? body?.result?.place_id ?? fallbackPlaceId;
-  const rawType = body?.primaryType ?? body?.primaryTypeDisplayName?.text ?? (Array.isArray(body?.types) ? body.types[0] : null);
+  const rawType = body?.primaryType ?? null;
+  const rawTypes = Array.isArray(body?.types) ? body.types : null;
   const hours = body?.regularOpeningHours ?? body?.currentOpeningHours ?? body?.result?.opening_hours ?? null;
   const mapsLinks = body?.googleMapsLinks ?? null;
   const googleMapsUri = body?.googleMapsUri ?? mapsLinks?.placeUri ?? null;
@@ -234,7 +258,7 @@ export function parseDetails(body: any, fallbackPlaceId: string, fallbackText: s
     address: typeof address === "string" ? address : null,
     lat: typeof lat === "number" ? lat : null,
     lng: typeof lng === "number" ? lng : null,
-    placeType: mapGoogleType(rawType),
+    icon: inferIcon(rawType, rawTypes),
     hours: hours ? { periods: hours.periods ?? [], weekdayDescriptions: hours.weekdayDescriptions ?? [] } : null,
     businessStatus: body?.businessStatus ?? null,
     priceLevel: body?.priceLevel ?? null,

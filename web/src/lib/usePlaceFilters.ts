@@ -15,7 +15,6 @@ export interface PlaceFilters {
   statusParam: string;
   tagsParam: string;
   qParam: string;
-  placeTypeParam: string;
   openAtParam: string;
   openNowParam: boolean;
   owner: string;
@@ -26,8 +25,6 @@ export interface PlaceFilters {
   setTags: (t: string[]) => void;
   q: string;
   setQ: (q: string) => void;
-  placeType: string;
-  setPlaceType: (s: string) => void;
   openEnabled: boolean;
   setOpenEnabled: (b: boolean) => void;
   openAt: string;
@@ -46,7 +43,6 @@ export function usePlaceFilters(): PlaceFilters {
   const statusParam = searchParams.get("status") ?? "";
   const tagsParam = searchParams.get("tags") ?? "";
   const qParam = searchParams.get("q") ?? "";
-  const placeTypeParam = searchParams.get("placeType") ?? "";
   const openAtParam = searchParams.get("openAt") ?? "";
   const openNowParam = searchParams.get("openNow") === "1";
 
@@ -54,18 +50,17 @@ export function usePlaceFilters(): PlaceFilters {
   const [status, setStatus] = useState(statusParam);
   const [tags, setTags] = useState<string[]>(tagsParam ? tagsParam.split(",").filter(Boolean) : []);
   const [q, setQ] = useState(qParam);
-  const [placeType, setPlaceType] = useState(placeTypeParam);
   const [openEnabled, setOpenEnabled] = useState(Boolean(openAtParam || openNowParam));
   const [openAt, setOpenAt] = useState(openAtParam);
 
   const debouncedQ = useDebouncedValue(q, 300);
 
   // Sync state → URL. `me` is omitted to keep existing URLs clean.
+  // Legacy `placeType` param is intentionally dropped (ignored).
   useEffect(() => {
     const next = new URLSearchParams();
     if (owner && owner !== "me") next.set("owner", owner);
     if (status) next.set("status", status);
-    if (placeType) next.set("placeType", placeType);
     if (tags.length) next.set("tags", tags.join(","));
     if (debouncedQ.trim()) next.set("q", debouncedQ.trim());
     if (openEnabled) {
@@ -74,7 +69,7 @@ export function usePlaceFilters(): PlaceFilters {
     }
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [owner, status, placeType, tags, debouncedQ, openEnabled, openAt]);
+  }, [owner, status, tags, debouncedQ, openEnabled, openAt]);
 
-  return { ownerParam, statusParam, tagsParam, qParam, placeTypeParam, openAtParam, openNowParam, owner, setOwner, status, setStatus, tags, setTags, q, setQ, placeType, setPlaceType, openEnabled, setOpenEnabled, openAt, setOpenAt, debouncedQ };
+  return { ownerParam, statusParam, tagsParam, qParam, openAtParam, openNowParam, owner, setOwner, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, debouncedQ };
 }

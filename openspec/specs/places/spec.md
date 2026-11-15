@@ -7,7 +7,8 @@ Stores each user's personal restaurant/bar/cafe memory (status, tags, rating, no
 ## Requirements
 
 ### Requirement: Place CRUD with ownership
-The system SHALL store places with Google link fields, status, placeType, tags, rating, note, snapshotted Google enrichment (hours, businessStatus, priceLevel, priceRange, Google rating and count, website, Maps links), `ownerId`, and `ownerDisplayName` on read, forcing `ownerId` to the authenticated user on create. Listing SHALL support `owner=me|all|<userId>` with `owner=all` returning every user's places. Owner `DELETE` SHALL permanently remove the owned place.
+
+The system SHALL store places with Google link fields, status, icon, tags, rating, note, snapshotted Google enrichment (hours, businessStatus, priceLevel, priceRange, Google rating and count, website, Maps links), `ownerId`, and `ownerDisplayName` on read, forcing `ownerId` to the authenticated user on create. Listing SHALL support `owner=me|all|<userId>` with `owner=all` returning every user's places. Owner `DELETE` SHALL permanently remove the owned place.
 
 #### Scenario: Create own place
 - **WHEN** an authenticated user posts a valid place payload
@@ -36,7 +37,6 @@ The system SHALL store places with Google link fields, status, placeType, tags, 
 #### Scenario: Delete own place
 - **WHEN** the owner sends `DELETE /api/places/:id` for a place they own
 - **THEN** the system permanently deletes that row and returns `{ok:true}`, and subsequent reads no longer return it
-
 ### Requirement: Status toggle replaces Pending/Approved tags
 The system SHALL expose `status` as `WANT_TO_GO` or `BEEN_TO`, defaulting to `WANT_TO_GO` on create.
 
@@ -47,7 +47,6 @@ The system SHALL expose `status` as `WANT_TO_GO` or `BEEN_TO`, defaulting to `WA
 #### Scenario: Mark as visited
 - **WHEN** the owner patches status to `BEEN_TO`
 - **THEN** the system persists the new status and updated timestamp
-
 ### Requirement: Rating and evolving note
 The system SHALL store nullable `rating` (0-5 stars) and a single free-text `note` that the owner edits over time.
 
@@ -62,15 +61,23 @@ The system SHALL store nullable `rating` (0-5 stars) and a single free-text `not
 #### Scenario: Invalid rating rejected
 - **WHEN** a rating outside 0-5 is submitted
 - **THEN** the system rejects with `400` and stores nothing
-
 ### Requirement: PlaceType stored and editable by owner
-The system SHALL require `placeType` on create, accept it on patch by the owner, and expose it on every place representation.
+
+The system SHALL store `icon` (one of the 12 place-icon values, defaulting to `fork` on create when omitted) on every place, accept it on patch by the owner, and expose it on every place representation. `placeType` is no longer accepted, stored, or returned; payloads sending `placeType` SHALL be rejected with `400` or ignored with `icon` taking precedence per the migration contract, and listing SHALL NOT support `placeType` filtering.
 
 #### Scenario: Patch type
-- **WHEN** the owner patches `placeType` to `bar`
+- **WHEN** the owner patches `icon` to `wine`
 - **THEN** the system persists the normalized value and updated timestamp
 
+#### Scenario: placeType rejected
+- **WHEN** a place payload sends `placeType`
+- **THEN** the system rejects with `400` and stores nothing
+
+#### Scenario: placeType filter removed
+- **WHEN** the user lists places with `placeType=bar`
+- **THEN** the system ignores the parameter and returns the unfiltered owner scope
 ### Requirement: Google enrichment snapshot
+
 The system SHALL persist the Google snapshot fields sent at save (`hoursJson` with periods plus weekday descriptions, `businessStatus`, `priceLevel`, `priceRange`, `googleRating`, `googleRatingCount`, `websiteUri`, `mapsLinks`, `googlePlaceId`, `address`, `lat`, `lng`) without live revalidation on read, and refresh them only via explicit save or `POST /api/places/:id/refresh`, which rewrites pure-snapshot columns and bumps `updatedAt`.
 
 #### Scenario: Snapshot stored at create
@@ -88,9 +95,9 @@ The system SHALL persist the Google snapshot fields sent at save (`hoursJson` wi
 #### Scenario: Refresh without Google id rejected
 - **WHEN** refresh is posted for a place with no stored `googlePlaceId`
 - **THEN** the system responds `422` and changes nothing
-
 ### Requirement: Open-state inference and filtering
-The system SHALL infer open or closed from snapshotted hours periods for a given datetime, and list filtering SHALL support `placeType` plus `openAt` (ISO datetime, default now when the open filter is enabled); places with unknown hours SHALL be excluded whenever the open filter is active, and places with `businessStatus` closed (temporary or permanent) SHALL be excluded from open-filtered results.
+
+The system SHALL infer open or closed from snapshotted hours periods for a given datetime, and list filtering SHALL support `openAt` (ISO datetime, default now when the open filter is enabled) with no `placeType` parameter; places with unknown hours SHALL be excluded whenever the open filter is active, and places with `businessStatus` closed (temporary or permanent) SHALL be excluded from open-filtered results.
 
 #### Scenario: Filter open now
 - **WHEN** the user enables the open filter without choosing a datetime

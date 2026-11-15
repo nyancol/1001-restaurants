@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LookupField from "../components/LookupField";
 import TagCombobox from "../components/TagCombobox";
-import TypeCombobox from "../components/TypeCombobox";
+import IconPicker from "../components/IconPicker";
 import Stars from "../components/Stars";
 import { createPlace, listPlaces, patchPlace, UnauthorizedError, type PlaceDetails } from "../lib/api";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -16,7 +16,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
   const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
-  const [placeType, setPlaceType] = useState("restaurant");
+  const [icon, setIcon] = useState("fork");
   const [status, setStatus] = useState<"WANT_TO_GO" | "BEEN_TO">("WANT_TO_GO");
   const [tags, setTags] = useState<string[]>([]);
   const [rating, setRating] = useState<number | null>(null);
@@ -33,7 +33,7 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
     setAddress(d.address ?? "");
     setLat(d.lat);
     setLng(d.lng);
-    if (d.placeType) setPlaceType(d.placeType);
+    if (d.icon) setIcon(d.icon);
     setEnrichment(d);
   }
 
@@ -45,16 +45,12 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
       setError(t["add.nameRequired"]);
       return;
     }
-    const finalType = placeType.trim().toLowerCase();
-    if (!finalType) {
-      setError(t["add.typeRequired"]);
-      return;
-    }
+    const finalIcon = (icon || "fork").trim().toLowerCase() || "fork";
     setSaving(true);
     try {
       const payload: any = {
         name: finalName,
-        placeType: finalType,
+        icon: finalIcon,
         status,
         tags,
         rating,
@@ -146,12 +142,11 @@ export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void
             placeholder={t["add.addressPlaceholder"]}
           />
         </div>
-        <TypeCombobox value={placeType} onChange={setPlaceType} />
+        <IconPicker value={icon} onChange={setIcon} />
         {enrichment && (
           <div className="edge radius-card border-line bg-surface-2 px-3 py-2">
             <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">{t["add.googleSnapshot"]}</div>
             <div className="flex flex-col gap-1 text-xs text-ink">
-              {enrichment.placeType && <div>🏷️ {t["add.suggestedType"]} <strong>{enrichment.placeType}</strong> {t["add.editableAbove"]}</div>}
               {enrichment.priceLevel && <div>💶 {t["add.price"]} <strong>{enrichment.priceLevel}</strong></div>}
               {enrichment.googleRating != null && <div>🅖 {t["add.google"]} <strong>{enrichment.googleRating}</strong>{enrichment.googleRatingCount != null ? t["add.reviews"](enrichment.googleRatingCount) : ""}</div>}
               {enrichment.websiteUri && <div className="truncate">🌐 <span className="text-accent underline">{enrichment.websiteUri}</span></div>}

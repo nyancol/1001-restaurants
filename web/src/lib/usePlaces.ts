@@ -5,14 +5,13 @@ import { useLanguage } from "../i18n/LanguageContext";
 export interface PlaceFilterParams {
   owner?: string;
   status?: string;
-  placeType?: string;
   tags?: string;
   q?: string;
   openAt?: string;
   openNow?: boolean;
 }
 
-export type PlacePatch = Partial<Pick<Place, "status" | "tags" | "rating" | "note" | "placeType">> &
+export type PlacePatch = Partial<Pick<Place, "status" | "tags" | "rating" | "note" | "icon">> &
   Record<string, unknown>;
 
 /**
@@ -22,7 +21,7 @@ export type PlacePatch = Partial<Pick<Place, "status" | "tags" | "rating" | "not
  */
 export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void) {
   const { t } = useLanguage();
-  const { owner, status, placeType, tags, q, openAt, openNow } = params;
+  const { owner, status, tags, q, openAt, openNow } = params;
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +37,6 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
       const data = await listPlaces({
         owner: owner || "me",
         status: status || undefined,
-        placeType: placeType || undefined,
         tags: tags || undefined,
         q: q || undefined,
         openAt: openAt || undefined,
@@ -54,7 +52,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
     } finally {
       setLoading(false);
     }
-  }, [owner, status, placeType, tags, q, openAt, openNow]);
+  }, [owner, status, tags, q, openAt, openNow]);
 
   useEffect(() => {
     void fetchList();
@@ -83,7 +81,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
   const saveEdit = useCallback(
     async (
       p: Place,
-      patch: { tags: string[]; rating: number | null; note: string | null; placeType: string },
+      patch: { tags: string[]; rating: number | null; note: string | null; icon: string },
     ) => {
       const prev: Place = { ...p };
       setPlaces((cur) => cur.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));

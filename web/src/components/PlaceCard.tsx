@@ -1,7 +1,8 @@
 import type { Place } from "../lib/api";
 import { mapsUrlFor } from "../lib/api";
 import { useState } from "react";
-import { colorForType, emojiFor } from "../theme/pins";
+import { PIN_FILL } from "../theme/pins";
+import IconGlyph from "./IconGlyph";
 import { useLanguage, type Dict } from "../i18n/LanguageContext";
 
 interface Props {
@@ -85,8 +86,7 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
   const busy = (refreshing ?? false) || busyLocal;
   const closed = p.businessStatus === "CLOSED_PERMANENTLY";
   const tempClosed = p.businessStatus === "CLOSED_TEMPORARILY";
-  const typeColor = colorForType(p.placeType || "restaurant");
-  const typeEmoji = emojiFor(p.placeType || "restaurant");
+  const iconId = (p.icon || "fork").toLowerCase();
   const cardTone = closed ? "opacity-70" : "";
 
   async function shareMaps() {
@@ -147,11 +147,11 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span
-              className="edge radius-pill inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-white"
-              style={{ backgroundColor: typeColor, borderColor: typeColor }}
-              title={t["card.typeTitle"](p.placeType)}
+              className="edge radius-pill inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-2.5 py-1.5 text-white"
+              style={{ backgroundColor: PIN_FILL, borderColor: PIN_FILL }}
+              title={t[`icon.${iconId}`] ?? iconId}
             >
-              <span aria-hidden>{typeEmoji}</span> {p.placeType || "restaurant"}
+              <IconGlyph id={iconId} size={22} />
             </span>
             <span
               className={`edge radius-pill px-2 py-0.5 text-xs ${p.status === "BEEN_TO" ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}

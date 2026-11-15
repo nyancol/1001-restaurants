@@ -9,7 +9,7 @@ interface Props {
   loading: boolean;
   error: string | null;
   onToggleStatus: (p: Place) => void;
-  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) => Promise<void> | void;
+  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) => Promise<void> | void;
   onDeleteEdit?: (p: Place) => Promise<void> | void;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshingIds?: string[];
@@ -29,7 +29,7 @@ export default function PlaceListPane({ places, loading, error, onToggleStatus, 
   const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) {
+  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) {
     try {
       await onSaveEdit(p, patch);
       setEditingId(null);

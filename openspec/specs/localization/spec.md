@@ -20,7 +20,6 @@ The system SHALL select the initial UI language from the browser language: `fr*`
 #### Scenario: Other language falls back to English
 - **WHEN** a user with no stored preference opens the app with a language that is neither French nor English (e.g. `de-DE`)
 - **THEN** the system renders all UI chrome in English
-
 ### Requirement: Persistent two-state language switcher
 The system SHALL offer an EN | FR switcher next to the theme switcher in the footer on all authenticated views and persist the choice per device, with the stored value winning over browser detection on later visits.
 
@@ -35,9 +34,9 @@ The system SHALL offer an EN | FR switcher next to the theme switcher in the foo
 #### Scenario: No automatic switch-back
 - **WHEN** the user has a stored language choice and the browser language changes
 - **THEN** the system keeps rendering the stored language
-
 ### Requirement: Complete UI chrome translation
-The system SHALL render all frontend UI chrome in the active language, including navigation, login, filters, empty states, add form, cards, editor, delete confirmation and delete failure messages, comboboxes, validation and lookup/refresh/share messages, duplicate-place prompts, placeholders, `aria-label`/`title` texts, and theme/mode labels, and set `document.documentElement.lang` accordingly.
+
+The system SHALL render all frontend UI chrome in the active language, including navigation, login, filters, empty states, add form, cards, editor, delete confirmation and delete failure messages, comboboxes, validation and lookup/refresh/share messages, duplicate-place prompts, placeholders, `aria-label`/`title` texts, and theme/mode labels, and set `document.documentElement.lang` accordingly. Visible place-type strings are removed; icon names exist only as `aria-label`/tooltip and picker search metadata in FR/EN.
 
 #### Scenario: Full French pass
 - **WHEN** French is active and the user visits login, list, map, and add views including error and empty states
@@ -51,6 +50,9 @@ The system SHALL render all frontend UI chrome in the active language, including
 - **WHEN** the owner opens the edit section delete control, its confirmation, or its failure message in the active language
 - **THEN** the button label, confirm prompt, and failure message render in that language
 
+#### Scenario: Icon aria translated
+- **WHEN** a place with icon `wine` renders with French active
+- **THEN** its accessible name reads the French label (e.g. `verre de vin`) with no visible category word
 ### Requirement: Locale-aware date display
 The system SHALL format displayed dates/times with the active locale while keeping the free-typed 24h `HH:MM` input format unchanged.
 
@@ -61,7 +63,6 @@ The system SHALL format displayed dates/times with the active locale while keepi
 #### Scenario: Input format unchanged
 - **WHEN** the user types an open-at time in either language
 - **THEN** the system accepts the same 24h `HH:MM` format and equivalent digits-only shortcuts
-
 ### Requirement: Untranslated content boundaries
 The system SHALL NOT translate user content (place names, notes, tags), Google-sourced data (hours text, ratings, place metadata, native dialog chrome), or backend error codes; only the frontend mapping of those codes is translated.
 

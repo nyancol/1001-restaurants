@@ -22,7 +22,6 @@ import { multistream } from "pino";
 import { registerGoogleRoutes, type GoogleFetch } from "./google/routes.js";
 import { registerPlaceRoutes } from "./places/routes.js";
 import { registerUserRoutes } from "./users/routes.js";
-import { registerPlaceTypeRoutes } from "./place-types/routes.js";
 import { registerTagRoutes } from "./tags/routes.js";
 
 const PUBLIC_PATHS = new Set([
@@ -138,7 +137,6 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   }
   registerPlaceRoutes(app, { db, config, googleFetch: opts.googleFetch });
   registerUserRoutes(app, { db });
-  registerPlaceTypeRoutes(app, { db });
   registerTagRoutes(app, { db });
   registerGoogleRoutes(app, { config, googleFetch: opts.googleFetch });
 

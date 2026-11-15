@@ -1,0 +1,36 @@
+# Spec Delta
+
+## MODIFIED Requirements
+
+### Requirement: Lookup then prefilled capture
+The system SHALL offer Google-based name lookup and prefill a capture form with the chosen place's name, address, coordinates, Google place id, suggested place icon, hours preview, and enrichment preview (price, Google rating, website, Maps links).
+
+#### Scenario: Pick from search results
+- **WHEN** the user searches a name (explicit search, min 2 chars) and picks a suggestion
+- **THEN** the system prefills name, address, coordinates, and Google place id
+
+#### Scenario: Lookup requires login
+- **WHEN** an unauthenticated caller hits the lookup proxy
+- **THEN** the system responds `401`
+
+### Requirement: Save with status tags rating note
+The system SHALL save the capture with icon (preselected, never blocking), status toggle, flat tags, nullable stars, and single note in one action, persisting the Google enrichment snapshot alongside.
+
+#### Scenario: Save want-to-go
+- **WHEN** the user saves with status `WANT_TO_GO`, tags, and a note
+- **THEN** the system creates the place owned by that user and shows it in the list
+
+#### Scenario: Duplicate Google place updates
+- **WHEN** the user saves a Google place id they already own
+- **THEN** the system updates the existing place rather than creating a duplicate
+
+### Requirement: Type suggestion from Google
+The system SHALL infer the place icon once from the Google `primaryType` exact lookup (miss/null → `fork`), preselect it in the 12-icon picker, and never block save for icon reasons; tags and names SHALL NOT influence inference.
+
+#### Scenario: Google type suggested
+- **WHEN** details return `primaryType` `pizza_restaurant`
+- **THEN** the capture form preselects `pizza` in the icon picker while allowing the user to change it
+
+#### Scenario: Type required before save
+- **WHEN** the user saves without touching the icon picker
+- **THEN** the system stores the preselected icon (`fork` for manual/unknown) and creates the place instead of blocking

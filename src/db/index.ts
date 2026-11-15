@@ -85,6 +85,48 @@ export const MIGRATIONS = [
         ('bakery', '#D9932B', 'bread', 0, 0);
     `,
   },
+  {
+    version: 5,
+    name: "placeType to icon",
+    sql: `
+      ALTER TABLE places ADD COLUMN icon TEXT NOT NULL DEFAULT 'fork';
+      UPDATE places SET icon = 'coffee' WHERE lower(place_type) IN ('café', 'cafe', 'coffee', 'coffee shop');
+      UPDATE places SET icon = 'croissant' WHERE lower(place_type) IN ('bakery', 'bakeries', 'boulangerie');
+      UPDATE places SET icon = 'cocktail' WHERE lower(place_type) = 'bar';
+      UPDATE places SET icon = 'fork' WHERE icon NOT IN ('fork','burger','pizza','soup','hotdog','bagel','croissant','ice-cream','cocktail','wine','beer','coffee');
+      DROP TABLE IF EXISTS place_types;
+      CREATE TABLE IF NOT EXISTS places_new (
+        id TEXT PRIMARY KEY,
+        owner_id TEXT NOT NULL,
+        google_place_id TEXT,
+        name TEXT NOT NULL,
+        address TEXT,
+        lat REAL,
+        lng REAL,
+        status TEXT NOT NULL DEFAULT 'WANT_TO_GO',
+        icon TEXT NOT NULL DEFAULT 'fork',
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        rating REAL,
+        note TEXT,
+        hours_json TEXT,
+        business_status TEXT,
+        price_level TEXT,
+        price_range_json TEXT,
+        google_rating REAL,
+        google_rating_count INTEGER,
+        website_uri TEXT,
+        maps_links_json TEXT,
+        utc_offset_minutes INTEGER,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      INSERT OR IGNORE INTO places_new (id, owner_id, google_place_id, name, address, lat, lng, status, icon, tags_json, rating, note, hours_json, business_status, price_level, price_range_json, google_rating, google_rating_count, website_uri, maps_links_json, utc_offset_minutes, created_at, updated_at)
+        SELECT id, owner_id, google_place_id, name, address, lat, lng, status, icon, tags_json, rating, note, hours_json, business_status, price_level, price_range_json, google_rating, google_rating_count, website_uri, maps_links_json, utc_offset_minutes, created_at, updated_at FROM places;
+      DROP TABLE places;
+      ALTER TABLE places_new RENAME TO places;
+      CREATE INDEX IF NOT EXISTS idx_places_owner ON places(owner_id);
+    `,
+  },
 ];
 
 export interface DbHandle {

@@ -7,7 +7,8 @@ Lets the user file a known bar, cafe, or restaurant in seconds from its name, en
 ## Requirements
 
 ### Requirement: Lookup then prefilled capture
-The system SHALL offer Google-based name lookup and prefill a capture form with the chosen place's name, address, coordinates, Google place id, suggested place type, hours preview, and enrichment preview (price, Google rating, website, Maps links).
+
+The system SHALL offer Google-based name lookup and prefill a capture form with the chosen place's name, address, coordinates, Google place id, suggested place icon, hours preview, and enrichment preview (price, Google rating, website, Maps links).
 
 #### Scenario: Pick from search results
 - **WHEN** the user searches a name (explicit search, min 2 chars) and picks a suggestion
@@ -16,9 +17,9 @@ The system SHALL offer Google-based name lookup and prefill a capture form with 
 #### Scenario: Lookup requires login
 - **WHEN** an unauthenticated caller hits the lookup proxy
 - **THEN** the system responds `401`
-
 ### Requirement: Save with status tags rating note
-The system SHALL save the capture with required place type, status toggle, flat tags, nullable stars, and single note in one action, persisting the Google enrichment snapshot alongside.
+
+The system SHALL save the capture with icon (preselected, never blocking), status toggle, flat tags, nullable stars, and single note in one action, persisting the Google enrichment snapshot alongside.
 
 #### Scenario: Save want-to-go
 - **WHEN** the user saves with status `WANT_TO_GO`, tags, and a note
@@ -27,7 +28,6 @@ The system SHALL save the capture with required place type, status toggle, flat 
 #### Scenario: Duplicate Google place updates
 - **WHEN** the user saves a Google place id they already own
 - **THEN** the system updates the existing place rather than creating a duplicate
-
 ### Requirement: Tag suggest and create inline
 The system SHALL suggest existing global tags as the user types and allow creating a new tag in one tap.
 
@@ -38,14 +38,14 @@ The system SHALL suggest existing global tags as the user types and allow creati
 #### Scenario: Create new tag
 - **WHEN** the user confirms a prefix with no exact match
 - **THEN** the system attaches it as a new normalized tag
-
 ### Requirement: Type suggestion from Google
-The system SHALL suggest the Google `primaryType` mapped to the user vocabulary as the editable default for the type field, never auto-applied without user confirmation.
+
+The system SHALL infer the place icon once from the Google `primaryType` exact lookup (miss/null → `fork`), preselect it in the 12-icon picker, and never block save for icon reasons; tags and names SHALL NOT influence inference.
 
 #### Scenario: Google type suggested
-- **WHEN** details return `primaryType` `bar`
-- **THEN** the capture form suggests `bar` in the type field while allowing the user to change it
+- **WHEN** details return `primaryType` `pizza_restaurant`
+- **THEN** the capture form preselects `pizza` in the icon picker while allowing the user to change it
 
 #### Scenario: Type required before save
-- **WHEN** the user attempts to save with an empty type
-- **THEN** the system blocks save and explains a type is required
+- **WHEN** the user saves without touching the icon picker
+- **THEN** the system stores the preselected icon (`fork` for manual/unknown) and creates the place instead of blocking

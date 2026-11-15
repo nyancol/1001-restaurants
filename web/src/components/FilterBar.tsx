@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import TagCombobox from "./TagCombobox";
 import { useLanguage } from "../i18n/LanguageContext";
-import { emojiFor } from "../theme/pins";
 
 interface Props {
   status: string;
@@ -10,8 +9,6 @@ interface Props {
   setTags: (t: string[]) => void;
   q: string;
   setQ: (q: string) => void;
-  placeType: string;
-  setPlaceType: (s: string) => void;
   openEnabled: boolean;
   setOpenEnabled: (b: boolean) => void;
   openAt: string;
@@ -19,8 +16,6 @@ interface Props {
   /** `stack` (default): tag picker behind a disclosure (phone top card). `rail`: tag picker always visible (desktop sidebar). */
   layout?: "stack" | "rail";
 }
-
-const TYPE_OPTIONS = ["restaurant", "bar", "café", "bakery"];
 
 // ---------------------------------------------------------------------------
 // Opening-hours helpers: `openAt` is a `datetime-local` string
@@ -118,17 +113,16 @@ function dayLabel(dateStr: string, todayLabel: string, tomorrowLabel: string, lo
   return new Intl.DateTimeFormat(loc, { weekday: "long", day: "numeric", month: "short" }).format(d);
 }
 
-const hasActive = (status: string, tags: string[], q: string, placeType: string, openEnabled: boolean) =>
-  Boolean(status || tags.length || q.trim() || placeType || openEnabled);
+const hasActive = (status: string, tags: string[], q: string, openEnabled: boolean) =>
+  Boolean(status || tags.length || q.trim() || openEnabled);
 
-export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, placeType, setPlaceType, openEnabled, setOpenEnabled, openAt, setOpenAt, layout = "stack" }: Props) {
+export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, layout = "stack" }: Props) {
   const { t, locale } = useLanguage();
-  const active = hasActive(status, tags, q, placeType, openEnabled);
+  const active = hasActive(status, tags, q, openEnabled);
   function clearAll() {
     setStatus("");
     setTags([]);
     setQ("");
-    setPlaceType("");
     setOpenEnabled(false);
     setOpenAt("");
   }
@@ -195,8 +189,8 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, p
         className="edge radius-input min-h-[44px] w-full border-line bg-bg px-3 py-2 text-base text-ink placeholder:text-muted sm:text-sm"
       />
 
-      {/* Status + type side by side, roomy touch targets */}
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      {/* Status full-width */}
+      <div className="mt-2">
         <label className="flex flex-col gap-1 text-xs text-muted">
           {t["filter.status"]}
           <select
@@ -208,23 +202,6 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, p
             <option value="">{t["filter.allStatuses"]}</option>
             <option value="WANT_TO_GO">{t["filter.wantToGo"]}</option>
             <option value="BEEN_TO">{t["filter.beenTo"]}</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-muted">
-          {t["filter.type"]}
-          <select
-            aria-label={t["filter.typeAria"]}
-            value={placeType}
-            onChange={(e) => setPlaceType(e.target.value)}
-            className="edge radius-input min-h-[44px] w-full border-line bg-bg px-2 text-sm text-ink"
-          >
-            <option value="">{t["filter.allTypes"]}</option>
-            {TYPE_OPTIONS.map((t) => (
-              <option key={t} value={t}>{emojiFor(t)} {t}</option>
-            ))}
-            {placeType && !TYPE_OPTIONS.includes(placeType) && (
-              <option value={placeType}>{emojiFor(placeType)} {placeType}</option>
-            )}
           </select>
         </label>
       </div>
@@ -341,14 +318,8 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, p
         )}
       </fieldset>
 
-      {(placeType || openAt || tags.length > 0) && (
+      {(openAt || tags.length > 0) && (
         <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-          {placeType && (
-            <span className="edge radius-pill inline-flex min-h-[32px] items-center gap-1.5 border-line bg-surface-2 px-2.5 py-1 text-ink">
-              {emojiFor(placeType)} {placeType}
-              <button type="button" aria-label={t["filter.clearType"]} onClick={() => setPlaceType("")} className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center">×</button>
-            </span>
-          )}
           {openAt && (
             <span className="edge radius-pill inline-flex min-h-[32px] items-center gap-1.5 border-line bg-surface-2 px-2.5 py-1 text-ink">
               🟢 {formatOpenAt(openAt, locale)}

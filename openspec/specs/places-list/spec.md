@@ -7,7 +7,8 @@ Lets the user find their own places again and update them, filtering by what mat
 ## Requirements
 
 ### Requirement: Own list with filters
-The system SHALL show the user's own places by default with filters for status, place type, tags, free text, and open-now/open-at datetime. The system SHALL also support viewing a specific user via a Users scope picker (`Me (<name>)`, each other user) persisted in the URL (`owner=me|<userId>`), applying the same filters to the selected scope newest first.
+
+The system SHALL show the user's own places by default with filters for status, tags, free text, and open-now/open-at datetime (no place-type filter). The system SHALL also support viewing a specific user via a Users scope picker (`Me (<name>)`, each other user) persisted in the URL (`owner=me|<userId>`), applying the same filters to the selected scope newest first.
 
 #### Scenario: Default is own places
 - **WHEN** an authenticated user opens the list
@@ -29,6 +30,9 @@ The system SHALL show the user's own places by default with filters for status, 
 - **WHEN** the user picks Bob and reloads or shares the URL
 - **THEN** the system restores the Bob-scoped view with filters intact
 
+#### Scenario: Legacy placeType URLs ignored
+- **WHEN** the user opens a list URL containing `placeType=bar`
+- **THEN** the system ignores the parameter and shows the unfiltered scope with no error
 ### Requirement: Inline edit from list
 The system SHALL allow editing status, tags, stars, and note from the list entry. The edit section SHALL offer owner-only Delete with explicit confirmation; on confirm the place is removed from the list, on cancel nothing changes. Editing and delete SHALL be available only when viewing `Me`; views of another user SHALL be read-only with no edit affordance, while notes, tags, and ratings remain visible.
 
@@ -61,7 +65,6 @@ The system SHALL allow editing status, tags, stars, and note from the list entry
 #### Scenario: Delete failure keeps the place
 - **WHEN** delete fails (for example `403`, `404`, or network error)
 - **THEN** the system keeps the place visible and surfaces a localized failure message
-
 ### Requirement: Tag filter selects existing tags only
 The system SHALL restrict the list/map tag filter to selecting existing tags from suggestions; typing an arbitrary value SHALL NOT add it as a filter via Enter or a create affordance.
 
@@ -76,9 +79,9 @@ The system SHALL restrict the list/map tag filter to selecting existing tags fro
 #### Scenario: Pre-set unknown tag still filters
 - **WHEN** the active tag filter already contains a value with no matching places (e.g. from a shared URL)
 - **THEN** the system shows the empty result set and keeps the removable filter chip without offering to create that tag
-
 ### Requirement: Enriched card with dual ratings and status states
-The system SHALL show on each list card the place-type badge, hours summary with open badge, price level plus price range, personal stars side-by-side with Google rating and count, website link, and distinct styling for `CLOSED_PERMANENTLY` (greyed plus badge) and `CLOSED_TEMPORARILY` (WIP styling plus badge). The system SHALL NOT render the Google Maps URL in place details.
+
+The system SHALL show on each list card the place icon alone (no label text), hours summary with open badge, price level plus price range, personal stars side-by-side with Google rating and count, website link, and distinct styling for `CLOSED_PERMANENTLY` (greyed plus badge) and `CLOSED_TEMPORARILY` (WIP styling plus badge). The system SHALL NOT render the Google Maps URL in place details.
 
 #### Scenario: Dual ratings visible
 - **WHEN** a place has personal rating `5` and Google rating `4.3 (1200)`
@@ -104,6 +107,9 @@ The system SHALL show on each list card the place-type badge, hours summary with
 - **WHEN** the open filter is active
 - **THEN** the list excludes owned places without an hours snapshot
 
+#### Scenario: Icon alone in card
+- **WHEN** a place with icon `cocktail` renders in the list
+- **THEN** the card shows the icon with no adjacent category word
 ### Requirement: List participates in desktop split
 The system SHALL render the own-places list as the center pane of the desktop split view, sharing the split's single fetch and selection state so list results always equal map pins for the same filters.
 
@@ -114,14 +120,12 @@ The system SHALL render the own-places list as the center pane of the desktop sp
 #### Scenario: Single fetch for both panes
 - **WHEN** filters change in the desktop split view
 - **THEN** the system issues one places query whose results feed both list and map panes
-
 ### Requirement: Desktop list grid density
 The system SHALL use desktop-appropriate density in the split list pane so cards remain scannable at wide viewports.
 
 #### Scenario: Cards remain scannable
 - **WHEN** the user views the list pane on a desktop viewport
 - **THEN** cards use compact touch targets and summary rows that fit the pane width without horizontal scrolling
-
 ### Requirement: Owner attribution and read-only list chrome
 The system SHALL show the viewed scope in the list header, user-aware empty states, and hide the add-place entry whenever the scope is not `Me`.
 

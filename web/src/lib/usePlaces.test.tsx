@@ -11,7 +11,7 @@ vi.mock("./api", async (orig) => {
 
 const P = (over: any = {}) => ({
   id: "p1", ownerId: "u1", googlePlaceId: null, name: "A", address: null,
-  lat: 1, lng: 2, status: "WANT_TO_GO", placeType: "restaurant",
+  lat: 1, lng: 2, status: "WANT_TO_GO", icon: "fork",
   tags: [], rating: null, note: null, createdAt: 1, updatedAt: 1, ...over,
 });
 
@@ -56,7 +56,7 @@ describe("usePlaces", () => {
     const { result } = renderHook(({ p }: any) => usePlaces(p, noop), { initialProps: { p: stableParams() } });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await expect(
-      act(async () => { await result.current.saveEdit(P({ note: "old" }), { tags: [], rating: null, note: "new", placeType: "restaurant" }); }),
+      act(async () => { await result.current.saveEdit(P({ note: "old" }), { tags: [], rating: null, note: "new", icon: "fork" }); }),
     ).rejects.toThrow("nope");
     expect(result.current.places[0].note).toBe("old");
   });

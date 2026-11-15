@@ -24,12 +24,12 @@ The system SHALL expose `POST /api/places/:id/refresh` that re-fetches Google Pl
 #### Scenario: Google failure relayed
 - **WHEN** Google returns an error or rate limit during refresh
 - **THEN** the system relays it as `502` (or `429` for rate limits) and changes nothing
-
 ### Requirement: Refresh writes snapshot columns only
+
 The system SHALL limit refresh writes to pure-snapshot columns (`hoursJson`, `businessStatus`, `priceLevel`, `priceRangeJson`, `googleRating`, `googleRatingCount`, `websiteUri`, `mapsLinksJson`, `utcOffsetMinutes`) plus `updatedAt`, never touching identity or user fields.
 
 #### Scenario: User fields preserved on refresh
-- **WHEN** a refresh succeeds for a place with a custom `name`, `note`, `rating`, `status`, `tags`, or `placeType`
+- **WHEN** a refresh succeeds for a place with a custom `name`, `note`, `rating`, `status`, `tags`, or `icon`
 - **THEN** those fields keep their prior values while snapshot columns take Google's fresh values
 
 #### Scenario: Lookup key never rewritten
@@ -39,7 +39,6 @@ The system SHALL limit refresh writes to pure-snapshot columns (`hoursJson`, `bu
 #### Scenario: Refresh bumps updatedAt
 - **WHEN** a refresh succeeds
 - **THEN** `updatedAt` is set to now even though no user field changed
-
 ### Requirement: Refresh authorization is owner-only for humans and scoped for services
 The system SHALL allow refresh for the row owner via session cookie and for any row via a valid M2M Bearer token carrying `refresh:places`; any other cross-owner refresh SHALL be rejected.
 
@@ -58,7 +57,6 @@ The system SHALL allow refresh for the row owner via session cookie and for any 
 #### Scenario: M2M refresh without scope rejected
 - **WHEN** a Bearer token without `refresh:places` posts to refresh
 - **THEN** the system responds `403` and changes nothing
-
 ### Requirement: Per-place refresh action in UI
 The system SHALL offer an explicit per-place refresh action on owned places that invokes `POST /api/places/:id/refresh` and replaces the displayed place with the server-returned updated place.
 

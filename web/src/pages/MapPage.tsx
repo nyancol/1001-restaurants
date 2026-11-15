@@ -10,12 +10,12 @@ import { displayNameFor, useUsers } from "../lib/useUsers";
 import { useLanguage } from "../i18n/LanguageContext";
 
 export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void }) {
-  const { owner, setOwner, statusParam, tagsParam, qParam, placeTypeParam, openAtParam, openNowParam, status, setStatus, tags, setTags, q, setQ, placeType, setPlaceType, openEnabled, setOpenEnabled, openAt, setOpenAt } = usePlaceFilters();
+  const { owner, setOwner, statusParam, tagsParam, qParam, openAtParam, openNowParam, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt } = usePlaceFilters();
   const { me, users } = useUsers();
   const { t } = useLanguage();
 
   const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds } = usePlaces(
-    { owner, status: statusParam, placeType: placeTypeParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam },
+    { owner, status: statusParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam },
     onUnauthorized,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
       <div className="mb-3">
         <OwnerPicker owner={owner} setOwner={setOwner} />
       </div>
-      <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} placeType={placeType} setPlaceType={setPlaceType} openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt} />
+      <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt} />
       {!readOnly && (
         <Link
           to="/add"

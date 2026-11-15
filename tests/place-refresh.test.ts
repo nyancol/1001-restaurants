@@ -173,7 +173,7 @@ describe("POST /api/places/:id/refresh", () => {
     const a = await cookieFor(ALICE);
     const created = await createPlace(a, {
       name: "My label",
-      placeType: "restaurant",
+      icon: "pizza",
       googlePlaceId: "ChIJ123",
       address: "Old address",
       note: "anniversary?",
@@ -196,6 +196,7 @@ describe("POST /api/places/:id/refresh", () => {
     expect(body.address).toBe("Old address");
     expect(body.note).toBe("anniversary?");
     expect(body.rating).toBe(5);
+    expect(body.icon).toBe("pizza");
     expect(body.googlePlaceId).toBe("ChIJ123");
     // key sent as path, secret in header
     expect(calls[0].url).toContain(encodeURIComponent("ChIJ123"));
@@ -206,7 +207,7 @@ describe("POST /api/places/:id/refresh", () => {
     await makeRefreshApp();
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);
-    const created = await createPlace(a, { name: "A1", placeType: "restaurant", googlePlaceId: "ChIJ123" });
+    const created = await createPlace(a, { name: "A1", icon: "fork", googlePlaceId: "ChIJ123" });
     const res = await app.inject({ method: "POST", url: `/api/places/${created.id}/refresh`, headers: { cookie: b } });
     expect(res.statusCode).toBe(403);
   });
@@ -216,7 +217,7 @@ describe("POST /api/places/:id/refresh", () => {
     const a = await cookieFor(ALICE);
     const missing = await app.inject({ method: "POST", url: "/api/places/nope/refresh", headers: { cookie: a } });
     expect(missing.statusCode).toBe(404);
-    const manual = await createPlace(a, { name: "Manual", placeType: "bar" });
+    const manual = await createPlace(a, { name: "Manual", icon: "cocktail" });
     const res = await app.inject({ method: "POST", url: `/api/places/${manual.id}/refresh`, headers: { cookie: a } });
     expect(res.statusCode).toBe(422);
   });
@@ -225,7 +226,7 @@ describe("POST /api/places/:id/refresh", () => {
     await makeRefreshApp({ googlePlacesKey: "" });
     const a = await cookieFor(ALICE);
     // create needs no google key; inject directly since googleFetch unused for create
-    const created = await createPlace(a, { name: "A1", placeType: "restaurant", googlePlaceId: "ChIJ123" });
+    const created = await createPlace(a, { name: "A1", icon: "fork", googlePlaceId: "ChIJ123" });
     const res = await app.inject({ method: "POST", url: `/api/places/${created.id}/refresh`, headers: { cookie: a } });
     expect(res.statusCode).toBe(503);
   });
@@ -235,7 +236,7 @@ describe("POST /api/places/:id/refresh", () => {
     const a = await cookieFor(ALICE);
     const created = await createPlace(a, {
       name: "A1",
-      placeType: "restaurant",
+      icon: "fork",
       googlePlaceId: "ChIJ123",
       googleRating: 4.3,
     });
@@ -261,7 +262,7 @@ describe("POST /api/places/:id/refresh", () => {
       skipOidcDiscovery: true,
       placesKeyResolver: async () => publicKey,
     }));
-    const created2 = await createPlace(a, { name: "B1", placeType: "bar", googlePlaceId: "ChIJ999", googleRating: 3.1 });
+    const created2 = await createPlace(a, { name: "B1", icon: "cocktail", googlePlaceId: "ChIJ999", googleRating: 3.1 });
     const r429 = await app.inject({ method: "POST", url: `/api/places/${created2.id}/refresh`, headers: { cookie: a } });
     expect(r429.statusCode).toBe(429);
     const after = await app.inject({ method: "GET", url: `/api/places/${created2.id}`, headers: { cookie: a } });
@@ -272,7 +273,7 @@ describe("POST /api/places/:id/refresh", () => {
   it("M2M authz matrix", async () => {
     await makeRefreshApp();
     const a = await cookieFor(ALICE);
-    const created = await createPlace(a, { name: "A1", placeType: "restaurant", googlePlaceId: "ChIJ123" });
+    const created = await createPlace(a, { name: "A1", icon: "fork", googlePlaceId: "ChIJ123" });
     const both = await mintToken(privateKey);
     const readOnly = await mintToken(privateKey, { scope: "read:places" });
     const refreshOnly = await mintToken(privateKey, { scope: "refresh:places" });

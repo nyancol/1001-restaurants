@@ -1,14 +1,14 @@
 import { useState } from "react";
 import type { Place } from "../lib/api";
 import TagCombobox from "./TagCombobox";
-import TypeCombobox from "./TypeCombobox";
+import IconPicker from "./IconPicker";
 import Stars from "./Stars";
 import ConfirmDialog from "./ConfirmDialog";
 import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
   place: Place;
-  onSave: (patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) => void;
+  onSave: (patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) => void;
   onCancel: () => void;
   onDelete?: () => void | Promise<void>;
 }
@@ -18,7 +18,7 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Pr
   const [tags, setTags] = useState<string[]>(p.tags ?? []);
   const [rating, setRating] = useState<number | null>(p.rating);
   const [note, setNote] = useState(p.note ?? "");
-  const [placeType, setPlaceType] = useState(p.placeType ?? "restaurant");
+  const [icon, setIcon] = useState((p.icon ?? "fork"));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -35,7 +35,7 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Pr
 
   return (
     <div className="mt-3 flex flex-col gap-2 border-t border-line pt-3">
-      <TypeCombobox value={placeType} onChange={setPlaceType} />
+      <IconPicker value={icon} onChange={setIcon} />
       <TagCombobox value={tags} onChange={setTags} />
       <Stars value={rating} onChange={setRating} />
       <textarea
@@ -61,7 +61,7 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Pr
         <button
           type="button"
           className="edge radius-input border-accent bg-accent px-3 py-1.5 text-sm text-accent-ink"
-          onClick={() => onSave({ tags, rating, note: note || null, placeType: placeType.trim().toLowerCase() || "restaurant" })}
+          onClick={() => onSave({ tags, rating, note: note || null, icon: icon.trim().toLowerCase() || "fork" })}
         >
           {t["editor.save"]}
         </button>

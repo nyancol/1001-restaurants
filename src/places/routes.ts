@@ -4,7 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import type { AppConfig } from "../config.js";
 import { places, users } from "../db/schema.js";
 import { normalizeTags } from "../tags/normalize.js";
-import { normalizePlaceType, isValidPlaceType, ensurePlaceType } from "../place-types/looks.js";
+import { normalizeIcon, isValidIcon } from "../place-icons/infer.js";
 import { isOpenAt, parseHoursJson } from "./open.js";
 import { withSpan } from "../observability/trace.js";
 
@@ -37,7 +37,7 @@ function toPlace(row: typeof places.$inferSelect, displayName?: string | null) {
     lat: row.lat,
     lng: row.lng,
     status: row.status,
-    placeType: (row as any).placeType ?? "restaurant",
+    icon: (row as any).icon ?? "fork",
     tags: JSON.parse(row.tagsJson ?? "[]") as string[],
     rating: row.rating,
     note: row.note,
@@ -58,18 +58,21 @@ function toPlace(row: typeof places.$inferSelect, displayName?: string | null) {
 
 function validatePlaceInput(body: any, isPatch: boolean): { error?: string; value?: any } {
   const v: any = {};
+  if (body.placeType !== undefined) return { error: "placeType is removed, use icon" };
   if (!isPatch || body.name !== undefined) {
     if (typeof body.name !== "string" || !body.name.trim()) {
       if (!isPatch) return { error: "name is required" };
       if (body.name !== undefined) return { error: "name must be a non-empty string" };
     } else v.name = body.name.trim();
   }
-  if (!isPatch || body.placeType !== undefined) {
-    const t = normalizePlaceType(body.placeType);
-    if (!t || !isValidPlaceType(t)) {
-      if (!isPatch) return { error: "placeType must be restaurant, bar, café, or bakery" };
-      if (body.placeType !== undefined) return { error: "placeType must be restaurant, bar, café, or bakery" };
-    } else v.placeType = t;
+  if (!isPatch || body.icon !== undefined) {
+    if (body.icon === undefined || body.icon === null || body.icon === "") {
+      if (!isPatch) v.icon = "fork";
+    } else {
+      const t = normalizeIcon(body.icon);
+      if (!t || !isValidIcon(t)) return { error: "icon must be one of fork, burger, pizza, soup, hotdog, bagel, croissant, ice-cream, cocktail, wine, beer, coffee" };
+      v.icon = t;
+    }
   }
   if (body.status !== undefined) {
     if (!STATUSES.includes(body.status)) return { error: "status must be WANT_TO_GO or BEEN_TO" };
@@ -179,7 +182,7 @@ export function registerPlaceRoutes(
         type: "object",
         properties: {
           name: { type: "string" },
-          placeType: { type: "string" },
+          icon: { type: "string" },
           status: { type: "string", enum: ["WANT_TO_GO", "BEEN_TO"] },
           tags: { type: "array", items: { type: "string" } },
           rating: { type: ["number", "null"] },
@@ -189,7 +192,7 @@ export function registerPlaceRoutes(
           lat: { type: ["number", "null"] },
           lng: { type: ["number", "null"] },
         },
-        required: ["name", "placeType"],
+        required: ["name"],
       },
     },
   }, async (req, reply) => {
@@ -198,7 +201,7 @@ export function registerPlaceRoutes(
     const { error, value } = validatePlaceInput(req.body ?? {}, false);
     if (error) return reply.code(400).send({ error });
     // Duplicate googlePlaceId per owner: update instead of forking.
-    if (value.googlePlaceId) {
+        if (value.googlePlaceId) {
       const dup = await db
         .select()
         .from(places)
@@ -206,12 +209,11 @@ export function registerPlaceRoutes(
         .limit(1);
       if (dup.length) {
         const patch: any = { updatedAt: Date.now() };
-        for (const k of ["name", "placeType", "status", "rating", "note", "address", "lat", "lng", "hoursJson", "businessStatus", "priceLevel", "priceRangeJson", "googleRating", "googleRatingCount", "websiteUri", "mapsLinksJson", "utcOffsetMinutes"] as const) {
+        for (const k of ["name", "icon", "status", "rating", "note", "address", "lat", "lng", "hoursJson", "businessStatus", "priceLevel", "priceRangeJson", "googleRating", "googleRatingCount", "websiteUri", "mapsLinksJson", "utcOffsetMinutes"] as const) {
           if (value[k] !== undefined) patch[k] = value[k];
         }
         if (value.tags !== undefined) patch.tagsJson = JSON.stringify(value.tags);
         await db.update(places).set(patch).where(eq(places.id, dup[0].id));
-        if (value.placeType) await ensurePlaceType(db, value.placeType);
         const updated = await db.select().from(places).where(eq(places.id, dup[0].id)).limit(1);
         const names = await ownerNameMap(db);
         return reply.code(200).send(toPlace(updated[0], names.get(updated[0].ownerId) ?? null));
@@ -228,7 +230,7 @@ export function registerPlaceRoutes(
       lat: value.lat ?? null,
       lng: value.lng ?? null,
       status: value.status ?? "WANT_TO_GO",
-      placeType: value.placeType,
+      icon: value.icon ?? "fork",
       tagsJson: JSON.stringify(value.tags ?? []),
       rating: value.rating ?? null,
       note: value.note ?? null,
@@ -244,7 +246,6 @@ export function registerPlaceRoutes(
       createdAt: now,
       updatedAt: now,
     });
-    await ensurePlaceType(db, value.placeType);
     const rows = await db.select().from(places).where(eq(places.id, id)).limit(1);
     const names = await ownerNameMap(db);
     return reply.code(201).send(toPlace(rows[0], names.get(rows[0].ownerId) ?? null));
@@ -278,10 +279,7 @@ export function registerPlaceRoutes(
     } else if (owner === "me") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === userId);
     else if (owner !== "all") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === owner);
     if (q.status) filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.status === q.status);
-    if (q.placeType) {
-      const wanted = normalizePlaceType(q.placeType);
-      if (wanted) filtered = filtered.filter((p) => normalizePlaceType((p as any).placeType) === wanted);
-    }
+    // placeType is removed: legacy ?placeType= URLs are ignored.
     if (q.tags) {
       const wanted = normalizeTags(String(q.tags).split(","));
       if (wanted.length) filtered = filtered.filter((p: ReturnType<typeof toPlace>) => wanted.every((t) => p.tags.includes(t)));
@@ -375,12 +373,11 @@ export function registerPlaceRoutes(
     const { error, value } = validatePlaceInput(req.body ?? {}, true);
     if (error) return reply.code(400).send({ error });
     const patch: any = { updatedAt: Date.now() };
-    for (const k of ["name", "placeType", "status", "rating", "note", "googlePlaceId", "address", "lat", "lng", "hoursJson", "businessStatus", "priceLevel", "priceRangeJson", "googleRating", "googleRatingCount", "websiteUri", "mapsLinksJson", "utcOffsetMinutes"] as const) {
+    for (const k of ["name", "icon", "status", "rating", "note", "googlePlaceId", "address", "lat", "lng", "hoursJson", "businessStatus", "priceLevel", "priceRangeJson", "googleRating", "googleRatingCount", "websiteUri", "mapsLinksJson", "utcOffsetMinutes"] as const) {
       if (value[k] !== undefined) patch[k] = value[k];
     }
     if (value.tags !== undefined) patch.tagsJson = JSON.stringify(value.tags);
     await db.update(places).set(patch).where(eq(places.id, rows[0].id));
-    if (value.placeType) await ensurePlaceType(db, value.placeType);
     const updated = await db.select().from(places).where(eq(places.id, rows[0].id)).limit(1);
     const names = await ownerNameMap(db);
     return toPlace(updated[0], names.get(updated[0].ownerId) ?? null);

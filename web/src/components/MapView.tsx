@@ -37,7 +37,7 @@ function toGeoJSON(places: Place[]): GeoJSON.FeatureCollection {
       .map((p) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [p.lng as number, p.lat as number] },
-        properties: { id: p.id, status: p.status, placeType: (p.placeType ?? "restaurant").toLowerCase() },
+        properties: { id: p.id, status: p.status, icon: (p.icon ?? "fork").toLowerCase() },
       })),
   };
 }
@@ -67,7 +67,7 @@ interface MapViewProps {
   loading: boolean;
   onError: (msg: string) => void;
   onFlipStatus: (p: Place) => void;
-  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) => Promise<void>;
+  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) => Promise<void>;
   onDelete?: (p: Place) => Promise<void> | void;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshingIds?: string[];
@@ -268,15 +268,14 @@ export default function MapView({
               "circle-opacity": 0.25,
             },
           });
-          // Tip-anchored drops; fill + letter encode place type in all themes.
-          // Unknown/custom types fall back to the generic grey pin.
+          // Tip-anchored drops; neutral fill + icon glyph in all themes.
           map.addLayer({
             id: "pins",
             type: "symbol",
             source: "places",
             filter: ["!", ["has", "point_count"]],
             layout: {
-              "icon-image": ["match", ["get", "placeType"], "bar", "drop-bar", "café", "drop-café", "restaurant", "drop-restaurant", "bakery", "drop-bakery", "drop-generic"],
+              "icon-image": ["coalesce", ["image", ["concat", "drop-", ["get", "icon"]]], ["image", "drop-generic"]],
               "icon-anchor": "bottom",
               "icon-size": 1,
               "icon-allow-overlap": true,
@@ -383,7 +382,7 @@ export default function MapView({
     if (!source) return;
     const fc = toGeoJSON(places);
     source.setData(fc);
-    const distinct = [...new Set(places.map((p) => (p.placeType ?? "restaurant").toLowerCase()))];
+    const distinct = [...new Set(places.map((p) => (p.icon ?? "fork").toLowerCase()))];
     void ensurePinImages(map, mode, distinct);
     // eslint-disable-next-line no-console
     console.info(`[map] pushed ${fc.features.length} pins`);
@@ -420,7 +419,7 @@ export default function MapView({
     });
   }
 
-  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; placeType: string }) {
+  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) {
     setEditing(false);
     try {
       await onSaveEdit(p, patch);

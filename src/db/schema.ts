@@ -17,7 +17,7 @@ export const places = sqliteTable("places", {
   lat: real("lat"),
   lng: real("lng"),
   status: text("status").notNull().default("WANT_TO_GO"),
-  placeType: text("place_type").notNull().default("restaurant"),
+  icon: text("icon").notNull().default("fork"),
   tagsJson: text("tags_json").notNull().default("[]"),
   rating: real("rating"),
   note: text("note"),
@@ -34,14 +34,5 @@ export const places = sqliteTable("places", {
   updatedAt: integer("updated_at").notNull(),
 });
 
-export const placeTypes = sqliteTable("place_types", {
-  label: text("label").primaryKey(),
-  color: text("color").notNull(),
-  icon: text("icon").notNull().default("dot"),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull(),
-});
-
 export type UserRow = typeof users.$inferSelect;
 export type PlaceRow = typeof places.$inferSelect;
-export type PlaceTypeRow = typeof placeTypes.$inferSelect;
