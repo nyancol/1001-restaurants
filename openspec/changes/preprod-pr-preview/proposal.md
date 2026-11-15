@@ -10,7 +10,7 @@ Preprod deploys are manual (`mise run preprod-deploy` from the homelab checkout)
 - Label is the trigger: pushes without the `preview` label build nothing; adding the label (maintainer opt-in) authorizes running PR code on the homelab host with staging secrets in env.
 - `concurrency: group: preprod-slot, cancel-in-progress: true`: superseded commits cancel (never deploy a stale SHA); the single group serializes the B1 slot, last writer wins with an eviction comment.
 - Reseed policy: label added (or slot owned by another branch) → `--fresh-db --evict`; `synchronize` on the already-deployed branch → rebuild, keep DB (requestor's test rows survive iteration).
-- Checkout pins `actions/checkout` to the same SHA as `sast.yml` (with version comment); the workflow creates the PR branch locally (`git checkout -B <head-ref>`) to satisfy the deploy wrapper's branch==checkout guard.
+- Checkout pins `actions/checkout` to the same SHA as `sast.yml` (with version comment); the workflow creates the PR branch locally (`git checkout -B <head-ref>`) to satisfy the deploy wrapper's branch==checkout guard. No workflow-level secrets and no `${{ github.* }}` interpolation inside `run:` scripts (values cross via `env:`) so Semgrep stays green.
 - `.env.preprod` (gitignored) is staged into the runner workspace from the canonical homelab path, failing loudly if absent; the slot file persists in the workspace across runs.
 - Evidence + teardown are posted as PR comments via `gh` (present on the runner) with `pull-requests: write` permission.
 - Skill capability 3 documents the CI trigger, the label convention, and the guarded teardown; `hermes.yaml` records the label and workflow name.
@@ -30,4 +30,4 @@ Preprod deploys are manual (`mise run preprod-deploy` from the homelab checkout)
 
 - Repo: new workflow file, skill capability-3 runbook update, `hermes.yaml` trigger record. No change to `compose.*`, Caddy, PocketID, Arcane, or the deploy/verify scripts (wrapper used as-is).
 - Systems: runner executes PR head code with staging env on the homelab host (label = maintainer authorization); prod untouched (Arcane still owns `main`).
-- Secrets: workflow stages the existing gitignored `.env.preprod` into the workspace; no secret values in logs or PR comments (presence/shape only).
+- Secrets: workflow writes the gitignored staging env from the `PREPROD_ENV` repo secret into the workspace (never committed); no secret values in logs or PR comments (presence/shape only).

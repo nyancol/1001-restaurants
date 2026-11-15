@@ -25,7 +25,8 @@ See proposal.md Why. Current state: `scripts/preprod-deploy.sh` (branch==checkou
 - **Reseed-on-claim, keep-on-sync.** Rationale: fresh DB per *branch* preserves the demoable guarantee; per-*commit* reseeds would wipe requestor rows mid-validation. Implemented as flag choice in the workflow, no wrapper change.
 - **Teardown guarded by slot ownership.** Rationale: `closed` fires for merges too (the common case — promotion, not abandonment); the guard makes teardown safe regardless of which PR closes when.
 - **Reuse the wrapper as-is (`checkout -B` shim).** Rationale: the branch==checkout guard is a safety feature worth keeping; a two-line `git checkout -B <head-ref>` in the workflow satisfies it without weakening the script for local use.
-- **`.env.preprod` staged from the canonical homelab path.** Rationale: secrets stay out of git and out of GitHub secrets UI duplication; the file already exists where the runner runs. Workflow fails loudly if absent.
+- **SAST-clean by construction.** Rationale: the repo gates on Semgrep; the workflow pins `actions/checkout` by SHA (same as `sast.yml`, with version comment), keeps secrets at step level (no workflow-level `GH_TOKEN`), and passes GitHub context into `run:` scripts only via `env:` indirection.
+- **Staging env via `PREPROD_ENV` repo secret, not the homelab path.** Rationale: the self-hosted runner works in an isolated `_work` checkout where host paths like `/home/yann/...` do not exist; a repo secret keeps secrets out of git without host coupling. The workflow writes it to `.env.preprod` (`chmod 600`) per run and fails loudly if absent. Local manual deploys keep using the gitignored file.
 - **`gh` CLI for comments over `actions/github-script`.** Rationale: `gh` is installed on the box, needs no new pinned action, and keeps the evidence-posting logic in shell next to the scripts that produce the evidence.
 
 ## Risks / Trade-offs
