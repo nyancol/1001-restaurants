@@ -33,7 +33,7 @@
     "@opentelemetry/sdk-node": "^0.301.2",
     "@opentelemetry/semantic-conventions": "^1.45.0",
     "better-sqlite3": "^12.2.0",
-    "drizzle-orm": "^0.44.4",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^5.6.1",
     "jose": "^6.0.12",
     "maplibre-gl": "^6.17.0",
