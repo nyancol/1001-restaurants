@@ -21,7 +21,7 @@ done
 [ -n "$BRANCH" ] || { echo "Missing --branch" >&2; exit 2; }
 
 cd "$(dirname "$0")/.."
-SUDO="${DOCKER_SUDO:-sudo}"
+SUDO="${DOCKER_SUDO-sudo}" # empty DOCKER_SUDO runs docker directly (no sudo)
 COMPOSE="$SUDO docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml"
 SLOT_FILE=".preprod-slot"
 

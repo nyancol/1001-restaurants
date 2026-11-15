@@ -3,7 +3,7 @@
 # Read-only: never rebuilds, reseeds, or evicts. Exit 0 = green, 1 = red.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SUDO="${DOCKER_SUDO:-sudo}"
+SUDO="${DOCKER_SUDO-sudo}" # empty DOCKER_SUDO runs docker directly (no sudo)
 COMPOSE="$SUDO docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml"
 FAIL=0
 say() { printf '%s\n' "$*"; }
