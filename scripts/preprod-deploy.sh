@@ -22,8 +22,7 @@ done
 
 cd "$(dirname "$0")/.."
 # shellcheck disable=SC1091
-. ./scripts/lib-docker.sh # sets SUDO/COMPOSE, auto-detecting docker access
-SLOT_FILE=".preprod-slot"
+. ./scripts/lib-docker.sh # sets SUDO/COMPOSE/SLOT_FILE (auto-detects docker access)
 
 CURRENT="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$CURRENT" != "$BRANCH" ]; then

@@ -294,8 +294,11 @@ sweep ran because of a RED finding, mention the correlation in the summary.
 
 Deploy a branch to the one staging slot for requestor validation.
 Project `places-preprod`, container `places-staging`, volume
-`places-preprod-data`. Own slot file `.preprod-slot` (gitignored) records
-`SLOT_BRANCH` / `SLOT_SHA` / `SLOT_SINCE` / `SLOT_VALIDATED`.
+`places-preprod-data`. The slot file records `SLOT_BRANCH` / `SLOT_SHA` /
+`SLOT_SINCE` / `SLOT_VALIDATED`: repo-local `.preprod-slot` (gitignored) for
+manual runs, `$PREPROD_SLOT_FILE` (`/tmp/places-preprod-slot` on the
+persistent runner filesystem) in CI — runner workspaces do not reliably
+persist untracked files between runs.
 
 ### 3.1 Deploy
 

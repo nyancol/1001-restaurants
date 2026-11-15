@@ -49,9 +49,9 @@ else
   pass "boot logs clean of 'Invalid config'"
 fi
 
-if [ -f .preprod-slot ]; then
+if [ -f "$SLOT_FILE" ]; then
   # shellcheck disable=SC1090
-  . ./.preprod-slot
+  . "$SLOT_FILE"
   BRANCH="${SLOT_BRANCH:-unknown}"
   if [ "$BRANCH" != "unknown" ] && [ "$(git rev-parse --abbrev-ref HEAD)" = "$BRANCH" ]; then
     if [ "${SLOT_SHA:-}" = "$(git rev-parse HEAD)" ]; then
@@ -63,7 +63,7 @@ if [ -f .preprod-slot ]; then
     say "SKIP version check: slot branch ($BRANCH) != current checkout (redeploy records it)"
   fi
 else
-  say "SKIP version check: no .preprod-slot (deploy with scripts/preprod-deploy.sh to record it)"
+  say "SKIP version check: no slot record (deploy with scripts/preprod-deploy.sh to record it)"
 fi
 
 if [ "${EXPECT_FIXTURE:-0}" = "1" ]; then

@@ -37,6 +37,9 @@ jobs:
       # Runner localhost is NOT the docker host (containerized runner sharing
       # the daemon): health checks run via `docker compose exec` (see lib-docker.sh).
       HEALTHCHECK_MODE: exec
+      # Runner workspaces do not reliably persist untracked files between runs;
+      # the slot record lives on the persistent runner filesystem instead.
+      PREPROD_SLOT_FILE: /tmp/places-preprod-slot
     steps:
       - name: Refuse forks
         env:
@@ -52,9 +55,9 @@ jobs:
           fi
 
       - name: Checkout PR head
-        # clean:false — the gitignored .preprod-slot must survive across runs
-        # (checkout's `git clean -ffdx` would otherwise wipe the slot record,
-        # forcing every deploy down the fresh-db path and blinding teardown).
+        # clean:false avoids wiping anything the next steps rely on and keeps
+        # checkouts fast; the slot record itself lives outside the checkout
+        # (PREPROD_SLOT_FILE) so it survives regardless.
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -86,7 +89,7 @@ jobs:
           if [ "$TRIGGER_ACTION" = "labeled" ]; then
             ARGS="$ARGS --fresh-db"
             FRESH=true
-          elif [ -f .preprod-slot ]; then
+          elif [ -f "$SLOT_FILE" ]; then
             # shellcheck disable=SC1091
             . ./.preprod-slot
             if [ "${SLOT_BRANCH:-}" != "$HEAD_REF" ]; then
@@ -169,9 +172,10 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       TRIGGER_ACTION: ${{ github.event.action }}
       IS_MERGED: ${{ github.event.pull_request.merged }}
+      PREPROD_SLOT_FILE: /tmp/places-preprod-slot
     steps:
       - name: Checkout base (head may be gone)
-        # clean:false — same reason as the preview job: keep .preprod-slot.
+        # clean:false — same reason as the preview job.
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.base.sha }}
@@ -193,18 +197,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ ! -f .preprod-slot ]; then
+          if [ ! -f "$SLOT_FILE" ]; then
             echo "No slot record — nothing to tear down."
             exit 0
           fi
           # shellcheck disable=SC1091
-          . ./.preprod-slot
+          . "$SLOT_FILE"
           if [ "${SLOT_BRANCH:-}" != "$HEAD_REF" ]; then
             echo "Slot owned by '${SLOT_BRANCH:-unknown}', not '$HEAD_REF' — leaving it alone."
             exit 0
           fi
           ${DOCKER_SUDO-sudo} docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml down
-          rm -f .preprod-slot
+          rm -f "$SLOT_FILE"
           REASON="closed"
           if [ "$TRIGGER_ACTION" = "closed" ] && [ "$IS_MERGED" = "true" ]; then
             REASON="merged — promoted to prod via main"

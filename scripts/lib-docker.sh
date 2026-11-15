@@ -10,6 +10,13 @@ SUDO="$DOCKER_SUDO"
 # shellcheck disable=SC2086
 COMPOSE="$SUDO docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml"
 
+# Slot record: which branch owns the single preview slot. Local default is the
+# repo-local (gitignored) file; CI sets PREPROD_SLOT_FILE to a path outside
+# the checkout because runner workspaces do not reliably persist untracked
+# files between runs (checkout wipes, ephemeral job dirs).
+SLOT_FILE="${PREPROD_SLOT_FILE:-.preprod-slot}"
+export SLOT_FILE
+
 # HTTP GET against the app. Two modes (HEALTHCHECK_MODE):
 #   host (default) — curl the published port; for local use where the
 #     script runs on the docker host.
