@@ -31,14 +31,33 @@ export interface Observability {
 
 const noop: Observability = { enabled: false, shutdown: async () => {} };
 
+/** Path portion of a URL-ish value (drops query string / fragment). */
+function pathOf(value: unknown): string {
+  if (typeof value !== "string" || !value) return "";
+  const noQuery = value.split("?")[0].split("#")[0];
+  try {
+    // Absolute URL (http.url / url.full) → pathname; relative path → itself.
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(noQuery)) return new URL(noQuery).pathname;
+  } catch {
+    return noQuery;
+  }
+  return noQuery;
+}
+
 function isHealthSpan(span: ReadableSpan | Span): boolean {
   const attrs = (span as ReadableSpan).attributes ?? {};
-  const route =
-    (attrs["http.route"] as string | undefined) ??
-    (attrs["http.target"] as string | undefined) ??
-    "";
+  // SDK semconv drift: instrumentation sets stable 1.x names (url.path),
+  // older docs/tests use 0.x names (http.route / http.target). Check all.
+  const candidates = [
+    attrs["http.route"],
+    attrs["http.target"],
+    attrs["url.path"],
+    attrs["http.url"],
+    attrs["url.full"],
+  ];
+  if (candidates.some((c) => pathOf(c) === "/api/health")) return true;
   const name = (span as ReadableSpan).name ?? "";
-  return route === "/api/health" || name.includes("/api/health");
+  return name.includes("/api/health");
 }
 
 /** Drops GET /api/health spans and sanitizes attributes on the rest. */
@@ -87,11 +106,25 @@ class SanitizingLogProcessor implements LogRecordProcessor {
   }
 }
 
+/**
+ * Low-cardinality HTTP attributes kept on metric streams. Covers both the
+ * stable 1.x semconv names emitted by current instrumentations
+ * (http.request.method, http.route, http.response.status_code, url.scheme,
+ * server.address) and their legacy 0.x aliases, so a semconv bump on either
+ * side can't silently strip every label again.
+ *
+ * Deliberately EXCLUDED (high cardinality): url.path, url.query, url.full,
+ * http.url, http.target — concrete paths carry ids and query strings.
+ */
 export const HTTP_ALLOWLIST = [
+  "http.request.method",
   "http.method",
   "http.route",
+  "http.response.status_code",
   "http.status_code",
+  "url.scheme",
   "http.scheme",
+  "server.address",
   "http.host",
 ];
 
@@ -107,7 +140,9 @@ export function buildMetricViews(): unknown[] {
       attributesProcessors: [
         createAllowListAttributesProcessor([
           ...HTTP_ALLOWLIST,
-          "http.url",
+          // NOTE: no http.url / url.full here — full upstream URLs carry
+          // place ids and query strings (cardinality bomb). server.address
+          // + peer.service are enough to split Google vs OIDC traffic.
           "server.address",
           "peer.service",
         ]),

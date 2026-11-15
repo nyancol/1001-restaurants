@@ -71,14 +71,43 @@ describe("health span filter", () => {
     };
     const proc = new HealthFilterProcessor(next as never);
     proc.onEnd(fakeSpan({ name: "GET /api/health", attributes: { "http.route": "/api/health" } }));
+    // Stable 1.x semconv shape actually emitted by the SDK (no http.route).
+    proc.onEnd(
+      fakeSpan({
+        name: "GET",
+        attributes: {
+          "http.request.method": "GET",
+          "url.path": "/api/health",
+          "url.scheme": "http",
+          "http.response.status_code": 200,
+        },
+      })
+    );
+    // Health with query string still matches on path.
+    proc.onEnd(fakeSpan({ name: "GET", attributes: { "url.path": "/api/health?foo=bar" } }));
+    proc.onEnd(
+      fakeSpan({
+        name: "GET",
+        attributes: {
+          "http.request.method": "GET",
+          "url.path": "/api/places",
+          "url.scheme": "http",
+          "http.response.status_code": 200,
+          "X-Goog-Api-Key": "secret-key",
+        },
+      })
+    );
     proc.onEnd(
       fakeSpan({
         name: "GET /api/places",
         attributes: { "http.route": "/api/places", "X-Goog-Api-Key": "secret-key" },
       })
     );
-    expect(seen).toHaveLength(1);
-    expect(seen[0].attributes["http.route"]).toBe("/api/places");
-    expect(seen[0].attributes["X-Goog-Api-Key"]).toBe("[Redacted]");
+    expect(seen).toHaveLength(2);
+    for (const s of seen) {
+      expect(s.attributes["X-Goog-Api-Key"]).toBe("[Redacted]");
+    }
+    expect(seen[0].attributes["url.path"]).toBe("/api/places");
+    expect(seen[1].attributes["http.route"]).toBe("/api/places");
   });
 });

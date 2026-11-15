@@ -32,6 +32,13 @@ export function packageVersion(): string {
   }
 }
 
+/** Explicit version wins; empty or the "unknown" placeholder falls through
+ * to the package.json version so service.version is always meaningful. */
+function versionFromEnv(raw: unknown): string {
+  const v = typeof raw === "string" ? raw.trim() : "";
+  return v && v !== "unknown" ? v : "";
+}
+
 export function parseOtelEnv(env: NodeJS.ProcessEnv = process.env): OtelEnv {
   const raw = (env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "").trim().replace(/\/+$/, "");
   let endpoint = "";
@@ -50,7 +57,7 @@ export function parseOtelEnv(env: NodeJS.ProcessEnv = process.env): OtelEnv {
     endpoint,
     serviceName: env.OTEL_SERVICE_NAME?.trim() || "places",
     environment: env.DEPLOYMENT_ENVIRONMENT?.trim() || env.NODE_ENV || "development",
-    serviceVersion: env.OTEL_SERVICE_VERSION?.trim() || packageVersion(),
+    serviceVersion: versionFromEnv(env.OTEL_SERVICE_VERSION) || packageVersion(),
     enabled: Boolean(endpoint),
   };
 }

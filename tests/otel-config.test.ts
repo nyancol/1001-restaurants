@@ -45,5 +45,7 @@ describe("otel config gating", () => {
     expect(c.otelServiceVersion).toMatch(/^\d+\.\d+\.\d+/);
     const e = loadConfig({ ...BASE, OTEL_SERVICE_VERSION: "9.9.9" } as any);
     expect(e.otelServiceVersion).toBe("9.9.9");
+    const u = loadConfig({ ...BASE, OTEL_SERVICE_VERSION: "unknown" } as any);
+    expect(u.otelServiceVersion).toMatch(/^\d+\.\d+\.\d+/);
   });
 });

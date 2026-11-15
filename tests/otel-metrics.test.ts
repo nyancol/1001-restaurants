@@ -23,12 +23,23 @@ describe("otel metrics", () => {
     });
     const meter = provider.getMeter("test");
     const hist = meter.createHistogram("http.server.duration");
+    // Legacy 0.x shape.
     hist.record(120, {
       "http.method": "GET",
       "http.route": "/api/places",
       "http.status_code": 200,
       userId: "u1",
       placeId: "p9",
+    });
+    // Stable 1.x shape actually emitted by current instrumentations.
+    hist.record(80, {
+      "http.request.method": "GET",
+      "http.route": "/api/places",
+      "http.response.status_code": 200,
+      "url.scheme": "http",
+      "server.address": "places",
+      "url.path": "/api/places",
+      "url.query": "owner=all",
     });
     await provider.forceFlush();
     const all = exporter.getMetrics();
@@ -41,11 +52,25 @@ describe("otel metrics", () => {
       }
     }
     expect(points.length).toBeGreaterThan(0);
-    const attrs = points[0].attributes as Record<string, unknown>;
-    expect(attrs["http.method"]).toBe("GET");
-    expect(attrs["http.route"]).toBe("/api/places");
-    expect(attrs).not.toHaveProperty("userId");
-    expect(attrs).not.toHaveProperty("placeId");
+    const byRoute = points.filter(
+      (p: any) => (p.attributes as Record<string, unknown>)["http.route"] === "/api/places"
+    );
+    expect(byRoute.length).toBeGreaterThan(0);
+    for (const p of points) {
+      const attrs = p.attributes as Record<string, unknown>;
+      expect(attrs).not.toHaveProperty("userId");
+      expect(attrs).not.toHaveProperty("placeId");
+      // Concrete path / query are high-cardinality — never kept.
+      expect(attrs).not.toHaveProperty("url.path");
+      expect(attrs).not.toHaveProperty("url.query");
+    }
+    const legacy = points.find((p: any) => (p.attributes as any)["http.method"] === "GET");
+    expect(legacy?.attributes["http.route"]).toBe("/api/places");
+    const stable = points.find(
+      (p: any) => (p.attributes as any)["http.request.method"] === "GET"
+    );
+    expect(stable?.attributes["http.route"]).toBe("/api/places");
+    expect(stable?.attributes["http.response.status_code"]).toBe(200);
     await provider.shutdown().catch(() => {});
   });
 
