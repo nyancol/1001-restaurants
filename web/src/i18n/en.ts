@@ -171,6 +171,12 @@ export const en = {
   "editor.save": "Save",
   "editor.updateFailed": "Update failed — rolled back.",
   "editor.delete": "Delete",
+  "editor.deleteTitle": "Delete this place?",
+  "editor.deleteBody": (name: string) => `“${name}” will be permanently removed from your list.`,
+  "editor.deleteWarning": "This action cannot be undone.",
+  "editor.deleteConfirmCta": "Delete place",
+  "editor.deleteCancel": "Keep it",
+  "editor.deleting": "Deleting…",
   "editor.deleteConfirm": (name: string) => `Delete “${name}”? This cannot be undone.`,
   "editor.deleteFailed": "Delete failed — please try again.",
 

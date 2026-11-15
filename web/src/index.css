@@ -4,3 +4,32 @@
 @import "./theme/themes/retro.css";
 @import "./theme/modes/light.css";
 @import "./theme/modes/dark.css";
+
+/* Delete-confirm dialog motion (respects reduced motion) */
+@keyframes dialog-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes dialog-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes dialog-spin {
+  to { transform: rotate(360deg); }
+}
+.dialog-backdrop {
+  animation: dialog-fade-in 150ms ease-out;
+}
+.dialog-panel {
+  animation: dialog-pop-in 180ms ease-out;
+}
+.dialog-spinner {
+  animation: dialog-spin 0.7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog-backdrop,
+  .dialog-panel,
+  .dialog-spinner {
+    animation: none;
+  }
+}

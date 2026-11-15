@@ -3,6 +3,7 @@ import type { Place } from "../lib/api";
 import TagCombobox from "./TagCombobox";
 import TypeCombobox from "./TypeCombobox";
 import Stars from "./Stars";
+import ConfirmDialog from "./ConfirmDialog";
 import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
@@ -18,15 +19,17 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Pr
   const [rating, setRating] = useState<number | null>(p.rating);
   const [note, setNote] = useState(p.note ?? "");
   const [placeType, setPlaceType] = useState(p.placeType ?? "restaurant");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  function handleDelete() {
-    if (!onDelete) return;
-    const confirmMsg =
-      typeof t["editor.deleteConfirm"] === "function"
-        ? (t["editor.deleteConfirm"] as (name: string) => string)(p.name)
-        : "Delete this place?";
-    if (window.confirm(confirmMsg)) {
-      void onDelete();
+  async function confirmDelete() {
+    if (!onDelete || deleting) return;
+    setDeleting(true);
+    try {
+      await onDelete();
+      setConfirmOpen(false);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -46,10 +49,10 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Pr
         {onDelete && (
           <button
             type="button"
-            className="edge radius-input mr-auto border-danger-line bg-danger-bg px-3 py-1.5 text-sm text-danger-ink"
-            onClick={handleDelete}
+            className="edge radius-input mr-auto border-danger-line bg-danger-bg px-3 py-1.5 text-sm font-medium text-danger-ink transition hover:brightness-95"
+            onClick={() => setConfirmOpen(true)}
           >
-            {t["editor.delete"]}
+            🗑️ {t["editor.delete"]}
           </button>
         )}
         <button type="button" className="edge radius-input border-line bg-surface px-3 py-1.5 text-sm text-ink" onClick={onCancel}>
@@ -63,6 +66,27 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Pr
           {t["editor.save"]}
         </button>
       </div>
+
+      {confirmOpen && onDelete && (
+        <ConfirmDialog
+          title={t["editor.deleteTitle"]}
+          placeName={p.name}
+          body={
+            typeof t["editor.deleteBody"] === "function"
+              ? (t["editor.deleteBody"] as (name: string) => string)(p.name)
+              : typeof t["editor.deleteConfirm"] === "function"
+                ? (t["editor.deleteConfirm"] as (name: string) => string)(p.name)
+                : "This cannot be undone."
+          }
+          warning={t["editor.deleteWarning"]}
+          confirmLabel={t["editor.deleteConfirmCta"]}
+          cancelLabel={t["editor.deleteCancel"]}
+          pendingLabel={t["editor.deleting"]}
+          pending={deleting}
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => { if (!deleting) setConfirmOpen(false); }}
+        />
+      )}
     </div>
   );
 }

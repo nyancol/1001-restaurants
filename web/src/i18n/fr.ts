@@ -173,6 +173,12 @@ export const fr: typeof en = {
   "editor.save": "Enregistrer",
   "editor.updateFailed": "Échec de la mise à jour — annulé.",
   "editor.delete": "Supprimer",
+  "editor.deleteTitle": "Supprimer ce lieu ?",
+  "editor.deleteBody": (name: string) => `« ${name} » sera définitivement retiré de votre liste.`,
+  "editor.deleteWarning": "Cette action est irréversible.",
+  "editor.deleteConfirmCta": "Supprimer le lieu",
+  "editor.deleteCancel": "Conserver",
+  "editor.deleting": "Suppression…",
   "editor.deleteConfirm": (name: string) => `Supprimer « ${name} » ? Cette action est irréversible.`,
   "editor.deleteFailed": "Échec de la suppression — réessayez.",
 
