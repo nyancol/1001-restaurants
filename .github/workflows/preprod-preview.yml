@@ -84,6 +84,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          SLOT_FILE="${PREPROD_SLOT_FILE:-.preprod-slot}"
           ARGS="--branch $HEAD_REF --evict"
           FRESH=false
           if [ "$TRIGGER_ACTION" = "labeled" ]; then
@@ -197,6 +198,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          SLOT_FILE="${PREPROD_SLOT_FILE:-.preprod-slot}"
           if [ ! -f "$SLOT_FILE" ]; then
             echo "No slot record — nothing to tear down."
             exit 0
