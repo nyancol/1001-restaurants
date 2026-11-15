@@ -34,5 +34,14 @@ export const places = sqliteTable("places", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export const tagDefinitions = sqliteTable("tag_definitions", {
+  ownerId: text("owner_id").notNull(),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export type TagDefinitionRow = typeof tagDefinitions.$inferSelect;
 export type UserRow = typeof users.$inferSelect;
 export type PlaceRow = typeof places.$inferSelect;

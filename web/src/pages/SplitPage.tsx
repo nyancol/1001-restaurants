@@ -4,6 +4,7 @@ import FilterBar from "../components/FilterBar";
 import MapView from "../components/MapView";
 import OwnerPicker from "../components/OwnerPicker";
 import PlaceListPane from "../components/PlaceListPane";
+import type { TagMutation } from "../components/TagCombobox";
 import { usePlaceFilters } from "../lib/usePlaceFilters";
 import { usePlaces } from "../lib/usePlaces";
 import { displayNameFor, useUsers } from "../lib/useUsers";
@@ -19,13 +20,22 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
   const { me, users } = useUsers();
   const { t } = useLanguage();
 
-  const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds } = usePlaces(
+  const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds, fetchList } = usePlaces(
     { owner, status: statusParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam },
     onUnauthorized,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [geoNote, setGeoNote] = useState<string | null>(null);
   const listElRef = useRef<HTMLUListElement | null>(null);
+
+  const handleTagDefinitionsChanged = useCallback((m: TagMutation) => {
+    if (m.type === "rename") {
+      setTags(tags.map((tg) => (tg === m.oldName ? m.newName : tg)));
+    } else if (m.type === "delete") {
+      setTags(tags.filter((tg) => tg !== m.name));
+    }
+    void fetchList();
+  }, [tags, setTags, fetchList]);
 
   const locatedCount = places.filter((p) => p.lat != null && p.lng != null).length;
   const unlocatedCount = places.length - locatedCount;
@@ -95,6 +105,7 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             onCardSelect={setSelectedId}
             listRef={(el) => { listElRef.current = el; }}
             readOnly={readOnly}
+            onTagDefinitionsChanged={handleTagDefinitionsChanged}
             emptyTitle={readOnly ? t["empty.scopeHasNoPlaces"](scopeName) : undefined}
             emptySubtitle={readOnly ? t["empty.tryClear"] : undefined}
             emptyHint={
@@ -119,6 +130,8 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             onGeoNote={setGeoNote}
             mapHeightClass="h-[calc(100dvh-8rem)] min-h-[480px]"
             readOnly={readOnly}
+            showDetails={false}
+            onTagDefinitionsChanged={handleTagDefinitionsChanged}
           />
           <p className="mt-2 text-[11px] text-muted">
             © <a className="underline" href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors

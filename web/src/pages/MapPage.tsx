@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import FilterBar from "../components/FilterBar";
 import MapView from "../components/MapView";
+import type { TagMutation } from "../components/TagCombobox";
 import OwnerPicker from "../components/OwnerPicker";
 import ViewToggle from "../components/ViewToggle";
 import { usePlaceFilters } from "../lib/usePlaceFilters";
@@ -14,7 +15,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
   const { me, users } = useUsers();
   const { t } = useLanguage();
 
-  const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds } = usePlaces(
+  const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds, fetchList } = usePlaces(
     { owner, status: statusParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam },
     onUnauthorized,
   );
@@ -25,6 +26,15 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
   const unlocatedCount = places.length - locatedCount;
   const readOnly = owner !== "me";
   const scopeName = owner === "me" ? t["scope.me"] : owner === "all" ? t["scope.everyone"] : (displayNameFor(owner, me, users) ?? t["scope.userFallback"]);
+
+  const handleTagDefinitionsChanged = useCallback((m: TagMutation) => {
+    if (m.type === "rename") {
+      setTags(tags.map((tg) => (tg === m.oldName ? m.newName : tg)));
+    } else if (m.type === "delete") {
+      setTags(tags.filter((tg) => tg !== m.name));
+    }
+    void fetchList();
+  }, [tags, setTags, fetchList]);
 
   return (
     <div className="mx-auto max-w-xl bg-bg px-4 pb-16 pt-4">
@@ -75,6 +85,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
         onSelect={setSelectedId}
         onGeoNote={setGeoNote}
         readOnly={readOnly}
+        onTagDefinitionsChanged={handleTagDefinitionsChanged}
       />
       <p className="mt-2 text-[11px] text-muted">
         © <a className="underline" href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors

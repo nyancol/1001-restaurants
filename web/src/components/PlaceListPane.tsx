@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PlaceCard from "../components/PlaceCard";
 import PlaceEditor from "../components/PlaceEditor";
+import type { TagMutation } from "../components/TagCombobox";
 import type { Place } from "../lib/api";
 import { useLanguage } from "../i18n/LanguageContext";
 
@@ -22,10 +23,11 @@ interface Props {
   readOnly?: boolean;
   emptyTitle?: string;
   emptySubtitle?: string;
+  onTagDefinitionsChanged?: (m: TagMutation) => void;
 }
 
 /** Scrollable list of place cards with inline editing. Shared by phone list and desktop split pane. */
-export default function PlaceListPane({ places, loading, error, onToggleStatus, onSaveEdit, onDeleteEdit, onRefresh, refreshingIds, onError, focusedId, listRef, emptyHint, onCardSelect, readOnly, emptyTitle, emptySubtitle }: Props) {
+export default function PlaceListPane({ places, loading, error, onToggleStatus, onSaveEdit, onDeleteEdit, onRefresh, refreshingIds, onError, focusedId, listRef, emptyHint, onCardSelect, readOnly, emptyTitle, emptySubtitle, onTagDefinitionsChanged }: Props) {
   const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -76,7 +78,7 @@ export default function PlaceListPane({ places, loading, error, onToggleStatus, 
         >
           <PlaceCard place={p} onToggleStatus={onToggleStatus} onEdit={(pl) => { if (!readOnly) setEditingId(pl.id); }} readOnly={readOnly} onRefresh={onRefresh} refreshing={refreshingIds?.includes(p.id)} />
           {!readOnly && editingId === p.id && (
-            <PlaceEditor place={p} onSave={(patch) => handleSave(p, patch)} onCancel={() => setEditingId(null)} onDelete={onDeleteEdit ? () => handleDelete(p) : undefined} />
+            <PlaceEditor place={p} onSave={(patch) => handleSave(p, patch)} onCancel={() => setEditingId(null)} onDelete={onDeleteEdit ? () => handleDelete(p) : undefined} onTagDefinitionsChanged={onTagDefinitionsChanged} />
           )}
         </li>
       ))}

@@ -76,13 +76,18 @@ interface MapViewProps {
   onGeoNote?: (note: string | null) => void;
   mapHeightClass?: string;
   readOnly?: boolean;
+  /** When false, pin taps only drive `onSelect` (e.g. list highlight) with no detail card on the map. */
+  showDetails?: boolean;
+  onTagDefinitionsChanged?: (m: import("./TagCombobox").TagMutation) => void;
 }
 
 /**
  * MapLibre map with pins, clusters, user dot, and detail surface.
  * Shared by the phone Map page and the desktop split pane. The detail
- * surface is a bottom sheet on phone and a right-docked panel on desktop
- * via responsive classes; `fitToResults` biases padding accordingly.
+ * surface is a bottom sheet on phone and — when `showDetails` is true —
+ * a right-docked panel on desktop via responsive classes; `fitToResults`
+ * biases padding accordingly. Split view sets `showDetails={false}` so a
+ * pin tap only highlights the matching list card.
  */
 export default function MapView({
   places,
@@ -98,6 +103,8 @@ export default function MapView({
   onGeoNote,
   mapHeightClass = "h-[60dvh] min-h-96",
   readOnly,
+  showDetails = true,
+  onTagDefinitionsChanged,
 }: MapViewProps) {
   const { mode } = useTheme();
   const { t } = useLanguage();
@@ -411,9 +418,9 @@ export default function MapView({
     map.fitBounds(bounds, {
       padding: {
         top: 60,
-        bottom: !isDesktop && selected ? 260 : 60,
+        bottom: !isDesktop && selected && showDetails ? 260 : 60,
         left: 40,
-        right: isDesktop && selected ? 420 : 40,
+        right: isDesktop && selected && showDetails ? 420 : 40,
       },
       maxZoom: 15,
     });
@@ -468,7 +475,7 @@ export default function MapView({
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm text-muted">{t["map.loading"]}</div>
       )}
-      {selected && (
+      {selected && showDetails && (
         <div className="radius-card absolute inset-x-0 bottom-0 max-h-[55%] overflow-y-auto border-t border-line bg-surface p-3 shadow-theme lg:inset-x-auto lg:bottom-3 lg:right-3 lg:top-3 lg:max-h-none lg:w-96 lg:border lg:pt-2">
           <div className="mb-2 flex justify-end">
             <button
@@ -484,7 +491,7 @@ export default function MapView({
             </button>
           </div>
           <PlaceCard place={selected} onToggleStatus={onFlipStatus} onEdit={() => { if (!readOnly) setEditing(true); }} readOnly={readOnly} onRefresh={onRefresh} refreshing={refreshingIds?.includes(selected.id)} />
-          {!readOnly && editing && <PlaceEditor place={selected} onSave={(patch) => handleSave(selected, patch)} onCancel={() => setEditing(false)} onDelete={onDelete ? () => handleDelete(selected) : undefined} />}
+          {!readOnly && editing && <PlaceEditor place={selected} onSave={(patch) => handleSave(selected, patch)} onCancel={() => setEditing(false)} onDelete={onDelete ? () => handleDelete(selected) : undefined} onTagDefinitionsChanged={onTagDefinitionsChanged} />}
         </div>
       )}
     </div>

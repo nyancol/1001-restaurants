@@ -4,6 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import type { AppConfig } from "../config.js";
 import { places, users } from "../db/schema.js";
 import { normalizeTags } from "../tags/normalize.js";
+import { ensureTagDefinitions } from "../tags/definitions.js";
 import { normalizeIcon, isValidIcon } from "../place-icons/infer.js";
 import { isOpenAt, parseHoursJson } from "./open.js";
 import { withSpan } from "../observability/trace.js";
@@ -214,6 +215,9 @@ export function registerPlaceRoutes(
         }
         if (value.tags !== undefined) patch.tagsJson = JSON.stringify(value.tags);
         await db.update(places).set(patch).where(eq(places.id, dup[0].id));
+        if (value.tags !== undefined) {
+          try { await ensureTagDefinitions(db, userId, value.tags); } catch { /* ignore */ }
+        }
         const updated = await db.select().from(places).where(eq(places.id, dup[0].id)).limit(1);
         const names = await ownerNameMap(db);
         return reply.code(200).send(toPlace(updated[0], names.get(updated[0].ownerId) ?? null));
@@ -248,6 +252,7 @@ export function registerPlaceRoutes(
     });
     const rows = await db.select().from(places).where(eq(places.id, id)).limit(1);
     const names = await ownerNameMap(db);
+    try { await ensureTagDefinitions(db, userId, value.tags ?? []); } catch { /* ignore */ }
     return reply.code(201).send(toPlace(rows[0], names.get(rows[0].ownerId) ?? null));
   });
 
@@ -378,6 +383,9 @@ export function registerPlaceRoutes(
     }
     if (value.tags !== undefined) patch.tagsJson = JSON.stringify(value.tags);
     await db.update(places).set(patch).where(eq(places.id, rows[0].id));
+    if (value.tags !== undefined) {
+      try { await ensureTagDefinitions(db, userId, value.tags); } catch { /* ignore */ }
+    }
     const updated = await db.select().from(places).where(eq(places.id, rows[0].id)).limit(1);
     const names = await ownerNameMap(db);
     return toPlace(updated[0], names.get(updated[0].ownerId) ?? null);

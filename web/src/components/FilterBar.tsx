@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import TagCombobox from "./TagCombobox";
+import TagDot from "./TagDot";
+import { colorForDisplay, useTagColors } from "../lib/useTagColors";
 import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
@@ -118,6 +120,7 @@ const hasActive = (status: string, tags: string[], q: string, openEnabled: boole
 
 export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, layout = "stack" }: Props) {
   const { t, locale } = useLanguage();
+  const tagColors = useTagColors();
   const active = hasActive(status, tags, q, openEnabled);
   function clearAll() {
     setStatus("");
@@ -326,10 +329,11 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
               <button type="button" aria-label={t["filter.clearOpen"]} onClick={() => { setOpenEnabled(false); setOpenAt(""); }} className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center">×</button>
             </span>
           )}
-          {tags.map((t) => (
-            <span key={t} className="edge radius-pill inline-flex min-h-[32px] items-center gap-1.5 border-accent bg-accent px-2.5 py-1 text-accent-ink">
-              #{t}
-              <button type="button" aria-label={t["filter.removeFilter"](t)} onClick={() => setTags(tags.filter((x) => x !== t))} className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center">×</button>
+          {tags.map((tg) => (
+            <span key={tg} className="edge radius-pill inline-flex min-h-[32px] items-center gap-1.5 border-accent bg-accent px-2.5 py-1 text-accent-ink">
+              <TagDot color={colorForDisplay(tg, tagColors)} />
+              #{tg}
+              <button type="button" aria-label={t["filter.removeFilter"](tg)} onClick={() => setTags(tags.filter((x) => x !== tg))} className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center">×</button>
             </span>
           ))}
         </div>

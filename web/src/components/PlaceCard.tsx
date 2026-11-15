@@ -3,6 +3,8 @@ import { mapsUrlFor } from "../lib/api";
 import { useState } from "react";
 import { PIN_FILL } from "../theme/pins";
 import IconGlyph from "./IconGlyph";
+import TagDot from "./TagDot";
+import { colorForDisplay, useTagColors } from "../lib/useTagColors";
 import { useLanguage, type Dict } from "../i18n/LanguageContext";
 
 interface Props {
@@ -80,6 +82,7 @@ function priceLabel(p: Place): string | null {
 
 export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, onRefresh, refreshing }: Props) {
   const { t } = useLanguage();
+  const tagColors = useTagColors();
   const [copied, setCopied] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [busyLocal, setBusyLocal] = useState(false);
@@ -220,7 +223,8 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
       {(p.tags ?? []).length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {(p.tags ?? []).map((tag) => (
-            <span key={tag} className="edge radius-pill border-line bg-surface-2 px-2 py-0.5 text-xs text-ink">
+            <span key={tag} className="edge radius-pill inline-flex items-center gap-1.5 border-line bg-surface-2 px-2 py-0.5 text-xs text-ink">
+              <TagDot color={colorForDisplay(tag, tagColors)} />
               #{tag}
             </span>
           ))}

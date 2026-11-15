@@ -138,12 +138,42 @@ export async function deletePlace(id: string): Promise<{ ok: true }> {
 
 export interface TagCount {
   tag: string;
+  color: string;
   count: number;
 }
 
 export async function getTags(q = ""): Promise<TagCount[]> {
   const body = await apiFetch(`/api/tags${q ? `?q=${encodeURIComponent(q)}` : ""}`);
-  return body.tags ?? [];
+  const raw: any[] = body.tags ?? [];
+  // Backward-compatible fallback: legacy {tag,count} without color.
+  const { colorForTag } = await import("./tagPalette");
+  return raw.map((t) => ({
+    tag: t.tag,
+    color: typeof t.color === "string" ? t.color : colorForTag(t.tag),
+    count: typeof t.count === "number" ? t.count : 0,
+  }));
+}
+
+export async function createTag(name: string, color?: string): Promise<TagCount & { tag: string }> {
+  const body = await apiFetch("/api/tags", {
+    method: "POST",
+    body: JSON.stringify(color ? { name, color } : { name }),
+  });
+  return { tag: body.tag, color: body.color, count: 0 };
+}
+
+export async function patchTag(
+  name: string,
+  patch: { newName?: string; color?: string },
+): Promise<{ tag: string; color: string; merged?: boolean }> {
+  return apiFetch(`/api/tags/${encodeURIComponent(name)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteTag(name: string): Promise<{ ok: true }> {
+  return apiFetch(`/api/tags/${encodeURIComponent(name)}`, { method: "DELETE" });
 }
 
 export interface PlaceTypeCount {

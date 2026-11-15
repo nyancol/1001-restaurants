@@ -147,7 +147,9 @@ describe("places API auth + ownership", () => {
     const res = await app.inject({ method: "GET", url: "/api/tags", headers: { cookie: a } });
     expect(res.statusCode).toBe(200);
     const tags = res.json().tags;
-    expect(tags[0]).toEqual({ tag: "cozy", count: 2 });
+    expect(tags[0].tag).toBe("cozy");
+    expect(tags[0].count).toBe(2);
+    expect(typeof tags[0].color).toBe("string");
     expect(tags.some((t: any) => t.tag === "terrasse")).toBe(false);
     expect(tags.some((t: any) => t.tag === "zz-other")).toBe(false);
   });

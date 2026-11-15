@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Place } from "../lib/api";
-import TagCombobox from "./TagCombobox";
+import TagCombobox, { type TagMutation } from "./TagCombobox";
 import IconPicker from "./IconPicker";
 import Stars from "./Stars";
 import ConfirmDialog from "./ConfirmDialog";
@@ -11,9 +11,10 @@ interface Props {
   onSave: (patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) => void;
   onCancel: () => void;
   onDelete?: () => void | Promise<void>;
+  onTagDefinitionsChanged?: (m: TagMutation) => void;
 }
 
-export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Props) {
+export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTagDefinitionsChanged }: Props) {
   const { t } = useLanguage();
   const [tags, setTags] = useState<string[]>(p.tags ?? []);
   const [rating, setRating] = useState<number | null>(p.rating);
@@ -36,7 +37,7 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete }: Pr
   return (
     <div className="mt-3 flex flex-col gap-2 border-t border-line pt-3">
       <IconPicker value={icon} onChange={setIcon} />
-      <TagCombobox value={tags} onChange={setTags} />
+      <TagCombobox value={tags} onChange={setTags} onTagDefinitionsChanged={onTagDefinitionsChanged} />
       <Stars value={rating} onChange={setRating} />
       <textarea
         value={note}
