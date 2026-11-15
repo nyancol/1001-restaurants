@@ -26,12 +26,31 @@ npm run dev:web
 """
 
 # ── Preprod environment ─────────────────────────────────────────────────────
-# Isolated app instance for testing (port 5173, own container + data volume),
-# sending telemetry to the standalone LGTM stack (obs/compose.yaml — start it
-# first: cd obs && docker compose up -d). Production is never touched.
+# Isolated app instance for testing (host port 5174, container port 5173 to
+# match the Caddy target, own container + data volume). Production is never
+# touched. NOTE: host port is 5174 (not 5173) so `mise run dev` (vite HMR
+# on 5173) and preprod bind together. See hermes.yaml for the canonical map.
 [tasks.preprod-up]
-description = "Start the preprod app instance (http://localhost:5173)"
+description = "Start the preprod app instance (http://localhost:5174)"
 run = "sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml up -d --build"
+
+[tasks.preprod-deploy]
+description = "Deploy a branch to the single preprod preview slot (refuses to evict without --evict)"
+usage = """
+  flag "--branch <branch>" help="Branch to deploy (must match current checkout)"
+  flag "--fresh-db" help="Reseed the demo DB after deploy"
+  flag "--evict" help="Confirm evicting another branch's preview"
+"""
+run = """
+ARGS="--branch ${usage_branch:?--branch is required}"
+[ "${usage_fresh_db:-}" = "true" ] && ARGS="$ARGS --fresh-db"
+[ "${usage_evict:-}" = "true" ] && ARGS="$ARGS --evict"
+./scripts/preprod-deploy.sh $ARGS
+"""
+
+[tasks.preprod-verify]
+description = "Verify preprod green (read-only: health, OIDC, logs, version, fixture)"
+run = "./scripts/preprod-verify.sh"
 
 [tasks.preprod-down]
 description = "Stop the preprod app instance (keeps its data volume)"
