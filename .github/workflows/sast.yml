@@ -9,7 +9,7 @@ on:
 jobs:
   semgrep-sast:
     name: Run Semgrep SAST
-    runs-on: [selfhosted-runner]
+    runs-on: [self-hosted]
     
     container:
       image: semgrep/semgrep:latest # Runs Semgrep inside an isolated container natively on your runner
