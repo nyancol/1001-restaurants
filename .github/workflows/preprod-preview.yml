@@ -92,7 +92,7 @@ jobs:
             FRESH=true
           elif [ -f "$SLOT_FILE" ]; then
             # shellcheck disable=SC1091
-            . ./.preprod-slot
+            . "$SLOT_FILE"
             if [ "${SLOT_BRANCH:-}" != "$HEAD_REF" ]; then
               ARGS="$ARGS --fresh-db"
               FRESH=true
