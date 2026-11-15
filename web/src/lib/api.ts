@@ -6,9 +6,10 @@ export class UnauthorizedError extends Error {
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<any> {
+  const hasBody = init.body !== undefined && init.body !== null;
   const res = await fetch(path, {
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
+    ...(hasBody ? { headers: { "Content-Type": "application/json", ...(init.headers ?? {}) } } : { headers: { ...(init.headers ?? {}) } }),
     ...init,
   });
   if (res.status === 401) throw new UnauthorizedError();
