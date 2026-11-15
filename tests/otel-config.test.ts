@@ -39,4 +39,11 @@ describe("otel config gating", () => {
     expect(c.otelEndpoint).toBe("http://lgtm:4318");
     expect(c.otelEnabled).toBe(true);
   });
+
+  it("defaults service version to package.json", () => {
+    const c = loadConfig({ ...BASE } as any);
+    expect(c.otelServiceVersion).toMatch(/^\d+\.\d+\.\d+/);
+    const e = loadConfig({ ...BASE, OTEL_SERVICE_VERSION: "9.9.9" } as any);
+    expect(e.otelServiceVersion).toBe("9.9.9");
+  });
 });

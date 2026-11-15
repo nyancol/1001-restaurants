@@ -4,6 +4,7 @@ export interface OtelEnv {
   endpoint: string;
   serviceName: string;
   environment: string;
+  /** Release version: explicit env wins, otherwise package.json version. */
   serviceVersion: string;
   enabled: boolean;
 }
@@ -16,6 +17,19 @@ export interface OtelConfig {
   otelServiceVersion: string;
   otelEnabled: boolean;
   nodeEnv: string;
+}
+
+import { createRequire } from "node:module";
+
+/** package.json version (the release identity). Never throws. */
+export function packageVersion(): string {
+  try {
+    const require = createRequire(import.meta.url);
+    const pkg = require("../../package.json") as { version?: unknown };
+    return typeof pkg?.version === "string" && pkg.version ? pkg.version : "unknown";
+  } catch {
+    return "unknown";
+  }
 }
 
 export function parseOtelEnv(env: NodeJS.ProcessEnv = process.env): OtelEnv {
@@ -36,7 +50,7 @@ export function parseOtelEnv(env: NodeJS.ProcessEnv = process.env): OtelEnv {
     endpoint,
     serviceName: env.OTEL_SERVICE_NAME?.trim() || "places",
     environment: env.DEPLOYMENT_ENVIRONMENT?.trim() || env.NODE_ENV || "development",
-    serviceVersion: env.OTEL_SERVICE_VERSION?.trim() || "unknown",
+    serviceVersion: env.OTEL_SERVICE_VERSION?.trim() || packageVersion(),
     enabled: Boolean(endpoint),
   };
 }

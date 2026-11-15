@@ -105,7 +105,7 @@ Docker network. Preprod/dev export nothing.
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | prod only (via Arcane) | — (unset = telemetry disabled) | e.g. `http://lgtm:4318`. Presence of a valid `http(s)` URL is the switch — `NODE_ENV` is `production` in both prod and preprod, so it cannot be the switch |
 | `OTEL_SERVICE_NAME` | no | `places` | `service.name` on every signal |
 | `DEPLOYMENT_ENVIRONMENT` | no | `NODE_ENV` | `deployment.environment` (`production` in prod) |
-| `OTEL_SERVICE_VERSION` | no | `unknown` | `service.version` (wire the git sha at Arcane build time when available) |
+| `OTEL_SERVICE_VERSION` | no | `package.json` version | `service.version` — bump with `npm version` on release; explicit value wins |
 
 - Activation is fail-open: the SDK starts before instrumented imports
   (`src/observability/register.ts` is the first import in `src/index.ts`);
@@ -124,10 +124,11 @@ Docker network. Preprod/dev export nothing.
 - Sampling: none — 100% of non-excluded signals are exported.
 
 Arcane rollout: attach `places` to the external `telemetry` network (from
-`compose.yaml` in git), set the four vars above in the Arcane prod `.env`
+`compose.yaml` in git), set the vars above in the Arcane prod `.env`
 (`OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318`,
-`OTEL_SERVICE_NAME=places`, `DEPLOYMENT_ENVIRONMENT=production`,
-`OTEL_SERVICE_VERSION=<sha>`), redeploy. Verify in Grafana (`:3001`):
+`OTEL_SERVICE_NAME=places`, `DEPLOYMENT_ENVIRONMENT=production`;
+leave `OTEL_SERVICE_VERSION` unset to use the automatic `package.json`
+version), redeploy. Verify in Grafana (`:3001`):
 Tempo `service.name=places`, Loki `{service_name="places"}`, Mimir
 `http.server.duration`.
 
