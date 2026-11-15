@@ -30,10 +30,9 @@ else
   pass "container running"
 fi
 
-HEALTH="$(curl -fsS -m 10 "http://localhost:${HOST_PORT}/api/health" 2>/dev/null || true)"
-if printf '%s' "$HEALTH" | grep -q '"db":"ok"'; then pass "health db:ok ($HEALTH)"; else fail "health not ok: ${HEALTH:-unreachable}"; fi
+if http_get /api/health 2>/dev/null && printf '%s' "$HTTP_BODY" | grep -q '"db":"ok"'; then pass "health db:ok ($HTTP_BODY)"; else fail "health not ok (code ${HTTP_CODE:-?}): ${HTTP_BODY:-unreachable}"; fi
 
-LOGIN_CODE="$(curl -s -o /dev/null -w '%{http_code}' -m 10 "http://localhost:${HOST_PORT}/api/auth/login" || true)"
+if http_get /api/auth/login 2>/dev/null; then LOGIN_CODE="$HTTP_CODE"; else LOGIN_CODE="000"; fi
 if [ "$LOGIN_CODE" = "302" ] || [ "$LOGIN_CODE" = "303" ] || [ "$LOGIN_CODE" = "307" ]; then
   pass "OIDC login redirects ($LOGIN_CODE)"
 else

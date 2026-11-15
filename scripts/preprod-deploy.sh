@@ -51,18 +51,19 @@ $COMPOSE up -d --build
 
 HOST_PORT="${HOST_PORT:-$(grep -E '^HOST_PORT=' .env.preprod 2>/dev/null | cut -d= -f2)}"
 HOST_PORT="${HOST_PORT:-5174}"
-echo "Waiting for health on http://localhost:${HOST_PORT}/api/health ..."
-for _ in $(seq 1 30); do
-  if curl -fsS -m 5 "http://localhost:${HOST_PORT}/api/health" >/dev/null 2>&1; then
-    break
-  fi
-  sleep 2
-  if [ "$_ " = "30 " ]; then
+BASE="http://localhost:${HOST_PORT:-5174}"
+echo "Waiting for health at $BASE/api/health (mode: ${HEALTHCHECK_MODE:-host}) ..."
+tries=0
+until http_get /api/health >/dev/null 2>&1; do
+  tries=$((tries + 1))
+  if [ "$tries" -ge 30 ]; then
     echo "Timed out waiting for preprod health." >&2
     $COMPOSE logs --tail 50 places >&2 || true
     exit 1
   fi
+  sleep 2
 done
+echo "App is reachable."
 
 if [ "$FRESH_DB" -eq 1 ]; then
   echo "Reseeding demo DB inside the staging container..."
@@ -70,7 +71,12 @@ if [ "$FRESH_DB" -eq 1 ]; then
   $COMPOSE exec -T -e PREPROD_RESEED=1 places node dist/scripts/seed-demo.js
 fi
 
-HEALTH="$(curl -fsS -m 10 "http://localhost:${HOST_PORT}/api/health")"
+if ! http_get /api/health; then
+  echo "Preprod came up but /api/health is unreachable afterwards." >&2
+  $COMPOSE logs --tail 50 places >&2 || true
+  exit 1
+fi
+HEALTH="$HTTP_BODY"
 APP_ORIGIN="$(grep -E '^APP_ORIGIN=' .env.preprod 2>/dev/null | cut -d= -f2-)"
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 {

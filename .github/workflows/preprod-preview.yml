@@ -34,6 +34,9 @@ jobs:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       TRIGGER_ACTION: ${{ github.event.action }}
+      # Runner localhost is NOT the docker host (containerized runner sharing
+      # the daemon): health checks run via `docker compose exec` (see lib-docker.sh).
+      HEALTHCHECK_MODE: exec
     steps:
       - name: Refuse forks
         env:
@@ -49,9 +52,13 @@ jobs:
           fi
 
       - name: Checkout PR head
+        # clean:false — the gitignored .preprod-slot must survive across runs
+        # (checkout's `git clean -ffdx` would otherwise wipe the slot record,
+        # forcing every deploy down the fresh-db path and blinding teardown).
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          clean: false
 
       - name: Recreate PR branch locally
         # preprod-deploy.sh refuses unless the checkout branch equals --branch.
@@ -71,6 +78,8 @@ jobs:
 
       - name: Deploy to slot
         id: deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ARGS="--branch $HEAD_REF --evict"
           FRESH=false
@@ -95,8 +104,6 @@ jobs:
           fi
           echo "fresh=$FRESH" >> "$GITHUB_OUTPUT"
           ./scripts/preprod-deploy.sh $ARGS
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify green
         id: verify
@@ -164,9 +171,11 @@ jobs:
       IS_MERGED: ${{ github.event.pull_request.merged }}
     steps:
       - name: Checkout base (head may be gone)
+        # clean:false — same reason as the preview job: keep .preprod-slot.
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.base.sha }}
+          clean: false
 
       - name: Stage staging env
         env:
