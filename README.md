@@ -105,7 +105,7 @@ Docker network. Preprod/dev export nothing.
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | prod only (via Arcane) | — (unset = telemetry disabled) | e.g. `http://lgtm:4318`. Presence of a valid `http(s)` URL is the switch — `NODE_ENV` is `production` in both prod and preprod, so it cannot be the switch |
 | `OTEL_SERVICE_NAME` | no | `places` | `service.name` on every signal |
 | `DEPLOYMENT_ENVIRONMENT` | no | `NODE_ENV` | `deployment.environment` (`production` in prod) |
-| `OTEL_SERVICE_VERSION` | no | `package.json` version | `service.version` — bump with `npm version` on release; explicit value wins |
+| `OTEL_SERVICE_VERSION` | no | `package.json` version | `service.version` — bump with `npm version` on release; explicit value wins (`unknown` is treated as unset) |
 
 - Activation is fail-open: the SDK starts before instrumented imports
   (`src/observability/register.ts` is the first import in `src/index.ts`);
@@ -120,7 +120,7 @@ Docker network. Preprod/dev export nothing.
   `PINO_REDACT_PATHS` (`src/observability/logger.ts`) plus
   `sanitizeAttributes()` on span/log attributes
   (`src/observability/sanitize.ts`). Metric views keep only
-  `http.method`, `http.route`, `http.status_code` (+ client peer/url).
+  `http.request.method`, `http.route`, `http.response.status_code` (+ `url.scheme`, `server.address`; never concrete URL paths).
 - Sampling: none — 100% of non-excluded signals are exported.
 
 Arcane rollout: attach `places` to the external `telemetry` network (from

@@ -49,7 +49,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
       OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-places}"
       DEPLOYMENT_ENVIRONMENT: "${DEPLOYMENT_ENVIRONMENT:-production}"
-      OTEL_SERVICE_VERSION: "${OTEL_SERVICE_VERSION:-unknown}"
+      OTEL_SERVICE_VERSION: "${OTEL_SERVICE_VERSION:-}"
+      # Empty (unset) = package.json version via src/observability/env.ts
+      # ("unknown" is treated as unset too). Set explicitly per release to
+      # pin service.version to something other than the package version.
     volumes:
       - places-data:/data
     networks:
