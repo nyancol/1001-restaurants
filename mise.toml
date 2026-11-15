@@ -1,10 +1,18 @@
 [tools]
 node = "24.22.2"
+betterleaks = "1.10.1"
 # opencode (sst/opencode v2, npm backend — explicit to avoid clash with aqua:anomalyco/opencode v1)
 "npm:@opencode/cli" = "2.2.6"
 # openspec (spec-driven development CLI)
 "npm:@fission-ai/openspec" = "1.16.1"
 "npm:firecrawl-cli" = "1.29.0"
+
+# ── Git hooks ───────────────────────────────────────────────────────────────
+# Versioned hooks live in .githooks/ (betterleaks pre-commit). Run once per clone:
+#   mise run setup
+[tasks.setup]
+description = "Install tools and enable versioned git hooks (.githooks/)"
+run = "mise install && git config core.hooksPath .githooks && echo 'hooks: core.hooksPath -> .githooks'"
 
 # ── Dev environment ─────────────────────────────────────────────────────────
 # Runs the API in dev mode (tsx watch) with env from .env.dev (gitignored).

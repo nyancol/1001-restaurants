@@ -1,0 +1,43 @@
+#!/bin/sh
+# betterleaks pre-commit hook (versioned).
+# Scans staged changes; blocks the commit when secrets are found.
+# Bypass (not recommended): BETTERLEAKS_DISABLE=1 git commit ...
+
+if [ "${BETTERLEAKS_DISABLE:-}" = "1" ]; then
+  echo "[betterleaks] skipped (BETTERLEAKS_DISABLE=1)"
+  exit 0
+fi
+
+resolve_bin() {
+  if command -v betterleaks >/dev/null 2>&1; then
+    echo "betterleaks"
+  elif command -v mise >/dev/null 2>&1; then
+    echo "mise x -- betterleaks"
+  else
+    echo ""
+  fi
+}
+
+BIN=$(resolve_bin)
+if [ -z "$BIN" ]; then
+  echo "[betterleaks] binary not found. Install it with one of:"
+  echo "  mise install          # installs pinned version from mise.toml"
+  echo "  brew install betterleaks"
+  echo "Commit blocked to avoid pushing unprotected secrets."
+  exit 1
+fi
+
+# shellcheck disable=SC2086
+$BIN protect --staged --redact
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "[betterleaks] commit blocked: possible secret in staged changes."
+  echo "  - Remove the secret, or"
+  echo "  - False positive? add path/pattern to .betterleaksignore, or"
+  echo "    append '# betterleaks:allow' to the offending line with a justification."
+  exit $status
+fi
+
+exit 0

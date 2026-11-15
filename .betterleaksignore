@@ -1,0 +1,4 @@
+# betterleaks ignore file — one fingerprint or path per line.
+# Add entries here only for verified false positives.
+# Generate fingerprints from a scan report, e.g.:
+#   betterleaks protect --staged -v 2>&1 | head -50
