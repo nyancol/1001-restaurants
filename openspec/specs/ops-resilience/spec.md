@@ -62,24 +62,29 @@ whenever asked.
   error, and fixes the job in zerobyte — with no automatic alerts and no
   restore.
 
-### Requirement: Google spend is counted app-side, guarded by Billing API
+### Requirement: Google spend is counted app-side against per-SKU free caps
 
-The agent SHALL report month-to-date billable Google calls
-(`autocomplete`, `details`, `geocode`, per-refresh upstream fan-out) from
-Loki/Tempo in the weekly RED report. When the operator grants GCP access,
-a Cloud Billing budget alert becomes the authoritative guard and app-side
-counts remain as cross-check.
+Project `mapstr-514323` (Places API New: per-SKU monthly free caps, no $200
+cushion). The agent SHALL report month-to-date billable Google calls from
+Tempo client spans in the weekly RED report, with `details` + `refresh`
+counted together against the shared Place Details Enterprise cap (1,000
+free/mo, $20/1k — both masks carry Enterprise trigger fields, none from
+Enterprise+Atmosphere). Thresholds are 70% watch / 90% urgent per SKU cap.
+When the operator grants GCP access, a Cloud Billing budget alert becomes
+the authoritative guard and app-side counts remain as cross-check.
 
 #### Scenario: Usage trend is visible without GCP access
 
 - **WHEN** the weekly report runs
-- **THEN** it includes per-endpoint call totals and month-to-date projection
-  vs the free-tier assumption.
+- **THEN** it includes per-SKU call totals and cap percentages (Enterprise
+  cap shared by details+refresh; one full sweep ≈ 78% of it; Text Search
+  tracked against the Pro cap with the Enterprise-equivalent noted until
+  its tier is confirmed in Billing Reports).
 
 #### Scenario: Budget alert fires on GCP side
 
-- **WHEN** spend crosses the budget threshold
-- **THEN** Discord receives the GCP alert and the agent correlates it with
+- **WHEN** usage crosses a threshold (or the GCP budget alert fires)
+- **THEN** Discord receives the alert and the agent correlates it with
   the app-side call breakdown to name the driving endpoint.
 
 ### Requirement: Runner health is watched

@@ -4,24 +4,30 @@ Operate the production `places` app ("In my Belly", 1001-restaurants). Seven
 capabilities:
 
 1. **Weekly RED report** — analyse rate/errors/duration telemetry from the
-   homelab LGTM stack, post the verdict to the ops Discord channel.
+   homelab LGTM stack, emit the verdict through the invoking channel.
 2. **Ad-hoc Google refresh sweep** — on explicit instruction, refresh the
    Google snapshot of every existing place via the M2M service API.
 3. **Preprod preview deploy** — deploy a branch to the single staging slot
    for requestor validation (refuses to evict without confirmation).
-4. **Hermes prod watch** — scheduled health + version polling, one Discord
-   alert per red transition plus a recovery notice.
+4. **Hermes prod watch** — scheduled health + version polling, one alert
+   per red transition plus a recovery notice.
 5. **Git-revert rollback** — on explicit operator order only, revert the
    offending commit on `main` and push so Arcane redeploys.
-6. **Backup & restore watch** — verify nightly zerobyte snapshots of prod
+6. **Backup & restore** — verify nightly zerobyte snapshots of prod
    SQLite exist and stay fresh; restore only on explicit operator order.
+7. **Runner health watch** — scheduled `github-runner` liveness + preview
+   queue freshness, one alert per red transition plus a recovery notice.
+
+Delivery: the skill defines report/alert *content*. The communication
+channel (Discord, cron output, prompt reply) is defined by the caller —
+the scheduled job or invoking prompt — never here.
 
 Never mutate app data outside the documented refresh endpoint (caps 1-2),
 the staging volume (cap 3), a git revert on `main` (cap 5), or a
 zerobyte restore into the prod volume on explicit order (cap 6).
 Secrets: the agent MAY read `.env.preprod` and the Arcane-managed prod `.env`
 for presence/shape validation (set?, valid URL?, length >= 32?). It MUST
-never print, commit, forward, or include secret values in Discord messages,
+never print, commit, forward, or include secret values in alerts,
 logs, prompts, or reports — presence/shape only (e.g. `SESSION_SECRET set,
 length ok`).
 
@@ -79,8 +85,8 @@ length ok`).
 ## Capability 1: Weekly RED report
 
 Cadence: once a week. Trigger: the operator's scheduler invokes the agent;
-when invoked, run the full analysis and post to Discord — do not ask for
-confirmation, the report is informational.
+when invoked, run the full analysis and emit through the invoking channel —
+do not ask for confirmation, the report is informational.
 
 Window: last 7 days, compared with the previous 7 days as baseline.
 
@@ -173,17 +179,21 @@ before calling a regression.
 
 ### 1.4 Google quota (spend guard, app-side counting)
 
+Project `mapstr-514323`. Places API (New) bills per-SKU monthly free caps
+(no $200 cushion). Field-mask billing = highest-SKU-wins per request.
+
+| Inbound | Client span | SKU (confirmed) | Free cap/mo | Over |
+|---|---|---|---|---|
+| `GET /api/google/autocomplete` (no session) | `google.autocomplete` | Autocomplete Requests (Ess) | 10,000 | $2.83/1k |
+| `GET /api/google/details` | `google.details` | **Place Details Enterprise** — mask carries `rating`, `userRatingCount`, opening hours, `priceLevel`/`priceRange`, `websiteUri`, phone numbers | 1,000 | $20/1k |
+| `GET /api/google/geocode` | `google.geocode` | Geocoding (Ess, legacy endpoint) | 10,000 | $5.00/1k |
+| *(no app endpoint — another key consumer)* | *(Monitoring only: `SearchText`)* | Text Search, tier unconfirmed (Pro 5k/$32 vs Ent 1k/$35 — check Billing Reports) | 5,000 or 1,000 | $32 or $35/1k |
+| `POST /api/places/:id/refresh` (cookie or M2M sweep) | `google.place-refresh` | **Place Details Enterprise** — `REFRESH_DETAILS_MASK` carries the same Enterprise triggers (no Ent+Atmosphere fields: no `reviews`, no `serves*`) | 1,000 shared with details | $20/1k |
+
 One inbound request = one billable upstream call, EXCEPT short-circuits
 that never reach Google (`400` missing param, `503 google_not_configured`,
 `403` scope/owner reject, `422 missing_google_id` on refresh). Count client
 spans — exactly one per billable call:
-
-| Inbound | Client span | Upstream SKU |
-|---|---|---|
-| `GET /api/google/autocomplete` | `google.autocomplete` | Places (New) Autocomplete (per-request; `sessionToken` enables session billing when the client passes one through) |
-| `GET /api/google/details` | `google.details` | Places (New) Details — cost follows the field mask (`detailsMask` pulls atmosphere-tier fields: rating, hours, phone, website) |
-| `GET /api/google/geocode` | `google.geocode` | Legacy Geocoding API |
-| `POST /api/places/:id/refresh` (cookie or M2M sweep) | `google.place-refresh` | Places (New) Details with `REFRESH_DETAILS_MASK` |
 
 Tempo TraceQL (Grafana TraceQL view, count spans per name):
 
@@ -194,17 +204,39 @@ Tempo TraceQL (Grafana TraceQL view, count spans per name):
 { resource.service.name = "places" && span.name = "google.place-refresh" }
 ```
 
-Run each over month-to-date, note the totals, project to month-end
-(`mtd * days_in_month / day_of_month`). A refresh sweep adds roughly one
-`google.place-refresh` per place with a `googlePlaceId` (778 places at last
-rehearsal) — flag any sweep in the window and attribute its share.
-Compare against Cloud Console Billing (authoritative; free-credit
-assumption lives there, not here). Escalate in the report when the
-projection moves materially vs last week or approaches the free limit.
+Thresholds: **70% watch / 90% urgent of each SKU's free cap**, MTD
+(`details` + `refresh` share the 1,000 Enterprise cap). One full sweep =
+~778 calls (78% of the Enterprise cap) — flag any sweep in the window and
+attribute its share; sweeps stay rare and deliberate, never scheduled.
 
-### 1.5 Post the report to Discord
+Programmatic check — Hermes-scheduled, no email backstop. A Hermes cron
+job "Places quota check" (weekly, `places-ops` skill, terminal tools,
+workdir `/home/yann/Documents/1001-restaurants`, same delivery as the RED
+report) runs:
 
-The agent has access to the ops Discord channel. Compose one message:
+```bash
+GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json mise x gcloud@593.0.0 -- ./scripts/quota-check.sh
+# exit 0 ok (WATCH lines possible) / 1 urgent (>=90% any cap) / 2 check-errored
+```
+
+Posting policy (same transition semantics as prod watch): silent on steady
+GREEN; one notice per WATCH/URGENT transition plus a recovery notice; no
+repeats while unchanged. `quota-check.sh` also tracks `SearchText`
+(Text Search): no code path in this repo calls it (UI search uses the
+autocomplete proxy), so any count there is another key consumer — verify
+its tier in Billing Reports and consider per-consumer keys. TraceQL
+counting below is the fallback when the grant is absent. Billing →
+Reports grouped by SKU stays authoritative for tier confirmation.
+
+Traps: never pass `sessionToken` through to `details` — terminating a
+session with a Pro/Enterprise Details call re-bills it at
+Enterprise+Atmosphere ($25/1k). `details` takes no session token today;
+keep it that way.
+
+### 1.5 Emit the report
+
+Compose one message in the invoking channel's format (the caller owns
+delivery — webhook, chat post, or prompt reply):
 
 ```
 📊 Places weekly RED report — <week of YYYY-MM-DD> (version <sha>)
@@ -212,16 +244,14 @@ The agent has access to the ops Discord channel. Compose one message:
 **Rate**: <normal | notable traffic on <routes>>
 **Errors**: <none | 4xx summary | 5xx summary with route + code>
 **Duration**: <normal | p95 <X>s on <route> (baseline <Y>s)>
-**Quota**: <N autocomplete / N details / N geocode / N refresh MTD, projected <M> (~<x>% of free assumption)>
+**Quota**: <details+refresh <n>/1000 Ent cap (<%>), autocomplete <n>/10k, geocode <n>/10k, textsearch <n>/5k Pro-assumed (<%>; tier unconfirmed) — <watch|urgent|ok>>
 
 **Verdict**: healthy | degraded (cause) | needs investigation (<what>)
 **Actions**: none | <watch item | trace_id to drill | config to fix>
 ```
 
-Send it via the configured Discord webhook (`DISCORD_WEBHOOK_URL`, curl
-`POST` with `{"content": "..."}`) or the agent's Discord channel access,
-whichever the environment provides. Never include secrets or raw PII in the
-message; route IDs and status codes are fine. If posting fails, report the
+Send it through the invoking channel. Never include secrets or raw PII in the
+message; route IDs and status codes are fine. If delivery fails, report the
 failure back to the operator instead of silently dropping it.
 
 ---
@@ -388,7 +418,7 @@ unreachable, indeterminate — NOT a red, do not alert as down, fix access
 and re-run). Only exit-1 runs count toward the watch's consecutive-failure
 threshold (capability 4).
 
-### 3.3 Evidence post (Discord)
+### 3.3 Evidence post
 
 ```
 [PREVIEW] branch <name> @ <short-sha> — GREEN | RED (<cause>)
@@ -407,7 +437,7 @@ Poll prod on the cadence and threshold in `hermes.yaml` (defaults: every
 5m, alert after 3 consecutive failures, 10m version-stuck grace after a
 merge). One alert per red transition; one recovery notice on green return;
 no repeats while the state is unchanged. Drills use the same templates
-with a `[DRILL]` prefix (same channel, per `hermes.yaml`).
+with a `[DRILL]` prefix.
 
 ### 4.1 Prod green (all must hold)
 
@@ -421,7 +451,7 @@ with a `[DRILL]` prefix (same channel, per `hermes.yaml`).
 - Container `PORT` equals the Caddy `reverse_proxy places:<PORT>` target
   and health passed at the declared URL (catches env-to-Caddy drift).
 
-### 4.2 Discord templates (evidence-backed, never secrets)
+### 4.2 Alert templates (evidence-backed, never secrets)
 
 ```
 [PROD RED] <cause: down|version-stuck|oidc-config|5xx|exporter-break>
@@ -545,7 +575,7 @@ its current head (stuck = non-completed run older than 15m).
 
 Exit codes match the preprod convention: `0` = green, `1` = red,
 `2` = check errored (indeterminate — NOT a red, fix access and re-run).
-One Discord alert per red transition + recovery notice, same semantics as
+One alert per red transition + recovery notice, same semantics as
 capability 4:
 
 ```

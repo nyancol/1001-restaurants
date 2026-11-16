@@ -88,6 +88,18 @@ backup:
   excludes: places-preprod-data # ephemeral, reseedable
   schedule_owner: zerobyte # zerobyte owns the schedule and its own failure notifications; no Hermes/cron polling
   fresh_check: on demand (before rollback, in RED report, or when asked) — newest snapshot younger than 26h
+
+quota:
+  project: mapstr-514323 # Places API (New): per-SKU monthly free caps, no $200 cushion
+  binding_sku: place-details-enterprise # 2D9A-3DE0-3766: 1,000 free/mo, then $20/1k
+  binding_cause: rating/userRatingCount + opening hours + priceLevel/priceRange + websiteUri + phone numbers in both Details masks (highest-SKU-wins; no Ent+Atmosphere fields)
+  sweep_cost: ~778 calls per full sweep (78% of the Enterprise cap) — sweeps stay rare, never scheduled
+  thresholds: 70% watch / 90% urgent of each SKU free cap, MTD (details+refresh share the Enterprise cap; textsearch tracked against Pro 5k with Enterprise-equivalent noted until tier confirmed)
+  authoritative: cloud console billing reports grouped by SKU (tier confirmation)
+  generated_by: hermes cron "Places quota check" (weekly, places-ops skill, terminal tools) — silent GREEN, notice per WATCH/URGENT transition + recovery
+  job_spec: run quota-check.sh with GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json in /home/yann/Documents/1001-restaurants (requires follow-up PR merged so the script is on main)
+  key: service account places-billing-viewer (billing.viewer + monitoring.viewer), 0600 at ~/.secrets/gcp-billing-viewer.json
+  textsearch: tracked but unattributed (no Text Search path in repo) — tier unconfirmed, verify in Billing Reports; consider per-consumer keys
   restore: stop places, restore snapshot into volume, PRAGMA integrity_check, start places, verify /api/health db:ok
   rehearsal: restore to empty temp volume + scratch container before trust, yearly after
 
