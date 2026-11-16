@@ -2,6 +2,7 @@
 .env
 .env.dev
 .env.preprod
+.preprod-slot
 node_modules/
 node_modules/
 dist/

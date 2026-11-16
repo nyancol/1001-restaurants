@@ -1,0 +1,219 @@
+# Preprod preview: label-gated PR deploys to the single staging slot (B1).
+# Trigger is the `preview` label (maintainer opt-in): pushes without it build
+# nothing. Same-repo branches only — PR head code runs on the homelab host
+# with staging secrets in env, so forks are refused outright.
+# SAST notes: actions pinned by SHA (see sast.yml); no workflow-level secrets
+# (GH_TOKEN is step-level); no `${{ github.* }}` interpolation inside `run:`
+# scripts — values cross via `env:` (semgrep run-shell-injection).
+# See skill capability 3 (skills/ops/SKILL.md) and hermes.yaml for the contract.
+name: Preprod preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled, closed]
+    branches: [main]
+
+concurrency:
+  group: preprod-slot
+  cancel-in-progress: true # preview value is always the latest head; stale runs die before deploying
+
+permissions:
+  contents: read
+  pull-requests: write # evidence / eviction / teardown comments
+
+jobs:
+  preview:
+    name: Deploy PR head to staging slot
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.action != 'unlabeled' &&
+      contains(github.event.pull_request.labels.*.name, 'preview')
+    runs-on: [self-hosted]
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      TRIGGER_ACTION: ${{ github.event.action }}
+      # Runner localhost is NOT the docker host (containerized runner sharing
+      # the daemon): health checks run via `docker compose exec` (see lib-docker.sh).
+      HEALTHCHECK_MODE: exec
+      # Runner workspaces do not reliably persist untracked files between runs;
+      # the slot record lives on the persistent runner filesystem instead.
+      PREPROD_SLOT_FILE: /tmp/places-preprod-slot
+    steps:
+      - name: Refuse forks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            echo "Fork PRs are not deployed to preprod (staging secrets live on the homelab host)." >&2
+            gh pr comment "$PR_NUMBER" --body \
+              "Preview refused: fork PRs are not deployed (staging secrets live on the homelab host)."
+            exit 1
+          fi
+
+      - name: Checkout PR head
+        # clean:false avoids wiping anything the next steps rely on and keeps
+        # checkouts fast; the slot record itself lives outside the checkout
+        # (PREPROD_SLOT_FILE) so it survives regardless.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: false
+
+      - name: Recreate PR branch locally
+        # preprod-deploy.sh refuses unless the checkout branch equals --branch.
+        run: git checkout -B "$HEAD_REF"
+
+      - name: Stage staging env
+        env:
+          PREPROD_ENV_FILE: ${{ secrets.PREPROD_ENV }}
+        run: |
+          if [ -n "$PREPROD_ENV_FILE" ]; then
+            printf '%s\n' "$PREPROD_ENV_FILE" > .env.preprod
+            chmod 600 .env.preprod
+          else
+            echo "::error::Missing PREPROD_ENV secret (repo Settings → Secrets → Actions)."
+            exit 1
+          fi
+
+      - name: Deploy to slot
+        id: deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SLOT_FILE="${PREPROD_SLOT_FILE:-.preprod-slot}"
+          ARGS="--branch $HEAD_REF --evict"
+          FRESH=false
+          if [ "$TRIGGER_ACTION" = "labeled" ]; then
+            ARGS="$ARGS --fresh-db"
+            FRESH=true
+          elif [ -f "$SLOT_FILE" ]; then
+            # shellcheck disable=SC1091
+            . "$SLOT_FILE"
+            if [ "${SLOT_BRANCH:-}" != "$HEAD_REF" ]; then
+              ARGS="$ARGS --fresh-db"
+              FRESH=true
+              {
+                echo "evicted=${SLOT_BRANCH:-unknown}"
+              } >> "$GITHUB_OUTPUT"
+              PREV_PR="$(gh pr list --head "${SLOT_BRANCH:-}" --state open --json number --jq '.[0].number // empty')"
+              echo "evicted_pr=$PREV_PR" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            ARGS="$ARGS --fresh-db"
+            FRESH=true
+          fi
+          echo "fresh=$FRESH" >> "$GITHUB_OUTPUT"
+          ./scripts/preprod-deploy.sh $ARGS
+
+      - name: Verify green
+        id: verify
+        env:
+          FRESH: ${{ steps.deploy.outputs.fresh }}
+        run: |
+          if [ "$FRESH" = "true" ]; then export EXPECT_FIXTURE=1; fi
+          set +e
+          OUT="$(./scripts/preprod-verify.sh 2>&1)"; RC=$?
+          set -e
+          printf '%s\n' "$OUT"
+          {
+            echo "verify_rc=$RC"
+            echo "verify_out<<EOF"
+            printf '%s\n' "$OUT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment evidence on PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERIFY_RC: ${{ steps.verify.outputs.verify_rc }}
+          VERIFY_OUT: ${{ steps.verify.outputs.verify_out }}
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          APP_ORIGIN_LINE: ""
+        run: |
+          if [ -f .env.preprod ]; then
+            APP_ORIGIN_LINE="$(grep -E '^APP_ORIGIN=' .env.preprod | cut -d= -f2-)"
+          fi
+          if [ "$VERIFY_RC" = "0" ]; then
+            STATUS="GREEN"
+          elif [ "$VERIFY_RC" = "2" ]; then
+            STATUS="UNKNOWN (check errored, not a red — see skill capability 3)"
+          elif [ -z "$VERIFY_RC" ]; then
+            STATUS="FAILED before verify (deploy step $DEPLOY_OUTCOME)"
+          else
+            STATUS="RED (exit $VERIFY_RC)"
+          fi
+          BODY="$(printf '[PREVIEW] branch %s @ %s — %s\nstaging: %s direct: http://localhost:5174\n```\n%s\n```' \
+            "$HEAD_REF" "${HEAD_SHA:0:7}" "$STATUS" \
+            "${APP_ORIGIN_LINE:-unknown}" \
+            "${VERIFY_OUT:-deploy did not reach the verify step}")"
+          gh pr comment "$PR_NUMBER" --body "$BODY"
+
+      - name: Comment eviction on previous owner's PR
+        if: steps.deploy.outputs.evicted_pr != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVICTED_PR: ${{ steps.deploy.outputs.evicted_pr }}
+        run: |
+          gh pr comment "$EVICTED_PR" --body \
+            "[PREVIEW] evicted: branch $HEAD_REF claimed the single slot (@ ${HEAD_SHA:0:7}). Re-add the \`preview\` label to reclaim it."
+
+  teardown:
+    name: Guarded teardown of staging slot
+    if: >-
+      github.event.action == 'closed' ||
+      (github.event.action == 'unlabeled' && github.event.label.name == 'preview')
+    runs-on: [self-hosted]
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      TRIGGER_ACTION: ${{ github.event.action }}
+      IS_MERGED: ${{ github.event.pull_request.merged }}
+      PREPROD_SLOT_FILE: /tmp/places-preprod-slot
+    steps:
+      - name: Checkout base (head may be gone)
+        # clean:false — same reason as the preview job.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          clean: false
+
+      - name: Stage staging env
+        env:
+          PREPROD_ENV_FILE: ${{ secrets.PREPROD_ENV }}
+        run: |
+          if [ -n "$PREPROD_ENV_FILE" ]; then
+            printf '%s\n' "$PREPROD_ENV_FILE" > .env.preprod
+            chmod 600 .env.preprod
+          else
+            echo "::error::Missing PREPROD_ENV secret (repo Settings → Secrets → Actions)."
+            exit 1
+          fi
+
+      - name: Tear down only if this PR owns the slot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SLOT_FILE="${PREPROD_SLOT_FILE:-.preprod-slot}"
+          if [ ! -f "$SLOT_FILE" ]; then
+            echo "No slot record — nothing to tear down."
+            exit 0
+          fi
+          # shellcheck disable=SC1091
+          . "$SLOT_FILE"
+          if [ "${SLOT_BRANCH:-}" != "$HEAD_REF" ]; then
+            echo "Slot owned by '${SLOT_BRANCH:-unknown}', not '$HEAD_REF' — leaving it alone."
+            exit 0
+          fi
+          ${DOCKER_SUDO-sudo} docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml down
+          rm -f "$SLOT_FILE"
+          REASON="closed"
+          if [ "$TRIGGER_ACTION" = "closed" ] && [ "$IS_MERGED" = "true" ]; then
+            REASON="merged — promoted to prod via main"
+          fi
+          gh pr comment "$PR_NUMBER" --body \
+            "[PREVIEW] torn down ($REASON). Slot is free."

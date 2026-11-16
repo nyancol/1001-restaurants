@@ -1,0 +1,93 @@
+# Hermes operations contract for the places app ("In my Belly").
+# REFERENCE ONLY — Hermes's own scheduler is authoritative; this file is the
+# reviewable contract between this repo and Hermes. Any rename of the commands,
+# URLs, or health semantics below MUST update this file in the same change.
+# See openspec/specs/ops-lifecycle/spec.md (change ops-preview-watch-rollback).
+version: 1
+
+docker_access:
+  rule: auto-detect (no sudo when `docker info` works, sudo only when needed)
+  override: DOCKER_SUDO="" (never sudo) or DOCKER_SUDO="sudo" (always sudo)
+  applies_to:
+    - scripts/preprod-deploy.sh
+    - scripts/preprod-verify.sh
+    - mise run preprod-up/down/logs
+  verify_exit_codes: 0=green, 1=red, 2=check-errored-indeterminate-not-a-red
+
+prod:
+  url: https://places.patates.club
+  health: https://places.patates.club/api/health
+  container: places
+  internal_target: places:5173
+  caddy: :8093
+  volume: places-data
+  deploy_method: arcane-gitops # Arcane polls main, pulls, builds, restarts. Agent NEVER builds/restarts prod.
+  expected_version_source: main HEAD
+  poll_every: 5m
+  alert_after_consecutive_failures: 3
+  version_stuck_grace_after_merge: 10m
+  channel: discord#ops-places
+  green_requires:
+    - health_200_db_ok_at_declared_url
+    - running_version_equals_main_head
+    - oidc_discovery_ok
+    - no_sustained_5xx_on_places_crud
+    - otel_visible_for_running_version
+  port_assertion: container_PORT_equals_caddy_target_no_host_publish
+
+preprod:
+  slot: single # B1: one preview slot, queued. Second branch without evict confirm is refused.
+  trigger: # automated via .github/workflows/preprod-preview.yml on the self-hosted runner
+    label: preview # PRs to main carrying this label get deployed; pushes without it build nothing
+    reseed_policy: fresh-db on claim (label added or new branch), rebuild-keep-DB on synchronize
+    teardown: PR close or label removal tears down only when that PR owns the slot
+  url: https://places-staging.patates.club
+  direct_url: http://localhost:5174
+  health: https://places-staging.patates.club/api/health
+  direct_health: http://localhost:5174/api/health
+  container: places-staging
+  internal_port: 5173
+  host_port: 5174 # vite HMR keeps host 5173; preprod publishes 5174 so both bind together.
+  caddy_target: places-staging:5173
+  caddy: :8092
+  volume: places-preprod-data
+  project: places-preprod
+  compose: docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml
+  deploy_cmd: mise run preprod-deploy --branch <branch> --fresh-db
+  evict_cmd: mise run preprod-deploy --branch <branch> --fresh-db --evict
+  seed_cmd: npm run db:seed-demo
+  verify_cmd: mise run preprod-verify
+  green_requires:
+    - container_up_over_30s
+    - health_200_db_ok_at_declared_url
+    - running_version_equals_branch_head
+    - oidc_login_redirects_not_503
+    - fixture_place_count_matches
+    - boot_logs_have_no_invalid_config
+
+watch:
+  poll_command: curl -sS -m 10 <health_url>
+  version_command: git rev-parse HEAD # expected; running version via health/version evidence or image label
+  log_command: docker logs --tail 100 <container> # host-side; Hermes runs where docker is reachable
+  alert_policy: one_alert_per_red_transition_plus_one_recovery_notice_no_repeat_while_red
+  drill_prefix: "[DRILL]"
+
+rollback:
+  method: git-revert-on-main-only # git revert <sha> on main + push; Arcane redeploys. No direct prod rebuild.
+  on_order_only: true
+  migration_safety_rule: additive-only # reverted migrations must replay safely; destructive ops block automatic revert
+  verify: prod_green_after_revert
+
+secrets_policy:
+  may_read_for_validation:
+    - .env.preprod
+    - arcane_managed_prod_env
+  validate_only:
+    - presence
+    - url_shape
+    - secret_length
+  never:
+    - print
+    - commit
+    - forward
+    - include_in_discord_or_logs
