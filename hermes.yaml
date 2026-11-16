@@ -96,7 +96,8 @@ quota:
   sweep_cost: ~778 calls per full sweep (78% of the Enterprise cap) — sweeps stay rare, never scheduled
   thresholds: 70% watch / 90% urgent of each SKU free cap, MTD (details+refresh share the Enterprise cap)
   authoritative: cloud console billing reports grouped by SKU
-  pending: service-account grant (places-billing-viewer) for programmatic checks
+  programmatic: scripts/quota-check.sh (serviceruntime MTD per method; needs gcloud + key with monitoring.viewer)
+  pending: service-account key at agreed 0600 path (places-billing-viewer: billing.viewer + monitoring.viewer on mapstr-514323)
   restore: stop places, restore snapshot into volume, PRAGMA integrity_check, start places, verify /api/health db:ok
   rehearsal: restore to empty temp volume + scratch container before trust, yearly after
 

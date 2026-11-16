@@ -207,9 +207,20 @@ Thresholds: **70% watch / 90% urgent of each SKU's free cap**, MTD
 (`details` + `refresh` share the 1,000 Enterprise cap). One full sweep =
 ~778 calls (78% of the Enterprise cap) — flag any sweep in the window and
 attribute its share; sweeps stay rare and deliberate, never scheduled.
-Compare against Cloud Console Billing → Reports grouped by SKU
-(authoritative). Escalate when a projection crosses a threshold or moves
-materially vs last week.
+
+Programmatic check (preferred when the GCP grant exists — host-side,
+needs `gcloud` + key with `monitoring.viewer` on the project):
+
+```bash
+GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json ./scripts/quota-check.sh
+# exit 0 ok (WATCH lines possible) / 1 urgent (>=90% any cap) / 2 check-errored
+```
+
+The script polls `serviceruntime` request counts MTD per method, maps
+methods to SKU caps, and prints cap percentages — TraceQL counting below
+is the fallback when the grant is absent. Billing → Reports grouped by
+SKU stays authoritative for tier confirmation. Escalate when a projection
+crosses a threshold or moves materially vs last week.
 
 Traps: never pass `sessionToken` through to `details` — terminating a
 session with a Pro/Enterprise Details call re-bills it at
