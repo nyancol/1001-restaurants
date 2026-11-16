@@ -4,9 +4,9 @@
 # Exit 0 = green, 1 = red, 2 = check errored (docker unreachable, indeterminate
 # — NOT a red: do not alert as down, fix access and re-run).
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../../.."
 # shellcheck disable=SC1091
-. ./scripts/lib-docker.sh # sets SUDO/COMPOSE, auto-detecting docker access
+. ./skills/ops/scripts/lib-docker.sh # sets SUDO/COMPOSE, auto-detecting docker access
 FAIL=0
 CHECK_ERR=0
 say() { printf '%s\n' "$*"; }
@@ -63,7 +63,7 @@ if [ -f "$SLOT_FILE" ]; then
     say "SKIP version check: slot branch ($BRANCH) != current checkout (redeploy records it)"
   fi
 else
-  say "SKIP version check: no slot record (deploy with scripts/preprod-deploy.sh to record it)"
+  say "SKIP version check: no slot record (deploy with skills/ops/scripts/preprod-deploy.sh to record it)"
 fi
 
 if [ "${EXPECT_FIXTURE:-0}" = "1" ]; then

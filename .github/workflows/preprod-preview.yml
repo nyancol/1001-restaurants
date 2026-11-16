@@ -107,7 +107,7 @@ jobs:
             FRESH=true
           fi
           echo "fresh=$FRESH" >> "$GITHUB_OUTPUT"
-          ./scripts/preprod-deploy.sh $ARGS
+          ./skills/ops/scripts/preprod-deploy.sh $ARGS
 
       - name: Verify green
         id: verify
@@ -116,7 +116,7 @@ jobs:
         run: |
           if [ "$FRESH" = "true" ]; then export EXPECT_FIXTURE=1; fi
           set +e
-          OUT="$(./scripts/preprod-verify.sh 2>&1)"; RC=$?
+          OUT="$(./skills/ops/scripts/preprod-verify.sh 2>&1)"; RC=$?
           set -e
           printf '%s\n' "$OUT"
           {
