@@ -173,17 +173,20 @@ before calling a regression.
 
 ### 1.4 Google quota (spend guard, app-side counting)
 
+Project `mapstr-514323`. Places API (New) bills per-SKU monthly free caps
+(no $200 cushion). Field-mask billing = highest-SKU-wins per request.
+
+| Inbound | Client span | SKU (confirmed) | Free cap/mo | Over |
+|---|---|---|---|---|
+| `GET /api/google/autocomplete` (no session) | `google.autocomplete` | Autocomplete Requests (Ess) | 10,000 | $2.83/1k |
+| `GET /api/google/details` | `google.details` | **Place Details Enterprise** — mask carries `rating`, `userRatingCount`, opening hours, `priceLevel`/`priceRange`, `websiteUri`, phone numbers | 1,000 | $20/1k |
+| `GET /api/google/geocode` | `google.geocode` | Geocoding (Ess, legacy endpoint) | 10,000 | $5.00/1k |
+| `POST /api/places/:id/refresh` (cookie or M2M sweep) | `google.place-refresh` | **Place Details Enterprise** — `REFRESH_DETAILS_MASK` carries the same Enterprise triggers (no Ent+Atmosphere fields: no `reviews`, no `serves*`) | 1,000 shared with details | $20/1k |
+
 One inbound request = one billable upstream call, EXCEPT short-circuits
 that never reach Google (`400` missing param, `503 google_not_configured`,
 `403` scope/owner reject, `422 missing_google_id` on refresh). Count client
 spans — exactly one per billable call:
-
-| Inbound | Client span | Upstream SKU |
-|---|---|---|
-| `GET /api/google/autocomplete` | `google.autocomplete` | Places (New) Autocomplete (per-request; `sessionToken` enables session billing when the client passes one through) |
-| `GET /api/google/details` | `google.details` | Places (New) Details — cost follows the field mask (`detailsMask` pulls atmosphere-tier fields: rating, hours, phone, website) |
-| `GET /api/google/geocode` | `google.geocode` | Legacy Geocoding API |
-| `POST /api/places/:id/refresh` (cookie or M2M sweep) | `google.place-refresh` | Places (New) Details with `REFRESH_DETAILS_MASK` |
 
 Tempo TraceQL (Grafana TraceQL view, count spans per name):
 
@@ -194,13 +197,18 @@ Tempo TraceQL (Grafana TraceQL view, count spans per name):
 { resource.service.name = "places" && span.name = "google.place-refresh" }
 ```
 
-Run each over month-to-date, note the totals, project to month-end
-(`mtd * days_in_month / day_of_month`). A refresh sweep adds roughly one
-`google.place-refresh` per place with a `googlePlaceId` (778 places at last
-rehearsal) — flag any sweep in the window and attribute its share.
-Compare against Cloud Console Billing (authoritative; free-credit
-assumption lives there, not here). Escalate in the report when the
-projection moves materially vs last week or approaches the free limit.
+Thresholds: **70% watch / 90% urgent of each SKU's free cap**, MTD
+(`details` + `refresh` share the 1,000 Enterprise cap). One full sweep =
+~778 calls (78% of the Enterprise cap) — flag any sweep in the window and
+attribute its share; sweeps stay rare and deliberate, never scheduled.
+Compare against Cloud Console Billing → Reports grouped by SKU
+(authoritative). Escalate when a projection crosses a threshold or moves
+materially vs last week.
+
+Traps: never pass `sessionToken` through to `details` — terminating a
+session with a Pro/Enterprise Details call re-bills it at
+Enterprise+Atmosphere ($25/1k). `details` takes no session token today;
+keep it that way.
 
 ### 1.5 Post the report to Discord
 
@@ -212,7 +220,7 @@ The agent has access to the ops Discord channel. Compose one message:
 **Rate**: <normal | notable traffic on <routes>>
 **Errors**: <none | 4xx summary | 5xx summary with route + code>
 **Duration**: <normal | p95 <X>s on <route> (baseline <Y>s)>
-**Quota**: <N autocomplete / N details / N geocode / N refresh MTD, projected <M> (~<x>% of free assumption)>
+**Quota**: <details+refresh <n>/1000 Ent cap (<%>), autocomplete <n>/10k, geocode <n>/10k — <watch|urgent|ok>>
 
 **Verdict**: healthy | degraded (cause) | needs investigation (<what>)
 **Actions**: none | <watch item | trace_id to drill | config to fix>
