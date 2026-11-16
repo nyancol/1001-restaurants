@@ -9,8 +9,8 @@ docker_access:
   rule: auto-detect (no sudo when `docker info` works, sudo only when needed)
   override: DOCKER_SUDO="" (never sudo) or DOCKER_SUDO="sudo" (always sudo)
   applies_to:
-    - scripts/preprod-deploy.sh
-    - scripts/preprod-verify.sh
+    - skills/ops/scripts/preprod-deploy.sh
+    - skills/ops/scripts/preprod-verify.sh
     - mise run preprod-up/down/logs
   verify_exit_codes: 0=green, 1=red, 2=check-errored-indeterminate-not-a-red
 
@@ -105,10 +105,17 @@ quota:
 
 runner:
   container: github-runner # self-hosted, same host as prod/preprod
-  check: scripts/runner-watch.sh # 0=green, 1=red, 2=check-errored-indeterminate-not-a-red
+  check: skills/ops/scripts/runner-watch.sh # 0=green, 1=red, 2=check-errored-indeterminate-not-a-red
   watches:
     - container_alive
     - preview_queue_fresh_15m # every open `preview` PR has a preprod-preview run on its head
+  alert_policy: one_alert_per_red_transition_plus_one_recovery_notice
+
+patching:
+  check: skills/ops/scripts/patch-check.sh # 0=checked-ok, 1=attention (SAST failed on main or dependabot.yml missing), 2=check-errored-indeterminate-not-a-verdict
+  inspects:
+    - open Dependabot PRs (monthly npm + docker input, informational — never a red by itself)
+    - latest SAST sast.yml run on main (failure blocks the monthly train)
   alert_policy: one_alert_per_red_transition_plus_one_recovery_notice
 
 secrets_policy:

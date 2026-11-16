@@ -1,6 +1,6 @@
 # Places Ops Skill
 
-Operate the production `places` app ("In my Belly", 1001-restaurants). Seven
+Operate the production `places` app ("In my Belly", 1001-restaurants). Eight
 capabilities:
 
 1. **Weekly RED report** — analyse rate/errors/duration telemetry from the
@@ -17,6 +17,8 @@ capabilities:
    SQLite exist and stay fresh; restore only on explicit operator order.
 7. **Runner health watch** — scheduled `github-runner` liveness + preview
    queue freshness, one alert per red transition plus a recovery notice.
+8. **Patching inspection** — read-only look at open Dependabot PRs + latest
+   SAST run on `main` (monthly-train input; merges/deploys stay manual).
 
 Delivery: the skill defines report/alert *content*. The communication
 channel (Discord, cron output, prompt reply) is defined by the caller —
@@ -70,7 +72,7 @@ length ok`).
   `:8093 -> places:5173`), no host publication. The Arcane-managed prod
   `.env` MUST NOT set `HOST_PORT` (base `compose.yaml` only `expose:`s it;
   the variable is dead weight that invites a harmful publish).
-* Docker access: `scripts/lib-docker.sh` (sourced by the preprod scripts)
+* Docker access: `skills/ops/scripts/lib-docker.sh` (sourced by the preprod scripts)
   auto-detects — runs docker directly when `docker info` already works,
   sudo only when needed. `mise run preprod-up/down/logs` honor the same
   rule. Override explicitly per host: `DOCKER_SUDO=""` (never sudo) or
@@ -215,7 +217,7 @@ workdir `/home/yann/Documents/1001-restaurants`, same delivery as the RED
 report) runs:
 
 ```bash
-GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json mise x gcloud@593.0.0 -- ./scripts/quota-check.sh
+GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json mise x gcloud@593.0.0 -- ./skills/ops/scripts/quota-check.sh
 # exit 0 ok (WATCH lines possible) / 1 urgent (>=90% any cap) / 2 check-errored
 ```
 
@@ -369,7 +371,7 @@ persist untracked files between runs.
 
 ```bash
 mise run preprod-deploy --branch <name> --fresh-db [--evict]
-# --fresh-db reseeds the 2-user / 6-place demo fixture (scripts/seed-demo.ts
+# --fresh-db reseeds the 2-user / 6-place demo fixture (src/scripts/seed-demo.ts
 # runs INSIDE the staging container, PREPROD_RESEED=1, on its own volume).
 # Without --evict, a slot owned by another branch is refused, not replaced.
 ```
@@ -569,7 +571,7 @@ curl -sS https://places.patates.club/api/health  # want 200 {"status":"ok","db":
 ## Capability 7: Runner health watch (scheduled)
 
 The preprod preview loop depends on the single self-hosted `github-runner`.
-Poll with `scripts/runner-watch.sh` (host-side, needs docker + `gh`):
+Poll with `skills/ops/scripts/runner-watch.sh` (host-side, needs docker + `gh`):
 container alive + every open `preview` PR has a `preprod-preview` run on
 its current head (stuck = non-completed run older than 15m).
 
@@ -587,3 +589,39 @@ next: watching; label-triggered deploys are stalled until the runner returns
 Drill: `docker stop github-runner` → expect red → `docker start
 github-runner` → expect recovery notice. Never debug by running preview
 workflows locally; the slot lives on the homelab host.
+
+---
+
+## Capability 8: Patching inspection (Dependabot + SAST, read-only)
+
+Monthly-train input (spec Requirement: Monthly patching with preprod
+drill). Read-only: never merges, rebuilds, or deploys. Poll with
+`skills/ops/scripts/patch-check.sh` (host-side, needs `gh` + `jq`): open Dependabot
+PRs (npm + docker, per `.github/dependabot.yml`) plus the latest SAST
+(`sast.yml`) run on `main`.
+
+```bash
+./skills/ops/scripts/patch-check.sh
+# exit 0 checked-ok / 1 attention (SAST failed on main, or dependabot.yml
+# missing from the checkout) / 2 check-errored
+```
+
+Exit codes match the preprod/runner convention: `0` = checked ok,
+`1` = attention, `2` = check errored (gh/jq missing, auth failed,
+indeterminate — NOT a verdict, fix access and re-run). Open Dependabot
+PRs are informational, never a red by themselves; a SAST failure on
+`main` is the red (it blocks the monthly train). One alert per red
+transition + recovery notice, same semantics as capability 4. Invoke
+on demand (e.g. monthly before the pass, or when asked) — no polling
+schedule of its own.
+
+### What NOT to do
+
+- Never merge a Dependabot PR without the full drill: `npm audit` +
+  review, base-image rebuild (`node:24-slim`), `npm test` + `typecheck`
+  + SAST green, preprod drill (`preprod-deploy` + `preprod-verify`),
+  then prod via `main`. Critical CVEs skip the queue — same drill,
+  expedited.
+- Never read "zero open PRs" as "nothing to do" without checking the
+  SAST line and the `dependabot.yml present` line (a missing config
+  looks calm but is blind).

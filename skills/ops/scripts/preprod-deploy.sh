@@ -4,7 +4,7 @@
 # without --evict. Never touches prod (project places-preprod, own volume).
 #
 # Usage:
-#   scripts/preprod-deploy.sh --branch <name> [--fresh-db] [--evict]
+#   skills/ops/scripts/preprod-deploy.sh --branch <name> [--fresh-db] [--evict]
 set -euo pipefail
 
 BRANCH=""
@@ -20,9 +20,9 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$BRANCH" ] || { echo "Missing --branch" >&2; exit 2; }
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../../.."
 # shellcheck disable=SC1091
-. ./scripts/lib-docker.sh # sets SUDO/COMPOSE/SLOT_FILE (auto-detects docker access)
+. ./skills/ops/scripts/lib-docker.sh # sets SUDO/COMPOSE/SLOT_FILE (auto-detects docker access)
 
 CURRENT="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$CURRENT" != "$BRANCH" ]; then
