@@ -1,15 +1,15 @@
 # Preprod override for `mise run preprod-up`:
 #   sudo docker compose --env-file .env.preprod -p places-preprod -f compose.yaml -f compose.preprod.yaml up -d --build
-# Isolated instance on http://localhost:5173 with its own data volume.
-# Production is never touched. Start the LGTM stack first if you want telemetry:
-#   cd obs && docker compose up -d
-# (obs/compose.yaml is standalone; this file does not depend on its network.)
+# Isolated instance (host http://localhost:5174, container :5173 to match the
+# Caddy target) with its own data volume. Production is never touched.
+# Host port is 5174 (NOT 5173): vite HMR keeps host 5173 in dev, so both bind
+# together. See hermes.yaml for the canonical port map.
 
 services:
   places:
     container_name: places-staging
     ports:
-      - "${HOST_PORT:-5173}:${PORT:-3000}"
+      - "${HOST_PORT:-5174}:${PORT:-3000}"
     networks:
       - default
       - caddy
@@ -22,9 +22,9 @@ services:
       TRUST_PROXY: "${TRUST_PROXY:-true}"
       DATABASE_PATH: /data/app.db
       # Per-deployment host: callback derives as ${APP_ORIGIN}/api/auth/callback.
-      APP_ORIGIN: "${APP_ORIGIN:-http://localhost:${HOST_PORT:-5173}}"
+      APP_ORIGIN: "${APP_ORIGIN:-http://localhost:${HOST_PORT:-5174}}"
       # Explicit override only if the provider registration differs:
-      # OIDC_REDIRECT_URI: "http://localhost:5173/api/auth/callback"
+      # OIDC_REDIRECT_URI: "http://localhost:5174/api/auth/callback"
     volumes:
       # Own named volume (project prefix `places-preprod` isolates it anyway).
       - places-preprod-data:/data
