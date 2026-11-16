@@ -17,8 +17,9 @@
 
 ## 2. Google quota (next)
 
-- [ ] 2.1 App-side counting: daily/month-to-date totals for
-  `/api/google/*` + refresh from Loki/Tempo; quota section in RED report.
+- [x] 2.1 App-side counting: daily/month-to-date totals for
+  `/api/google/*` + refresh from client spans in skill 1.4 with quota
+  line in the RED report template.
 - [ ] 2.2 Operator grants GCP Billing API access; budget alert → ops Discord;
   app-side counts remain as cross-check.
 

@@ -171,7 +171,38 @@ and `POST /api/places/:id/refresh` slow down together, suspect
 `places.googleapis.com`, not the app. Homelab volume is low — check counts
 before calling a regression.
 
-### 1.4 Post the report to Discord
+### 1.4 Google quota (spend guard, app-side counting)
+
+One inbound request = one billable upstream call, EXCEPT short-circuits
+that never reach Google (`400` missing param, `503 google_not_configured`,
+`403` scope/owner reject, `422 missing_google_id` on refresh). Count client
+spans — exactly one per billable call:
+
+| Inbound | Client span | Upstream SKU |
+|---|---|---|
+| `GET /api/google/autocomplete` | `google.autocomplete` | Places (New) Autocomplete (per-request; `sessionToken` enables session billing when the client passes one through) |
+| `GET /api/google/details` | `google.details` | Places (New) Details — cost follows the field mask (`detailsMask` pulls atmosphere-tier fields: rating, hours, phone, website) |
+| `GET /api/google/geocode` | `google.geocode` | Legacy Geocoding API |
+| `POST /api/places/:id/refresh` (cookie or M2M sweep) | `google.place-refresh` | Places (New) Details with `REFRESH_DETAILS_MASK` |
+
+Tempo TraceQL (Grafana TraceQL view, count spans per name):
+
+```
+{ resource.service.name = "places" && span.name = "google.autocomplete" }
+{ resource.service.name = "places" && span.name = "google.details" }
+{ resource.service.name = "places" && span.name = "google.geocode" }
+{ resource.service.name = "places" && span.name = "google.place-refresh" }
+```
+
+Run each over month-to-date, note the totals, project to month-end
+(`mtd * days_in_month / day_of_month`). A refresh sweep adds roughly one
+`google.place-refresh` per place with a `googlePlaceId` (778 places at last
+rehearsal) — flag any sweep in the window and attribute its share.
+Compare against Cloud Console Billing (authoritative; free-credit
+assumption lives there, not here). Escalate in the report when the
+projection moves materially vs last week or approaches the free limit.
+
+### 1.5 Post the report to Discord
 
 The agent has access to the ops Discord channel. Compose one message:
 
@@ -181,6 +212,7 @@ The agent has access to the ops Discord channel. Compose one message:
 **Rate**: <normal | notable traffic on <routes>>
 **Errors**: <none | 4xx summary | 5xx summary with route + code>
 **Duration**: <normal | p95 <X>s on <route> (baseline <Y>s)>
+**Quota**: <N autocomplete / N details / N geocode / N refresh MTD, projected <M> (~<x>% of free assumption)>
 
 **Verdict**: healthy | degraded (cause) | needs investigation (<what>)
 **Actions**: none | <watch item | trace_id to drill | config to fix>
