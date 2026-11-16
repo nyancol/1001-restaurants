@@ -187,6 +187,7 @@ Project `mapstr-514323`. Places API (New) bills per-SKU monthly free caps
 | `GET /api/google/autocomplete` (no session) | `google.autocomplete` | Autocomplete Requests (Ess) | 10,000 | $2.83/1k |
 | `GET /api/google/details` | `google.details` | **Place Details Enterprise** — mask carries `rating`, `userRatingCount`, opening hours, `priceLevel`/`priceRange`, `websiteUri`, phone numbers | 1,000 | $20/1k |
 | `GET /api/google/geocode` | `google.geocode` | Geocoding (Ess, legacy endpoint) | 10,000 | $5.00/1k |
+| *(no app endpoint — another key consumer)* | *(Monitoring only: `SearchText`)* | Text Search, tier unconfirmed (Pro 5k/$32 vs Ent 1k/$35 — check Billing Reports) | 5,000 or 1,000 | $32 or $35/1k |
 | `POST /api/places/:id/refresh` (cookie or M2M sweep) | `google.place-refresh` | **Place Details Enterprise** — `REFRESH_DETAILS_MASK` carries the same Enterprise triggers (no Ent+Atmosphere fields: no `reviews`, no `serves*`) | 1,000 shared with details | $20/1k |
 
 One inbound request = one billable upstream call, EXCEPT short-circuits
@@ -218,9 +219,13 @@ GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json ./scripts/quota-check.sh
 
 The script polls `serviceruntime` request counts MTD per method, maps
 methods to SKU caps, and prints cap percentages — TraceQL counting below
-is the fallback when the grant is absent. Billing → Reports grouped by
-SKU stays authoritative for tier confirmation. Escalate when a projection
-crosses a threshold or moves materially vs last week.
+is the fallback when the grant is absent. `quota-check.sh` also tracks
+`SearchText` (Text Search): no code path in this repo calls it (UI search
+uses the autocomplete proxy), so any count there is another key consumer —
+verify its tier in Billing Reports and consider per-consumer keys.
+Billing → Reports grouped by SKU stays authoritative for tier
+confirmation. Escalate when a projection crosses a threshold or moves
+materially vs last week.
 
 Traps: never pass `sessionToken` through to `details` — terminating a
 session with a Pro/Enterprise Details call re-bills it at

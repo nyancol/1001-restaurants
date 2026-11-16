@@ -98,6 +98,7 @@ quota:
   authoritative: cloud console billing reports grouped by SKU
   programmatic: scripts/quota-check.sh (serviceruntime MTD per method; needs gcloud + key with monitoring.viewer)
   key: service account places-billing-viewer (billing.viewer + monitoring.viewer), 0600 key file in worktree root (gitignored)
+  textsearch: tracked but unattributed (no Text Search path in repo) — tier unconfirmed, verify in Billing Reports; consider per-consumer keys
   restore: stop places, restore snapshot into volume, PRAGMA integrity_check, start places, verify /api/health db:ok
   rehearsal: restore to empty temp volume + scratch container before trust, yearly after
 

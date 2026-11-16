@@ -94,12 +94,15 @@ if [ "$(jq 'length' "$TOTALS_FILE")" -eq 0 ]; then
 fi
 
 # Method -> SKU bucket. Enterprise cap is shared by details + refresh.
-AUTOCOMPLETE=0; ENTERPRISE=0; GEOCODE=0; UNMAPPED=""
+# SearchText is tracked but unattributed: no code path in this repo calls
+# Text Search (UI search uses the autocomplete proxy) — another key consumer.
+AUTOCOMPLETE=0; ENTERPRISE=0; GEOCODE=0; SEARCHTEXT=0; UNMAPPED=""
 while IFS="$(printf "\t")" read -r method count; do
   case "$method" in
     *[Aa]utocomplete*) AUTOCOMPLETE=$((AUTOCOMPLETE + count)) ;;
     *[Gg]et[Pp]lace*|*[Pp]lace[Dd]etails*|*[Gg]et[Pp]hoto*) ENTERPRISE=$((ENTERPRISE + count)) ;;
     *[Gg]eocode*|*[Gg]eocoding*) GEOCODE=$((GEOCODE + count)) ;;
+    *[Ss]earch[Tt]ext*|*[Tt]ext[Ss]earch*) SEARCHTEXT=$((SEARCHTEXT + count)) ;;
     *) UNMAPPED="$UNMAPPED $method=$count" ;;
   esac
   say "method $method: $count"
@@ -115,6 +118,13 @@ check_cap() { # name count cap
 check_cap "autocomplete/10k" "$AUTOCOMPLETE" 10000
 check_cap "details+refresh Enterprise/1k" "$ENTERPRISE" 1000
 check_cap "geocode/10k" "$GEOCODE" 10000
+# SearchText tier is unconfirmed (Pro 5k vs Enterprise 1k) — report both.
+check_cap "textsearch/5k (Pro assumed)" "$SEARCHTEXT" 5000
+if [ "$SEARCHTEXT" -gt 0 ]; then
+  pct=$(( SEARCHTEXT * 100 / 1000 ))
+  say "info: same SearchText count vs Enterprise/1k would be ${pct}% — confirm tier in Billing Reports"
+  say "info: SearchText is unattributed (no Text Search path in this repo; UI search uses the autocomplete proxy)"
+fi
 [ -n "$UNMAPPED" ] && warn "unmapped methods (verify SKU, not counted):$UNMAPPED"
 
 say "---"
