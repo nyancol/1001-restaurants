@@ -31,5 +31,11 @@
 
 ## 4. Patching (next)
 
-- [ ] 4.1 Monthly pass: audit, Dependabot, base-image rebuild, tests +
-  typecheck + SAST, preprod drill, prod via `main`.
+- [x] 4.1 First pass (2026-11-16): `npm audit` found 5 moderate (one chain
+  under OTEL's GCP detector); fixed via `glob ^14.0.2` + `minimatch ^11.0.1`
+  overrides (existing esbuild pattern) → 0 vulns; typecheck clean, 104/104
+  tests, `npm run build` OK. Majors deferred: better-sqlite3 13, pino 10.
+  No open Dependabot PRs. Node v24.22.2 matches mise pin.
+- [ ] 4.2 Monthly recurrence: audit, Dependabot, base-image rebuild, tests +
+  typecheck + SAST, preprod drill, prod via `main`. Critical CVEs skip the
+  queue, same drill expedited.
