@@ -58,7 +58,7 @@ jobs:
         # clean:false avoids wiping anything the next steps rely on and keeps
         # checkouts fast; the slot record itself lives outside the checkout
         # (PREPROD_SLOT_FILE) so it survives regardless.
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           clean: false
@@ -177,7 +177,7 @@ jobs:
     steps:
       - name: Checkout base (head may be gone)
         # clean:false — same reason as the preview job.
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           clean: false
