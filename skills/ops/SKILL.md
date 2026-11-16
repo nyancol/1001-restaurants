@@ -1,6 +1,6 @@
 # Places Ops Skill
 
-Operate the production `places` app ("In my Belly", 1001-restaurants). Six
+Operate the production `places` app ("In my Belly", 1001-restaurants). Seven
 capabilities:
 
 1. **Weekly RED report** — analyse rate/errors/duration telemetry from the
@@ -533,3 +533,27 @@ curl -sS https://places.patates.club/api/health  # want 200 {"status":"ok","db":
 - Never restore a snapshot that failed `integrity_check` without flagging
   it and proposing the previous snapshot instead.
 - Never copy prod data into preprod outside the documented demo reseed.
+
+---
+
+## Capability 7: Runner health watch (scheduled)
+
+The preprod preview loop depends on the single self-hosted `github-runner`.
+Poll with `scripts/runner-watch.sh` (host-side, needs docker + `gh`):
+container alive + every open `preview` PR has a `preprod-preview` run on
+its current head (stuck = non-completed run older than 15m).
+
+Exit codes match the preprod convention: `0` = green, `1` = red,
+`2` = check errored (indeterminate — NOT a red, fix access and re-run).
+One Discord alert per red transition + recovery notice, same semantics as
+capability 4:
+
+```
+[RUNNER RED] <container-down | stalled-queue>
+detail: <e.g. PR #N (branch) has no run on <sha> | run still <status> after <age>s>
+next: watching; label-triggered deploys are stalled until the runner returns
+```
+
+Drill: `docker stop github-runner` → expect red → `docker start
+github-runner` → expect recovery notice. Never debug by running preview
+workflows locally; the slot lives on the homelab host.

@@ -91,6 +91,14 @@ backup:
   restore: stop places, restore snapshot into volume, PRAGMA integrity_check, start places, verify /api/health db:ok
   rehearsal: restore to empty temp volume + scratch container before trust, yearly after
 
+runner:
+  container: github-runner # self-hosted, same host as prod/preprod
+  check: scripts/runner-watch.sh # 0=green, 1=red, 2=check-errored-indeterminate-not-a-red
+  watches:
+    - container_alive
+    - preview_queue_fresh_15m # every open `preview` PR has a preprod-preview run on its head
+  alert_policy: one_alert_per_red_transition_plus_one_recovery_notice
+
 secrets_policy:
   may_read_for_validation:
     - .env.preprod

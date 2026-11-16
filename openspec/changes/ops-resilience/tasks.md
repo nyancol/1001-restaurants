@@ -25,8 +25,9 @@
 
 ## 3. Runner health (next)
 
-- [ ] 3.1 Watch `github-runner` container + preview-queue age; Discord alert
-  per transition; drill by stopping runner.
+- [x] 3.1 Watch `github-runner` container + preview-queue age (`scripts/runner-watch.sh`,
+  0/1/2 convention, verified green with no open preview PRs); Discord alert
+  per transition; drill by stopping runner (documented in skill capability 7).
 
 ## 4. Patching (next)
 
