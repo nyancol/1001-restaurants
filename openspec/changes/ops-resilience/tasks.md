@@ -22,11 +22,11 @@
 - [x] 2.1 App-side counting: daily/month-to-date totals for
   `/api/google/*` + refresh from client spans in skill 1.4 with quota
   line in the RED report template.
-- [ ] 2.2 Operator places service-account key (`places-billing-viewer`:
-  billing.viewer + monitoring.viewer on mapstr-514323) at the agreed 0600
-  path; then first live `quota-check.sh` run + native GCP budget (email)
-  as authoritative backstop. Script + procedure ready, logic verified
-  against fixtures (exit 0/1/2, WATCH/URGENT/unmapped paths).
+- [x] 2.2 First live run (2026-11-16): key at agreed path, Monitoring API
+  reachable. MTD: AutocompletePlaces 35, GetPlace 31 (3% of Enterprise cap),
+  Geocode 2. Unmapped: SearchText 825 — NOT our app (no text-search
+  endpoint); another key consumer, SKU/tier to verify in Billing Reports.
+  Native GCP budget (email) still to configure in Console as backstop.
 
 ## 3. Runner health (next)
 

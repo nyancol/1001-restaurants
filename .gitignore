@@ -17,3 +17,6 @@ web/public/maplibre-gl-worker.mjs
 *.db-journal
 *.db-wal
 *.db-shm
+
+# GCP service-account keys (never commit)
+mapstr-*.json

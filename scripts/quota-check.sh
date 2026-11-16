@@ -30,8 +30,15 @@ warn() { printf 'WATCH: %s\n' "$*"; }
 urgent() { printf 'URGENT: %s\n' "$*"; FAIL=1; }
 cerr() { printf 'ERROR: %s\n' "$*"; CHECK_ERR=1; }
 
-command -v gcloud >/dev/null 2>&1 || { cerr "gcloud not found"; say "---"; say "quota UNKNOWN (check errored)"; exit 2; }
+command -v gcloud >/dev/null 2>&1 || { cerr "gcloud not found (needed for auth)"; say "---"; say "quota UNKNOWN (check errored)"; exit 2; }
 command -v jq >/dev/null 2>&1 || { cerr "jq not found"; say "---"; say "quota UNKNOWN (check errored)"; exit 2; }
+command -v curl >/dev/null 2>&1 || { cerr "curl not found"; say "---"; say "quota UNKNOWN (check errored)"; exit 2; }
+
+# method -> total calls across all queried services
+TOTALS_FILE="$(mktemp)"
+RESP_FILE="$(mktemp)"
+trap 'rm -f "$TOTALS_FILE" "$RESP_FILE" "$RESP_FILE.err"' EXIT
+echo '{}' > "$TOTALS_FILE"
 
 if [ -n "$KEY_FILE" ]; then
   [ -f "$KEY_FILE" ] || { cerr "key file not found: $KEY_FILE"; say "---"; say "quota UNKNOWN (check errored)"; exit 2; }
@@ -43,31 +50,36 @@ if [ -n "$KEY_FILE" ]; then
     || { cerr "service-account activation failed"; say "---"; say "quota UNKNOWN (check errored)"; exit 2; }
 fi
 
+# NOTE: gcloud has no time-series read command, so queries go to the
+# Monitoring REST API with a token minted from the active account.
+TOKEN="$(gcloud auth print-access-token 2>"$RESP_FILE.err")" \
+  || { cerr "could not mint access token: $(head -c 300 "$RESP_FILE.err")"; say "---"; say "quota UNKNOWN (check errored)"; exit 2; }
+
 START="$(date -u -d "$(date -u +%Y-%m-01)" +%Y-%m-%dT%H:%M:%SZ)"
 END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 say "window: $START .. $END (MTD, project $PROJECT)"
 
-# method -> total calls across all queried services
-TOTALS_FILE="$(mktemp)"
-RESP_FILE="$(mktemp)"
-trap 'rm -f "$TOTALS_FILE" "$RESP_FILE" "$RESP_FILE.err"' EXIT
-echo '{}' > "$TOTALS_FILE"
-
 for SVC in $SERVICES; do
-  if ! gcloud monitoring time-series list --project="$PROJECT" \
-    --filter="metric.type=\"serviceruntime.googleapis.com/api/request_count\" AND resource.type=\"consumed_api\" AND resource.labels.service=\"$SVC\"" \
-    --interval-start="$START" --interval-end="$END" \
-    --aggregation-alignment-period=86400s \
-    --aggregation-per-series-aligner=ALIGN_SUM \
-    --format=json > "$RESP_FILE" 2>"$RESP_FILE.err"; then
+  FILTER="metric.type=\"serviceruntime.googleapis.com/api/request_count\" AND resource.type=\"consumed_api\" AND resource.labels.service=\"$SVC\""
+  if ! curl -sS -m 30 -G "https://monitoring.googleapis.com/v3/projects/$PROJECT/timeSeries" \
+    --data-urlencode "filter=$FILTER" \
+    --data-urlencode "interval.startTime=$START" \
+    --data-urlencode "interval.endTime=$END" \
+    --data-urlencode "aggregation.alignmentPeriod=86400s" \
+    --data-urlencode "aggregation.perSeriesAligner=ALIGN_SUM" \
+    -H "Authorization: Bearer $TOKEN" > "$RESP_FILE" 2>"$RESP_FILE.err"; then
     cerr "time-series query failed for $SVC: $(head -c 300 "$RESP_FILE.err")"
     continue
   fi
-  N="$(jq 'length' "$RESP_FILE" 2>/dev/null || echo -1)"
+  if jq -e '.error' "$RESP_FILE" >/dev/null 2>&1; then
+    cerr "API error for $SVC: $(jq -c '.error' "$RESP_FILE" | head -c 300)"
+    continue
+  fi
+  N="$(jq '(.timeSeries // []) | length' "$RESP_FILE" 2>/dev/null || echo -1)"
   if [ "$N" -eq -1 ]; then cerr "unparseable response for $SVC"; continue; fi
   if [ "$N" -eq 0 ]; then say "service $SVC: no series in window"; continue; fi
   say "service $SVC: $N series"
-  jq -r '.[] | [(.metric.labels.api_method // "unknown"), ([.points[].value.int64Value // .points[].value.stringValue // "0" | tonumber] | add // 0)] | @tsv' "$RESP_FILE" |
+  jq -r '.timeSeries[] | [(.resource.labels.method // "unknown"), ([.points[].value.int64Value // "0" | tonumber] | add // 0)] | @tsv' "$RESP_FILE" |
   while IFS="$(printf '\t')" read -r method count; do
     cur="$(jq -r --arg m "$method" '.[$m] // 0' "$TOTALS_FILE")"
     jq --arg m "$method" --argjson c "$count" --argjson cur "$cur" '.[$m] = ($cur + $c)' "$TOTALS_FILE" > "$TOTALS_FILE.tmp" \
@@ -87,7 +99,7 @@ while IFS="$(printf "\t")" read -r method count; do
   case "$method" in
     *[Aa]utocomplete*) AUTOCOMPLETE=$((AUTOCOMPLETE + count)) ;;
     *[Gg]et[Pp]lace*|*[Pp]lace[Dd]etails*|*[Gg]et[Pp]hoto*) ENTERPRISE=$((ENTERPRISE + count)) ;;
-    *[Gg]eocode*) GEOCODE=$((GEOCODE + count)) ;;
+    *[Gg]eocode*|*[Gg]eocoding*) GEOCODE=$((GEOCODE + count)) ;;
     *) UNMAPPED="$UNMAPPED $method=$count" ;;
   esac
   say "method $method: $count"

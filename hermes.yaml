@@ -97,7 +97,7 @@ quota:
   thresholds: 70% watch / 90% urgent of each SKU free cap, MTD (details+refresh share the Enterprise cap)
   authoritative: cloud console billing reports grouped by SKU
   programmatic: scripts/quota-check.sh (serviceruntime MTD per method; needs gcloud + key with monitoring.viewer)
-  pending: service-account key at agreed 0600 path (places-billing-viewer: billing.viewer + monitoring.viewer on mapstr-514323)
+  key: service account places-billing-viewer (billing.viewer + monitoring.viewer), 0600 key file in worktree root (gitignored)
   restore: stop places, restore snapshot into volume, PRAGMA integrity_check, start places, verify /api/health db:ok
   rehearsal: restore to empty temp volume + scratch container before trust, yearly after
 
