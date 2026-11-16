@@ -1,6 +1,6 @@
 # Places Ops Skill
 
-Operate the production `places` app ("In my Belly", 1001-restaurants). Five
+Operate the production `places` app ("In my Belly", 1001-restaurants). Seven
 capabilities:
 
 1. **Weekly RED report** — analyse rate/errors/duration telemetry from the
@@ -13,9 +13,12 @@ capabilities:
    alert per red transition plus a recovery notice.
 5. **Git-revert rollback** — on explicit operator order only, revert the
    offending commit on `main` and push so Arcane redeploys.
+6. **Backup & restore watch** — verify nightly zerobyte snapshots of prod
+   SQLite exist and stay fresh; restore only on explicit operator order.
 
 Never mutate app data outside the documented refresh endpoint (caps 1-2),
-the staging volume (cap 3), or a git revert on `main` (cap 5).
+the staging volume (cap 3), a git revert on `main` (cap 5), or a
+zerobyte restore into the prod volume on explicit order (cap 6).
 Secrets: the agent MAY read `.env.preprod` and the Arcane-managed prod `.env`
 for presence/shape validation (set?, valid URL?, length >= 32?). It MUST
 never print, commit, forward, or include secret values in Discord messages,
@@ -168,7 +171,38 @@ and `POST /api/places/:id/refresh` slow down together, suspect
 `places.googleapis.com`, not the app. Homelab volume is low — check counts
 before calling a regression.
 
-### 1.4 Post the report to Discord
+### 1.4 Google quota (spend guard, app-side counting)
+
+One inbound request = one billable upstream call, EXCEPT short-circuits
+that never reach Google (`400` missing param, `503 google_not_configured`,
+`403` scope/owner reject, `422 missing_google_id` on refresh). Count client
+spans — exactly one per billable call:
+
+| Inbound | Client span | Upstream SKU |
+|---|---|---|
+| `GET /api/google/autocomplete` | `google.autocomplete` | Places (New) Autocomplete (per-request; `sessionToken` enables session billing when the client passes one through) |
+| `GET /api/google/details` | `google.details` | Places (New) Details — cost follows the field mask (`detailsMask` pulls atmosphere-tier fields: rating, hours, phone, website) |
+| `GET /api/google/geocode` | `google.geocode` | Legacy Geocoding API |
+| `POST /api/places/:id/refresh` (cookie or M2M sweep) | `google.place-refresh` | Places (New) Details with `REFRESH_DETAILS_MASK` |
+
+Tempo TraceQL (Grafana TraceQL view, count spans per name):
+
+```
+{ resource.service.name = "places" && span.name = "google.autocomplete" }
+{ resource.service.name = "places" && span.name = "google.details" }
+{ resource.service.name = "places" && span.name = "google.geocode" }
+{ resource.service.name = "places" && span.name = "google.place-refresh" }
+```
+
+Run each over month-to-date, note the totals, project to month-end
+(`mtd * days_in_month / day_of_month`). A refresh sweep adds roughly one
+`google.place-refresh` per place with a `googlePlaceId` (778 places at last
+rehearsal) — flag any sweep in the window and attribute its share.
+Compare against Cloud Console Billing (authoritative; free-credit
+assumption lives there, not here). Escalate in the report when the
+projection moves materially vs last week or approaches the free limit.
+
+### 1.5 Post the report to Discord
 
 The agent has access to the ops Discord channel. Compose one message:
 
@@ -178,6 +212,7 @@ The agent has access to the ops Discord channel. Compose one message:
 **Rate**: <normal | notable traffic on <routes>>
 **Errors**: <none | 4xx summary | 5xx summary with route + code>
 **Duration**: <normal | p95 <X>s on <route> (baseline <Y>s)>
+**Quota**: <N autocomplete / N details / N geocode / N refresh MTD, projected <M> (~<x>% of free assumption)>
 
 **Verdict**: healthy | degraded (cause) | needs investigation (<what>)
 **Actions**: none | <watch item | trace_id to drill | config to fix>
@@ -452,3 +487,73 @@ with fresh evidence — do not stack further reverts blindly.
 
 For rehearsal or approval: run 5.2, print the exact `git revert` command
 that WOULD run, and stop. Used by Drill 4.
+
+---
+
+## Capability 6: Backup & restore (zerobyte → Pi REST)
+
+Prod SQLite (`places_places-data`, WAL mode) is snapshotted nightly by
+zerobyte (see `hermes.yaml:backup`). Zerobyte owns the schedule and its own
+failure notifications — there is no Hermes/cron polling for this. The agent
+owns the restore procedure (restores run ONLY on explicit operator order)
+and verifies freshness on demand: before any rollback, in the weekly RED
+report, or whenever asked.
+
+### 6.1 Freshness check (on demand, no schedule)
+
+- Fresh = newest snapshot for source `Places` in repo `places-in-pi` is
+  younger than 26h and contains `app.db` (+ `-wal`/`-shm`). Check in the
+  zerobyte UI (https://backup.patates.club) snapshot list.
+- If stale or failing: say so with repo, last-good snapshot age, and the
+  job error — then fix the job in zerobyte; never age into automatic
+  alerts or restores.
+
+### 6.2 Restore (explicit order only)
+
+```bash
+docker stop places
+# in zerobyte UI: restore newest green snapshot of `Places` into places_places-data
+docker start places
+# integrity + health:
+docker exec places node -e "const D=require('better-sqlite3');const db=D('/data/app.db',{readonly:true});console.log(db.prepare('PRAGMA integrity_check').get());db.close()"
+curl -sS https://places.patates.club/api/health  # want 200 {"status":"ok","db":"ok",...}
+```
+
+- Rehearsal first (before trusting a new repo, yearly after): restore to an
+  empty temp volume, serve with a scratch container, `integrity_check` =
+  `ok` + health `db: ok` + expected place count.
+- `places-preprod-data` is never a restore source or target for prod.
+- Report only counts and verdicts; never dump row contents beyond what the
+  API already exposes.
+
+### 6.3 What NOT to do
+
+- Never restore without an explicit order; without one: alert and prepare
+  the exact restore steps, do not execute them.
+- Never restore a snapshot that failed `integrity_check` without flagging
+  it and proposing the previous snapshot instead.
+- Never copy prod data into preprod outside the documented demo reseed.
+
+---
+
+## Capability 7: Runner health watch (scheduled)
+
+The preprod preview loop depends on the single self-hosted `github-runner`.
+Poll with `scripts/runner-watch.sh` (host-side, needs docker + `gh`):
+container alive + every open `preview` PR has a `preprod-preview` run on
+its current head (stuck = non-completed run older than 15m).
+
+Exit codes match the preprod convention: `0` = green, `1` = red,
+`2` = check errored (indeterminate — NOT a red, fix access and re-run).
+One Discord alert per red transition + recovery notice, same semantics as
+capability 4:
+
+```
+[RUNNER RED] <container-down | stalled-queue>
+detail: <e.g. PR #N (branch) has no run on <sha> | run still <status> after <age>s>
+next: watching; label-triggered deploys are stalled until the runner returns
+```
+
+Drill: `docker stop github-runner` → expect red → `docker start
+github-runner` → expect recovery notice. Never debug by running preview
+workflows locally; the slot lives on the homelab host.
