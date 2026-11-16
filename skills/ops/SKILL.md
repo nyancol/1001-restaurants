@@ -243,7 +243,7 @@ delivery — webhook, chat post, or prompt reply):
 **Rate**: <normal | notable traffic on <routes>>
 **Errors**: <none | 4xx summary | 5xx summary with route + code>
 **Duration**: <normal | p95 <X>s on <route> (baseline <Y>s)>
-**Quota**: <details+refresh <n>/1000 Ent cap (<%>), autocomplete <n>/10k, geocode <n>/10k — <watch|urgent|ok>>
+**Quota**: <details+refresh <n>/1000 Ent cap (<%>), autocomplete <n>/10k, geocode <n>/10k, textsearch <n>/5k Pro-assumed (<%>; tier unconfirmed) — <watch|urgent|ok>>
 
 **Verdict**: healthy | degraded (cause) | needs investigation (<what>)
 **Actions**: none | <watch item | trace_id to drill | config to fix>

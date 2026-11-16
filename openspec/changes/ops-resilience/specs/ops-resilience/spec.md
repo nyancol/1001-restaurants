@@ -71,7 +71,9 @@ the authoritative guard and app-side counts remain as cross-check.
 
 - **WHEN** the weekly report runs
 - **THEN** it includes per-SKU call totals and cap percentages (Enterprise
-  cap shared by details+refresh; one full sweep ≈ 78% of it).
+  cap shared by details+refresh; one full sweep ≈ 78% of it; Text Search
+  tracked against the Pro cap with the Enterprise-equivalent noted until
+  its tier is confirmed in Billing Reports).
 
 #### Scenario: Budget alert fires on GCP side
 

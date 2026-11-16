@@ -94,7 +94,7 @@ quota:
   binding_sku: place-details-enterprise # 2D9A-3DE0-3766: 1,000 free/mo, then $20/1k
   binding_cause: rating/userRatingCount + opening hours + priceLevel/priceRange + websiteUri + phone numbers in both Details masks (highest-SKU-wins; no Ent+Atmosphere fields)
   sweep_cost: ~778 calls per full sweep (78% of the Enterprise cap) — sweeps stay rare, never scheduled
-  thresholds: 70% watch / 90% urgent of each SKU free cap, MTD (details+refresh share the Enterprise cap)
+  thresholds: 70% watch / 90% urgent of each SKU free cap, MTD (details+refresh share the Enterprise cap; textsearch tracked against Pro 5k with Enterprise-equivalent noted until tier confirmed)
   authoritative: cloud console billing reports grouped by SKU
   programmatic: scripts/quota-check.sh (serviceruntime MTD per method; needs gcloud + key with monitoring.viewer)
   key: service account places-billing-viewer (billing.viewer + monitoring.viewer), 0600 key file in worktree root (gitignored)
