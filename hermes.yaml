@@ -78,6 +78,19 @@ rollback:
   migration_safety_rule: additive-only # reverted migrations must replay safely; destructive ops block automatic revert
   verify: prod_green_after_revert
 
+backup:
+  method: zerobyte-rest-to-pi # zerobyte UI job; provisioning covers volume+repo only (jobs are UI/API-only)
+  volume_mount: places_places-data:/places-data:ro # external: true — zerobyte never writes prod data
+  volume_id: places # backend: directory, path: /places-data
+  repository: places-in-pi # backend: rest, url http://192.168.1.121:8000, path: places-data
+  job: nightly ~04:00 Europe/Paris, source Places -> places-in-pi, 7 daily + 4 weekly
+  covers: app.db + app.db-wal + app.db-shm as one snapshot set # crash-consistent; SQLite replays WAL on restore
+  excludes: places-preprod-data # ephemeral, reseedable
+  schedule_owner: zerobyte # zerobyte owns the schedule and its own failure notifications; no Hermes/cron polling
+  fresh_check: on demand (before rollback, in RED report, or when asked) — newest snapshot younger than 26h
+  restore: stop places, restore snapshot into volume, PRAGMA integrity_check, start places, verify /api/health db:ok
+  rehearsal: restore to empty temp volume + scratch container before trust, yearly after
+
 secrets_policy:
   may_read_for_validation:
     - .env.preprod
