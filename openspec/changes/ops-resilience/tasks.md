@@ -25,8 +25,15 @@
 - [x] 2.2 First live run (2026-11-16): key at agreed path, Monitoring API
   reachable. MTD: AutocompletePlaces 35, GetPlace 31 (3% of Enterprise cap),
   Geocode 2. Unmapped: SearchText 825 — NOT our app (no text-search
-  endpoint); another key consumer, SKU/tier to verify in Billing Reports.
-  Native GCP budget (email) still to configure in Console as backstop.
+  endpoint; UI search uses the autocomplete proxy); another key consumer,
+  SKU/tier to verify in Billing Reports. Script moved to REST API (gcloud
+  has no time-series read) + method-label fix + SearchText bucket, all
+  verified live. Key relocated to ~/.secrets/gcp-billing-viewer.json (600).
+- [ ] 2.3 Hermes-scheduled generation (replaces email backstop): merge the
+  follow-up PR so quota-check.sh is on main, then create the Hermes cron
+  job "Places quota check" (weekly, places-ops skill, terminal tools,
+  workdir /home/yann/Documents/1001-restaurants): run quota-check.sh with
+  the key, silent GREEN, notice per WATCH/URGENT transition + recovery.
 
 ## 3. Runner health (next)
 

@@ -209,23 +209,24 @@ Thresholds: **70% watch / 90% urgent of each SKU's free cap**, MTD
 ~778 calls (78% of the Enterprise cap) — flag any sweep in the window and
 attribute its share; sweeps stay rare and deliberate, never scheduled.
 
-Programmatic check (preferred when the GCP grant exists — host-side,
-needs `gcloud` + key with `monitoring.viewer` on the project):
+Programmatic check — Hermes-scheduled, no email backstop. A Hermes cron
+job "Places quota check" (weekly, `places-ops` skill, terminal tools,
+workdir `/home/yann/Documents/1001-restaurants`, same delivery as the RED
+report) runs:
 
 ```bash
-GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json ./scripts/quota-check.sh
+GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json mise x gcloud@593.0.0 -- ./scripts/quota-check.sh
 # exit 0 ok (WATCH lines possible) / 1 urgent (>=90% any cap) / 2 check-errored
 ```
 
-The script polls `serviceruntime` request counts MTD per method, maps
-methods to SKU caps, and prints cap percentages — TraceQL counting below
-is the fallback when the grant is absent. `quota-check.sh` also tracks
-`SearchText` (Text Search): no code path in this repo calls it (UI search
-uses the autocomplete proxy), so any count there is another key consumer —
-verify its tier in Billing Reports and consider per-consumer keys.
-Billing → Reports grouped by SKU stays authoritative for tier
-confirmation. Escalate when a projection crosses a threshold or moves
-materially vs last week.
+Posting policy (same transition semantics as prod watch): silent on steady
+GREEN; one notice per WATCH/URGENT transition plus a recovery notice; no
+repeats while unchanged. `quota-check.sh` also tracks `SearchText`
+(Text Search): no code path in this repo calls it (UI search uses the
+autocomplete proxy), so any count there is another key consumer — verify
+its tier in Billing Reports and consider per-consumer keys. TraceQL
+counting below is the fallback when the grant is absent. Billing →
+Reports grouped by SKU stays authoritative for tier confirmation.
 
 Traps: never pass `sessionToken` through to `details` — terminating a
 session with a Pro/Enterprise Details call re-bills it at
