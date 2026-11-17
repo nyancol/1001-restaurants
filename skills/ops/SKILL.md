@@ -4,25 +4,21 @@ Operate the production `places` app ("In my Belly", 1001-restaurants). Eight
 capabilities:
 
 1. **Weekly RED report** — analyse rate/errors/duration telemetry from the
-   homelab LGTM stack, emit the verdict through the invoking channel.
-2. **Ad-hoc Google refresh sweep** — on explicit instruction, refresh the
+   homelab LGTM stack and produce a verdict report.
+2. **Ad-hoc Google refresh sweep** — refresh the
    Google snapshot of every existing place via the M2M service API.
 3. **Preprod preview deploy** — deploy a branch to the single staging slot
    for requestor validation (refuses to evict without confirmation).
-4. **Hermes prod watch** — scheduled health + version polling, one alert
-   per red transition plus a recovery notice.
-5. **Git-revert rollback** — on explicit operator order only, revert the
+4. **Hermes prod watch** — prod health + version checks producing
+   red/green assessments.
+5. **Git-revert rollback** — revert the
    offending commit on `main` and push so Arcane redeploys.
 6. **Backup & restore** — verify nightly zerobyte snapshots of prod
-   SQLite exist and stay fresh; restore only on explicit operator order.
-7. **Runner health watch** — scheduled `github-runner` liveness + preview
-   queue freshness, one alert per red transition plus a recovery notice.
+   SQLite exist and stay fresh; restore procedure.
+7. **Runner health watch** — `github-runner` liveness + preview
+   queue freshness checks producing red/green assessments.
 8. **Patching inspection** — read-only look at open Dependabot PRs + latest
-   SAST run on `main` (monthly-train input; merges/deploys stay manual).
-
-Delivery: the skill defines report/alert *content*. The communication
-channel (Discord, cron output, prompt reply) is defined by the caller —
-the scheduled job or invoking prompt — never here.
+   SAST run on `main`.
 
 Never mutate app data outside the documented refresh endpoint (caps 1-2),
 the staging volume (cap 3), a git revert on `main` (cap 5), or a
@@ -85,10 +81,6 @@ length ok`).
 ---
 
 ## Capability 1: Weekly RED report
-
-Cadence: once a week. Trigger: the operator's scheduler invokes the agent;
-when invoked, run the full analysis and emit through the invoking channel —
-do not ask for confirmation, the report is informational.
 
 Window: last 7 days, compared with the previous 7 days as baseline.
 
@@ -209,19 +201,16 @@ Tempo TraceQL (Grafana TraceQL view, count spans per name):
 Thresholds: **70% watch / 90% urgent of each SKU's free cap**, MTD
 (`details` + `refresh` share the 1,000 Enterprise cap). One full sweep =
 ~778 calls (78% of the Enterprise cap) — flag any sweep in the window and
-attribute its share; sweeps stay rare and deliberate, never scheduled.
+attribute its share; sweeps stay rare and deliberate.
 
-Programmatic check — Hermes-scheduled, no email backstop. A Hermes cron
-job "Places quota check" (weekly, `places-ops` skill, terminal tools,
-workdir `/home/yann/Documents/1001-restaurants`, same delivery as the RED
-report) runs:
+Programmatic check — runs:
 
 ```bash
 GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json mise x gcloud@593.0.0 -- ./skills/ops/scripts/quota-check.sh
 # exit 0 ok (WATCH lines possible) / 1 urgent (>=90% any cap) / 2 check-errored
 ```
 
-Posting policy (same transition semantics as prod watch): silent on steady
+Status semantics: silent on steady
 GREEN; one notice per WATCH/URGENT transition plus a recovery notice; no
 repeats while unchanged. `quota-check.sh` also tracks `SearchText`
 (Text Search): no code path in this repo calls it (UI search uses the
@@ -235,10 +224,9 @@ session with a Pro/Enterprise Details call re-bills it at
 Enterprise+Atmosphere ($25/1k). `details` takes no session token today;
 keep it that way.
 
-### 1.5 Emit the report
+### 1.5 Report content
 
-Compose one message in the invoking channel's format (the caller owns
-delivery — webhook, chat post, or prompt reply):
+Compose one report with this content:
 
 ```
 📊 Places weekly RED report — <week of YYYY-MM-DD> (version <sha>)
@@ -252,16 +240,14 @@ delivery — webhook, chat post, or prompt reply):
 **Actions**: none | <watch item | trace_id to drill | config to fix>
 ```
 
-Send it through the invoking channel. Never include secrets or raw PII in the
-message; route IDs and status codes are fine. If delivery fails, report the
-failure back to the operator instead of silently dropping it.
+Never include secrets or raw PII in the
+report; route IDs and status codes are fine.
 
 ---
 
 ## Capability 2: Ad-hoc Google refresh sweep
 
-Trigger: explicit operator instruction ("refresh all places", "run the
-sweep"). Never run on a schedule unless asked. One HTTP call per place; the
+One HTTP call per place; the
 agent owns the loop, the app owns the Google calls. There is no sweep
 endpoint and no job polling.
 
@@ -376,13 +362,13 @@ mise run preprod-deploy --branch <name> --fresh-db [--evict]
 # Without --evict, a slot owned by another branch is refused, not replaced.
 ```
 
-CI trigger (`.github/workflows/preprod-preview.yml`, self-hosted runner):
-the `preview` label on a PR to `main` is the trigger — pushes without it
-build nothing. Label added (or slot owned by another branch) deploys with
+CI behavior (`.github/workflows/preprod-preview.yml`, self-hosted runner):
+the `preview` label on a PR to `main` controls whether it builds.
+Label added (or slot owned by another branch) deploys with
 `--fresh-db --evict`; `synchronize` on the already-deployed branch rebuilds
-and keeps the DB (requestor rows survive iteration). Every deploy, eviction,
-teardown, and red verdict is posted as a PR comment via `gh` (branch, SHA,
-health body, green/red cause — never secrets). On PR close or label removal
+and keeps the DB (requestor rows survive iteration). Deploy, eviction,
+teardown, and red verdict details include branch, SHA,
+health body, green/red cause — never secrets. On PR close or label removal
 the workflow tears the preview down only if that PR's branch owns the slot.
 Same-repo branches only; fork PRs are refused. Manual `mise run
 preprod-deploy` stays available as fallback and re-records the slot.
@@ -408,7 +394,7 @@ Rules:
 - Fixture count matches when `--fresh-db` was used (6 demo places).
 - Boot logs contain no `Invalid config` lines.
 
-Read-only check any time (also used by Hermes drills):
+Read-only check any time:
 
 ```bash
 mise run preprod-verify                 # all green signals
@@ -416,11 +402,11 @@ EXPECT_FIXTURE=1 mise run preprod-verify # additionally require 6-place seed
 ```
 
 Exit codes: `0` = green, `1` = red, `2` = check errored (docker
-unreachable, indeterminate — NOT a red, do not alert as down, fix access
-and re-run). Only exit-1 runs count toward the watch's consecutive-failure
+unreachable, indeterminate — NOT a red, fix access
+and re-run). Only exit-1 runs count toward the consecutive-failure
 threshold (capability 4).
 
-### 3.3 Evidence post
+### 3.3 Evidence summary
 
 ```
 [PREVIEW] branch <name> @ <short-sha> — GREEN | RED (<cause>)
@@ -433,13 +419,11 @@ RED names the failing signal plus the relevant log excerpt.
 
 ---
 
-## Capability 4: Hermes prod watch (scheduled)
+## Capability 4: Hermes prod watch
 
-Poll prod on the cadence and threshold in `hermes.yaml` (defaults: every
-5m, alert after 3 consecutive failures, 10m version-stuck grace after a
-merge). One alert per red transition; one recovery notice on green return;
-no repeats while the state is unchanged. Drills use the same templates
-with a `[DRILL]` prefix.
+Prod health + version checks against the thresholds in `hermes.yaml`
+(defaults: alert after 3 consecutive failures, 10m version-stuck grace
+after a merge).
 
 ### 4.1 Prod green (all must hold)
 
@@ -453,7 +437,7 @@ with a `[DRILL]` prefix.
 - Container `PORT` equals the Caddy `reverse_proxy places:<PORT>` target
   and health passed at the declared URL (catches env-to-Caddy drift).
 
-### 4.2 Alert templates (evidence-backed, never secrets)
+### 4.2 Assessment templates (evidence-backed, never secrets)
 
 ```
 [PROD RED] <cause: down|version-stuck|oidc-config|5xx|exporter-break>
@@ -472,22 +456,20 @@ running: <version>  health: <body>
 
 - Never build, restart, or `exec` into prod; never touch prod `/data`.
   The agent verifies and prepares — Arcane owns deploys.
-- Never alert twice for the same unchanged red state; edit the original
-  thread only when the cause changes.
 - Never include secret values: presence/shape only
   (e.g. `SESSION_SECRET set, length ok`).
 
 ---
 
-## Capability 5: Git-revert rollback (explicit order only)
+## Capability 5: Git-revert rollback
 
 Rollback is `git revert` of the offending commit on `main` + push so Arcane
 redeploys. No direct prod rebuild, no image pinning — one deploy mechanism.
 
 ### 5.1 Gate
 
-- Run ONLY on explicit operator order (`revert <sha>`, `roll back prod`).
-  Without an order: alert (capability 4 template) and prepare the exact
+- Run ONLY on explicit order (`revert <sha>`, `roll back prod`).
+  Without an order: produce the capability 4 assessment and prepare the exact
   commands, do not execute them.
 
 ### 5.2 Migration-safety pre-check (must pass before revert)
@@ -511,36 +493,33 @@ git revert --no-edit <sha> && git push origin main
 # then: prod green per capability 4.1 (version advances to the revert commit)
 ```
 
-Post the revert commit, the push result, and the post-revert green report.
+Report the revert commit, the push result, and the post-revert green check.
 If green does not return within the Arcane poll window + build time, escalate
 with fresh evidence — do not stack further reverts blindly.
 
 ### 5.4 Dry run (no push)
 
 For rehearsal or approval: run 5.2, print the exact `git revert` command
-that WOULD run, and stop. Used by Drill 4.
+that WOULD run, and stop.
 
 ---
 
 ## Capability 6: Backup & restore (zerobyte → Pi REST)
 
 Prod SQLite (`places_places-data`, WAL mode) is snapshotted nightly by
-zerobyte (see `hermes.yaml:backup`). Zerobyte owns the schedule and its own
-failure notifications — there is no Hermes/cron polling for this. The agent
-owns the restore procedure (restores run ONLY on explicit operator order)
-and verifies freshness on demand: before any rollback, in the weekly RED
-report, or whenever asked.
+zerobyte (see `hermes.yaml:backup`). Restore procedure (restores run ONLY
+on explicit order) plus freshness verification: before any rollback, in
+the weekly RED report, or whenever asked.
 
-### 6.1 Freshness check (on demand, no schedule)
+### 6.1 Freshness check
 
 - Fresh = newest snapshot for source `Places` in repo `places-in-pi` is
   younger than 26h and contains `app.db` (+ `-wal`/`-shm`). Check in the
   zerobyte UI (https://backup.patates.club) snapshot list.
-- If stale or failing: say so with repo, last-good snapshot age, and the
-  job error — then fix the job in zerobyte; never age into automatic
-  alerts or restores.
+- If stale or failing: state repo, last-good snapshot age, and the
+  job error — then fix the job in zerobyte.
 
-### 6.2 Restore (explicit order only)
+### 6.2 Restore
 
 ```bash
 docker stop places
@@ -560,7 +539,8 @@ curl -sS https://places.patates.club/api/health  # want 200 {"status":"ok","db":
 
 ### 6.3 What NOT to do
 
-- Never restore without an explicit order; without one: alert and prepare
+- Never restore without an explicit order; without one: produce the
+  assessment and prepare
   the exact restore steps, do not execute them.
 - Never restore a snapshot that failed `integrity_check` without flagging
   it and proposing the previous snapshot instead.
@@ -568,17 +548,17 @@ curl -sS https://places.patates.club/api/health  # want 200 {"status":"ok","db":
 
 ---
 
-## Capability 7: Runner health watch (scheduled)
+## Capability 7: Runner health watch
 
 The preprod preview loop depends on the single self-hosted `github-runner`.
-Poll with `skills/ops/scripts/runner-watch.sh` (host-side, needs docker + `gh`):
+Check with `skills/ops/scripts/runner-watch.sh` (host-side, needs docker + `gh`):
 container alive + every open `preview` PR has a `preprod-preview` run on
 its current head (stuck = non-completed run older than 15m).
 
 Exit codes match the preprod convention: `0` = green, `1` = red,
 `2` = check errored (indeterminate — NOT a red, fix access and re-run).
-One alert per red transition + recovery notice, same semantics as
-capability 4:
+
+Assessment content:
 
 ```
 [RUNNER RED] <container-down | stalled-queue>
@@ -586,16 +566,14 @@ detail: <e.g. PR #N (branch) has no run on <sha> | run still <status> after <age
 next: watching; label-triggered deploys are stalled until the runner returns
 ```
 
-Drill: `docker stop github-runner` → expect red → `docker start
-github-runner` → expect recovery notice. Never debug by running preview
+Never debug by running preview
 workflows locally; the slot lives on the homelab host.
 
 ---
 
 ## Capability 8: Patching inspection (Dependabot + SAST, read-only)
 
-Monthly-train input (spec Requirement: Monthly patching with preprod
-drill). Read-only: never merges, rebuilds, or deploys. Poll with
+Read-only: never merges, rebuilds, or deploys. Check with
 `skills/ops/scripts/patch-check.sh` (host-side, needs `gh` + `jq`): open Dependabot
 PRs (npm + docker, per `.github/dependabot.yml`) plus the latest SAST
 (`sast.yml`) run on `main`.
@@ -610,10 +588,7 @@ Exit codes match the preprod/runner convention: `0` = checked ok,
 `1` = attention, `2` = check errored (gh/jq missing, auth failed,
 indeterminate — NOT a verdict, fix access and re-run). Open Dependabot
 PRs are informational, never a red by themselves; a SAST failure on
-`main` is the red (it blocks the monthly train). One alert per red
-transition + recovery notice, same semantics as capability 4. Invoke
-on demand (e.g. monthly before the pass, or when asked) — no polling
-schedule of its own.
+`main` is the red (it blocks the monthly train).
 
 ### What NOT to do
 
