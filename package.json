@@ -25,7 +25,7 @@
     "@opentelemetry/exporter-logs-otlp-proto": "^0.301.2",
     "@opentelemetry/exporter-metrics-otlp-proto": "^0.301.2",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.301.2",
-    "@opentelemetry/instrumentation-fastify": "^0.56.0",
+    "@opentelemetry/instrumentation-fastify": "^0.57.0",
     "@opentelemetry/instrumentation-pino": "^0.71.0",
     "@opentelemetry/instrumentation-runtime-node": "^0.38.0",
     "@opentelemetry/resources": "^3.1.1",
