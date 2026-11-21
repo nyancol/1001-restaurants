@@ -1,6 +1,6 @@
 # ── Build stage ────────────────────────────────────────────────────────────────
 # better-sqlite3 needs a compiler on slim images.
-FROM node:25-slim AS build
+FROM node:26.12.1-slim AS build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # ── Runtime stage ──────────────────────────────────────────────────────────────
-FROM node:25-slim AS runtime
+FROM node:26.12.1-slim AS runtime
 WORKDIR /app
 
 # Production defaults mirroring .env.dev / .env.sample variable names.
