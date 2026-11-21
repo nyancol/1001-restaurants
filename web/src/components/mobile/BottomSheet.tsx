@@ -102,9 +102,13 @@ export default function BottomSheet({ open, onClose, ariaLabel, children }: Prop
         }}
       >
         <div
-          className="cursor-grab touch-none select-none pt-2 active:cursor-grabbing"
+          className="cursor-grab touch-none select-none px-4 py-3 active:cursor-grabbing"
           onPointerDown={(e) => {
-            (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+            try {
+              (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+            } catch {
+              // ignore capture failures; drag still tracks via move/up handlers
+            }
             onDragStart(e.clientY);
           }}
           onPointerMove={(e) => onDragMove(e.clientY)}

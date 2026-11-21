@@ -243,13 +243,6 @@ export default function App() {
       <footer className="border-t border-line bg-surface-2/60">
         <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-5 text-sm lg:px-8">
           <span className="font-display text-base font-semibold text-ink">{t["app.title"]}</span>
-          <span className="text-muted">— A mindful compendium of memorable tables and culinary wanderlust.</span>
-          <span className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-muted">
-            <a href="#/" className="hover:text-ink hover:underline">Neighborhood Guides</a>
-            <a href="#/" className="hover:text-ink hover:underline">Tasting Notes Index</a>
-            <a href="#/" className="hover:text-ink hover:underline">Cellar &amp; Wine Logs</a>
-            <span>© 2024 {t["app.title"]}</span>
-          </span>
           <span className="flex w-full items-center gap-2 pt-1">
             <LanguageSwitcher />
           </span>

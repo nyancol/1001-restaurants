@@ -1,56 +1,165 @@
+import { useEffect, useRef, useState } from "react";
 import type { Place } from "../../lib/api";
+import PlaceCard from "../PlaceCard";
 
-/** Floating preview card from Stitch "Places mobile - map view". Rating matches the list view (Google rating + count). */
-export default function PhoneMapPreview({ place: p, onClose, onViewNotes }: { place: Place; onClose?: () => void; onViewNotes?: (p: Place) => void }) {
-  const google = p.googleRating ?? null;
-  const personal = p.rating ?? null;
+interface Props {
+  place: Place;
+  onClose?: () => void;
+  onViewNotes?: (p: Place) => void;
+  onToggleStatus?: (p: Place) => void;
+  onEdit?: (p: Place) => void;
+  readOnly?: boolean;
+  onRefresh?: (p: Place) => Promise<unknown>;
+  refreshing?: boolean;
+}
+
+/**
+ * Floating preview card over the phone map.
+ * Same details as list mode: shared `PlaceCard` (title, ratings,
+ * status toggle, address/price, note, tags, hours, Edit/Share/refresh).
+ * Tapping the body opens tasting notes; the CTA button does the same.
+ * Dragging the top handle down dismisses the preview.
+ */
+export default function PhoneMapPreview({
+  place: p,
+  onClose,
+  onViewNotes,
+  onToggleStatus,
+  onEdit,
+  readOnly,
+  onRefresh,
+  refreshing,
+}: Props) {
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
+  const dragRef = useRef({ startY: 0, curY: 0, dragging: false });
+  const closeTimer = useRef<number | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Reset drag position when the selected place changes.
+  useEffect(() => {
+    setDragY(0);
+    setDragging(false);
+    setDismissing(false);
+    dragRef.current = { startY: 0, curY: 0, dragging: false };
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+  }, [p.id]);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    },
+    [],
+  );
+
+  function dismiss() {
+    setDismissing(true);
+    setDragging(false);
+    setDragY(window.innerHeight);
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => {
+      onCloseRef.current?.();
+    }, 200);
+  }
+
+  function onDragStart(clientY: number) {
+    if (!onClose) return;
+    dragRef.current = { startY: clientY, curY: clientY, dragging: true };
+    setDragging(true);
+  }
+  function onDragMove(clientY: number) {
+    if (!dragRef.current.dragging) return;
+    dragRef.current.curY = clientY;
+    setDragY(Math.max(0, clientY - dragRef.current.startY));
+  }
+  function onDragEnd() {
+    if (!dragRef.current.dragging) return;
+    dragRef.current.dragging = false;
+    setDragging(false);
+    const dy = dragRef.current.curY - dragRef.current.startY;
+    if (dy > 80) {
+      dismiss();
+    } else {
+      setDragY(0);
+    }
+  }
+
   return (
-    <div className="edge border-accent bg-surface p-3 shadow-theme" style={{ borderRadius: 16, borderWidth: 2 }}>
-      <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-ink/15" aria-hidden />
-      <div className="flex gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-display truncate text-lg font-bold text-ink">{p.name}</h3>
-            {google != null ? (
-              <span className="edge inline-flex shrink-0 items-center gap-1 border-transparent bg-want px-2 py-0.5 text-xs font-bold text-want-ink" style={{ borderRadius: 8 }}>
-                <span aria-hidden>★</span> {typeof google === "number" ? google.toFixed(1) : google}
-                {p.googleRatingCount != null && (
-                  <span className="font-normal">({p.googleRatingCount})</span>
-                )}
-              </span>
-            ) : personal != null ? (
-              <span className="edge inline-flex shrink-0 items-center gap-1 border-transparent bg-want px-2 py-0.5 text-xs font-bold text-want-ink" style={{ borderRadius: 8 }}>
-                <span aria-hidden>★</span> {personal.toFixed(1)}
-              </span>
-            ) : null}
-            <span className="edge ml-auto inline-flex shrink-0 items-center gap-1 border-transparent bg-been px-2 py-1 text-[11px] font-bold text-been-ink" style={{ borderRadius: 999 }}>
-              🔖 Saved
-            </span>
-          </div>
-          <p className="mt-0.5 truncate text-xs text-muted">
-            {p.address ?? "Paris"} • {p.priceLevel?.includes("$") ? p.priceLevel : "$$$"}
-          </p>
-          <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[#7a4a00]">
-            <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
-            No Reservations • Line up 6:45 PM
-          </p>
-        </div>
-        {onClose && (
-          <button type="button" onClick={onClose} aria-label="Close preview" className="-mr-1 -mt-1 h-8 w-8 shrink-0 text-lg text-muted">
-            ×
-          </button>
-        )}
+    <div
+      className="edge relative border-accent bg-surface p-4 shadow-theme will-change-transform"
+      style={{
+        borderRadius: 16,
+        borderWidth: 2,
+        transform: dismissing ? undefined : `translateY(${dragY}px)`,
+        opacity: dismissing ? 0 : dragging ? Math.max(0.35, 1 - dragY / 500) : 1,
+        transition: dragging ? "none" : "transform 220ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms",
+      }}
+    >
+      <div
+        className="cursor-grab touch-none select-none px-4 py-3 active:cursor-grabbing"
+        onPointerDown={(e) => {
+          try {
+            (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+          } catch {
+            // ignore capture failures; drag still tracks via move/up handlers
+          }
+          onDragStart(e.clientY);
+        }}
+        onPointerMove={(e) => onDragMove(e.clientY)}
+        onPointerUp={() => onDragEnd()}
+        onPointerCancel={() => onDragEnd()}
+        role="button"
+        tabIndex={0}
+        aria-label="Drag down to close preview"
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onClose?.();
+        }}
+      >
+        <div className="mx-auto h-1.5 w-12 rounded-full bg-ink/15" aria-hidden />
       </div>
-      <div className="mt-3">
+      {onClose && (
         <button
           type="button"
-          onClick={() => onViewNotes?.(p)}
-          className="edge inline-flex min-h-[48px] w-full items-center justify-center gap-2 border-accent bg-accent px-4 text-sm font-bold text-accent-ink"
-          style={{ borderRadius: 12 }}
+          onClick={onClose}
+          aria-label="Close preview"
+          className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full text-lg text-muted hover:bg-surface-2 hover:text-ink"
         >
-          <span aria-hidden>📝</span> View Tasting Notes
+          ×
         </button>
+      )}
+      <div
+        onClick={(e) => {
+          if (!onViewNotes) return;
+          if ((e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
+          onViewNotes(p);
+        }}
+        className={onViewNotes ? "cursor-pointer" : undefined}
+      >
+        <PlaceCard
+          place={p}
+          onToggleStatus={onToggleStatus ?? (() => {})}
+          onEdit={onEdit ?? (() => {})}
+          readOnly={readOnly}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+          hidePhotos
+          actionStyle="pills"
+        />
       </div>
+      {onViewNotes && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => onViewNotes(p)}
+            className="edge inline-flex min-h-[48px] w-full items-center justify-center gap-2 border-accent bg-accent px-4 text-sm font-bold text-accent-ink"
+            style={{ borderRadius: 12 }}
+          >
+            <span aria-hidden>📝</span> View Tasting Notes
+          </button>
+        </div>
+      )}
     </div>
   );
 }

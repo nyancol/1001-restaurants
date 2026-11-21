@@ -110,10 +110,6 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted">
-        <span>© 2024 In my Belly • Paris</span>
-      </div>
-
       <FilterSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}

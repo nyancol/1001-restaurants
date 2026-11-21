@@ -77,6 +77,8 @@ interface MapViewProps {
   readOnly?: boolean;
   /** When false, pin taps only drive `onSelect` (e.g. list highlight) with no detail card on the map. */
   showDetails?: boolean;
+  /** Set false when the parent renders its own preview overlay (phone map page). */
+  showPreview?: boolean;
   onTagDefinitionsChanged?: (m: import("./TagCombobox").TagMutation) => void;
 }
 
@@ -103,6 +105,7 @@ export default function MapView({
   mapHeightClass = "h-[60dvh] min-h-96",
   readOnly,
   showDetails = true,
+  showPreview = true,
   onTagDefinitionsChanged,
 }: MapViewProps) {
   const { t } = useLanguage();
@@ -446,12 +449,19 @@ export default function MapView({
         <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm text-muted">{t["map.loading"]}</div>
       )}
       {/* Preview card docked above footer (split view only; phone uses bottom sheet) */}
-      {selected && !showDetails && (
+      {selected && !showDetails && showPreview && (
         <div className="absolute inset-x-3 bottom-3">
           <MapPreviewCard
             place={selected}
             onViewNotes={viewNotes}
             onClose={() => { onSelect(null); setEditing(false); }}
+            onToggleStatus={onFlipStatus}
+            onSaveEdit={onSaveEdit}
+            onDelete={onDelete}
+            onRefresh={onRefresh}
+            refreshing={refreshingIds?.includes(selected.id)}
+            readOnly={readOnly}
+            onTagDefinitionsChanged={onTagDefinitionsChanged}
           />
         </div>
       )}

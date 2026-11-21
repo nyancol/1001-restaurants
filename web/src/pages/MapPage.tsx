@@ -92,6 +92,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
           readOnly={false}
           mapHeightClass="h-[62dvh] min-h-[420px]"
           showDetails={false}
+          showPreview={false}
           onTagDefinitionsChanged={handleTagDefinitionsChanged}
         />
 
@@ -101,11 +102,14 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
               place={selected}
               onClose={() => setSelectedId(null)}
               onViewNotes={(p) => setNotesPlace(p)}
+              onToggleStatus={(pl) => void flipStatus(pl)}
+              onEdit={(pl) => setEditingPlace(pl)}
+              onRefresh={(pl) => refreshOne(pl)}
+              refreshing={refreshingIds.includes(selected.id)}
             />
           </div>
         )}
       </div>
-      <p className="mt-2 text-center text-[11px] text-muted">© 2024 In my Belly • Paris</p>
 
       <FilterSheet
         open={sheetOpen}
