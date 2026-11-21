@@ -2,3 +2,4 @@
 # Add entries here only for verified false positives.
 # Generate fingerprints from a scan report, e.g.:
 #   betterleaks protect --staged -v 2>&1 | head -50
+.opencode/skills/extract-static-html/SKILL.md:generic-password:161
