@@ -229,6 +229,7 @@ export const en = {
   "card.refreshingAria": "refreshing place",
   "card.website": "Website",
   "card.share": "Share Maps link",
+  "card.sharePill": "Share",
   "card.copied": "Link copied",
   "card.shareAria": "copy Google Maps link",
   "card.copiedLive": "Google Maps link copied",
@@ -236,6 +237,13 @@ export const en = {
   "card.googleUnavailable": "Google unavailable — try again later",
   "card.notAllowed": "Not allowed for this place",
   "card.refreshFailed": "Refresh failed — try again",
+
+  "hours.title": "Hours & Service",
+  "hours.openNow": "Open now",
+  "hours.closed": "Closed",
+  "hours.today": "Today",
+  "hours.showWeek": "Show full week hours",
+  "hours.hideWeek": "Hide full week hours",
 
   "map.placesMapAria": "places map",
   "map.listAria": "places list",

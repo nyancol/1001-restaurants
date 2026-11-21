@@ -231,6 +231,7 @@ export const fr: typeof en = {
   "card.refreshingAria": "actualisation du lieu",
   "card.website": "Site web",
   "card.share": "Partager le lien Maps",
+  "card.sharePill": "Partager",
   "card.copied": "Lien copié",
   "card.shareAria": "copier le lien Google Maps",
   "card.copiedLive": "Lien Google Maps copié",
@@ -238,6 +239,13 @@ export const fr: typeof en = {
   "card.googleUnavailable": "Google indisponible — réessayez plus tard",
   "card.notAllowed": "Non autorisé pour ce lieu",
   "card.refreshFailed": "Échec de l'actualisation — réessayez",
+
+  "hours.title": "Horaires",
+  "hours.openNow": "Ouvert",
+  "hours.closed": "Fermé",
+  "hours.today": "Aujourd'hui",
+  "hours.showWeek": "Voir les horaires de la semaine",
+  "hours.hideWeek": "Masquer les horaires de la semaine",
 
   "map.placesMapAria": "carte des lieux",
   "map.listAria": "liste des lieux",

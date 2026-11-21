@@ -188,35 +188,31 @@ export default function App() {
   return (
     <div className="font-body flex min-h-screen flex-col bg-bg text-ink">
       <header className="sticky top-0 z-20 border-b border-line bg-bg/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1600px] items-center gap-3 px-4 py-3 lg:px-8">
-          <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label={t["app.homeAria"]}>
-            <span className="edge radius-pill inline-flex h-10 w-10 items-center justify-center border-line bg-surface-2 text-lg" aria-hidden style={{ borderRadius: 999 }}>
+        <div className="mx-auto flex w-full max-w-[1600px] items-center gap-2 px-4 py-2.5 lg:gap-3 lg:px-8 lg:py-3">
+          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2.5" aria-label={t["app.homeAria"]}>
+            <span className="edge radius-pill inline-flex h-9 w-9 items-center justify-center border-line bg-surface-2 text-lg lg:h-10 lg:w-10" aria-hidden style={{ borderRadius: 999 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M4 10h16v2a8 8 0 0 1-8 8h0a8 8 0 0 1-8-8v-2Z" />
                 <path d="M9 10V5.5a1.5 1.5 0 0 1 3 0V10" />
                 <path d="M12 20v1" />
               </svg>
             </span>
-            <span className="leading-tight">
-              <span className="font-display block text-[22px] font-semibold tracking-tight text-ink">{t["app.title"]}</span>
-              <span className="block text-xs text-muted">Personal dining journal &amp; shared taste</span>
+            <span className="min-w-0 leading-tight">
+              <span className="font-display block truncate text-[19px] font-bold tracking-tight text-ink lg:text-[22px] lg:font-semibold">{t["app.title"]}</span>
             </span>
           </Link>
-          <div className="ml-auto flex min-w-0 items-center gap-2.5 pl-2">
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 pl-2 lg:gap-2.5">
             <Link
               to="/add"
-              className="edge inline-flex min-h-[44px] shrink-0 items-center gap-1.5 border-accent bg-accent px-4 text-sm font-semibold text-accent-ink shadow-theme"
+              className="edge inline-flex min-h-[36px] shrink-0 items-center gap-1 border-accent bg-accent px-3 text-xs font-bold text-accent-ink shadow-theme lg:min-h-[44px] lg:px-4 lg:text-sm lg:font-semibold"
               style={{ borderRadius: 999 }}
             >
-              <span aria-hidden>🍴</span> + New Memory
+              <span aria-hidden className="text-base leading-none">+</span> Memory
             </Link>
-            <div className="hidden min-w-0 items-center gap-2 sm:flex">
-              <span className="edge inline-flex h-9 w-9 shrink-0 items-center justify-center border-line bg-surface-2 text-xs font-bold text-ink" style={{ borderRadius: 999 }} aria-hidden>
-                {(user.displayName ?? "C").slice(0, 1).toUpperCase()}
-              </span>
-              <span className="hidden max-w-[140px] truncate text-sm font-semibold text-ink md:block" title={user.displayName ?? t["app.meFallback"]}>{user.displayName ?? t["app.meFallback"]}</span>
-            </div>
-            <button type="button" onClick={logout} aria-label={t["app.logout"]} title={t["app.logout"]} className="edge radius-input inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center border-line bg-surface px-2 text-xs text-muted hover:text-ink">
+            <span className="edge inline-flex h-8 w-8 shrink-0 items-center justify-center border-line bg-surface-2 text-xs font-bold text-ink lg:h-9 lg:w-9" style={{ borderRadius: 999 }} aria-hidden title={user.displayName ?? t["app.meFallback"]}>
+              {(user.displayName ?? "C").slice(0, 1).toUpperCase()}
+            </span>
+            <button type="button" onClick={logout} aria-label={t["app.logout"]} title={t["app.logout"]} className="edge radius-input hidden min-h-[40px] min-w-[40px] shrink-0 items-center justify-center border-line bg-surface px-2 text-xs text-muted hover:text-ink sm:inline-flex">
               <span aria-hidden>⏻</span>
               <span className="ml-1 hidden xl:inline">{t["app.logout"]}</span>
             </button>

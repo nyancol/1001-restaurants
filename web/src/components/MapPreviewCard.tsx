@@ -7,7 +7,8 @@ interface Props {
 }
 
 export default function MapPreviewCard({ place: p, onViewNotes, onClose }: Props) {
-  const rating = p.rating ?? p.googleRating ?? null;
+  const google = p.googleRating ?? null;
+  const personal = p.rating ?? null;
   const area = p.address ? p.address.split(",").slice(0, 2).join(",") : "Paris";
   return (
     <div className="edge radius-card border-line bg-surface p-3 shadow-theme" style={{ borderRadius: 16 }}>
@@ -18,11 +19,18 @@ export default function MapPreviewCard({ place: p, onViewNotes, onClose }: Props
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-display truncate text-lg font-semibold text-ink">{p.name}</h3>
-            {rating != null && (
+            {google != null ? (
               <span className="edge ml-auto inline-flex shrink-0 items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-xs font-bold text-ink" style={{ borderRadius: 999 }}>
-                ★ {typeof rating === "number" ? rating.toFixed(1) : rating}
+                ★ {typeof google === "number" ? google.toFixed(1) : google}
+                {p.googleRatingCount != null && (
+                  <span className="font-normal text-muted">({p.googleRatingCount})</span>
+                )}
               </span>
-            )}
+            ) : personal != null ? (
+              <span className="edge ml-auto inline-flex shrink-0 items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-xs font-bold text-ink" style={{ borderRadius: 999 }}>
+                ★ {typeof personal === "number" ? personal.toFixed(1) : personal}
+              </span>
+            ) : null}
           </div>
           <p className="mt-0.5 truncate text-xs text-muted">{area} • Seafood &amp; Natural Wine Bar • $$$</p>
         </div>
