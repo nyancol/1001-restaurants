@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import FilterBar from "../components/FilterBar";
 import FeedHeader, { sortPlaces, type SortId, type ViewMode } from "../components/FeedHeader";
 import MapView from "../components/MapView";
@@ -86,15 +85,6 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
         {/* Center feed */}
         <section aria-label={t["map.listAria"]} className="min-w-0">
           <FeedHeader total={places.length} sort={sort} setSort={setSort} viewMode={viewMode} setViewMode={setViewMode} />
-          {!readOnly && (
-            <Link
-              to="/add"
-              className="edge mb-4 hidden min-h-[44px] w-full items-center justify-center border-accent bg-accent text-sm font-semibold text-accent-ink lg:inline-flex"
-              style={{ borderRadius: 12 }}
-            >
-              {t["action.addPlacePlus"]}
-            </Link>
-          )}
           <p className="mb-2 text-xs text-muted">Viewing {scopeName} · {locatedCount} shown{unlocatedCount > 0 ? ` · ${unlocatedCount} hidden` : ""}{readOnly ? " · read-only" : ""}</p>
           <PlaceListPane
             places={sorted}

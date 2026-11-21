@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import FilterBar from "../components/FilterBar";
 import FeedHeader, { sortPlaces, type SortId, type ViewMode } from "../components/FeedHeader";
 import OwnerPicker from "../components/OwnerPicker";
@@ -52,15 +51,6 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt}
         statusCounts={{ all: places.length, want: wantCount, been: beenCount }}
       />
-      {!readOnly && (
-        <Link
-          to="/add"
-          className="edge mb-3 inline-flex min-h-[48px] w-full items-center justify-center border-accent bg-accent text-sm font-semibold text-accent-ink"
-          style={{ borderRadius: 12 }}
-        >
-          {t["action.addPlacePlus"]}
-        </Link>
-      )}
       <div className="mb-4">
         <ViewToggle />
       </div>

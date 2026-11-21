@@ -40,7 +40,6 @@ export const fr: typeof en = {
   "view.list": "Liste",
   "view.map": "Carte",
 
-  "action.addPlacePlus": "+ Ajouter un lieu",
   "action.addPlace": "Ajouter un lieu",
 
   "empty.noPlaces": "Aucun lieu pour le moment",

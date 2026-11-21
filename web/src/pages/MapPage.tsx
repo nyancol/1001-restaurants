@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { Link } from "react-router-dom";
 import FilterBar from "../components/FilterBar";
 import MapView from "../components/MapView";
 import type { TagMutation } from "../components/TagCombobox";
@@ -53,14 +52,6 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
         <OwnerPicker owner={owner} setOwner={setOwner} />
       </div>
       <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt} statusCounts={{ all: places.length, want: wantCount, been: beenCount }} />
-      {!readOnly && (
-        <Link
-          to="/add"
-          className="edge radius-input mb-3 inline-flex min-h-[48px] w-full items-center justify-center border-accent bg-accent text-sm font-medium text-accent-ink"
-        >
-          {t["action.addPlacePlus"]}
-        </Link>
-      )}
       <div className="mb-4">
         <ViewToggle />
       </div>

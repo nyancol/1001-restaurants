@@ -38,7 +38,6 @@ export const en = {
   "view.list": "List",
   "view.map": "Map",
 
-  "action.addPlacePlus": "+ Add a place",
   "action.addPlace": "Add a place",
 
   "empty.noPlaces": "No places yet",
