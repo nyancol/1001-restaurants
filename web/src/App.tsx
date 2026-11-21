@@ -4,7 +4,6 @@ import AddPage from "./pages/AddPage";
 import ListPage from "./pages/ListPage";
 import { getMe, UnauthorizedError } from "./lib/api";
 import { useMediaQuery } from "./lib/useMediaQuery";
-import ThemeSwitcher from "./theme/ThemeSwitcher";
 import LanguageSwitcher from "./i18n/LanguageSwitcher";
 import { useLanguage } from "./i18n/LanguageContext";
 
@@ -256,7 +255,6 @@ export default function App() {
             <span>© 2024 {t["app.title"]}</span>
           </span>
           <span className="flex w-full items-center gap-2 pt-1">
-            <ThemeSwitcher />
             <LanguageSwitcher />
           </span>
         </div>

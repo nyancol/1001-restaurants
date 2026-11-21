@@ -1,4 +1,0 @@
-/* Generic light fallback (lower specificity than [data-theme][data-mode]). */
-[data-mode="light"] {
-  color-scheme: light;
-}

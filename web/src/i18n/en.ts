@@ -13,13 +13,6 @@ export const en = {
   "app.meFallback": "me",
   "app.splitLoading": "Loading…",
 
-  "theme.groupAria": "theme",
-  "theme.modeAria": "mode",
-  "theme.xp": "XP",
-  "theme.retro": "Retro",
-  "theme.botanical": "Botanical",
-  "theme.light": "Light",
-  "theme.dark": "Dark",
   "language.groupAria": "language",
 
   "scope.me": "Me",

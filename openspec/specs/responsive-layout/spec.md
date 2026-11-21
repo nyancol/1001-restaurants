@@ -37,4 +37,4 @@ The system SHALL widen the app shell and header to full width on desktop viewpor
 
 #### Scenario: Header widens
 - **WHEN** the user views any page on a desktop viewport
-- **THEN** the header spans the full shell width with branding, result count, theme switcher, and user actions visible
+- **THEN** the header spans the full shell width with branding, result count, and user actions visible

@@ -15,13 +15,6 @@ export const fr: typeof en = {
   "app.meFallback": "moi",
   "app.splitLoading": "Chargement…",
 
-  "theme.groupAria": "thème",
-  "theme.modeAria": "mode",
-  "theme.xp": "XP",
-  "theme.retro": "Rétro",
-  "theme.botanical": "Botanique",
-  "theme.light": "Clair",
-  "theme.dark": "Sombre",
   "language.groupAria": "langue",
 
   "scope.me": "Moi",

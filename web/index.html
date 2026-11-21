@@ -10,20 +10,6 @@
       href="https://fonts.googleapis.com/css2?family=Literata:wght@400;500;600;700&family=Nunito+Sans:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <script>
-      try {
-        var t = localStorage.getItem("oyster-theme") || "botanical";
-        var m = localStorage.getItem("oyster-mode");
-        if (m !== "light" && m !== "dark") {
-          m = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        }
-        document.documentElement.dataset.theme = t;
-        document.documentElement.dataset.mode = m;
-      } catch (e) {
-        document.documentElement.dataset.theme = "botanical";
-        document.documentElement.dataset.mode = "light";
-      }
-    </script>
   </head>
   <body>
     <div id="root"></div>

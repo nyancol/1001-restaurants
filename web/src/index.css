@@ -1,10 +1,6 @@
 @import "tailwindcss";
 @import "./theme/tokens.css";
 @import "./theme/themes/botanical.css";
-@import "./theme/themes/xp.css";
-@import "./theme/themes/retro.css";
-@import "./theme/modes/light.css";
-@import "./theme/modes/dark.css";
 
 /* Delete-confirm dialog motion (respects reduced motion) */
 @keyframes dialog-fade-in {

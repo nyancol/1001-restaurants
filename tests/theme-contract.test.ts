@@ -35,15 +35,13 @@ const CONTRACT = [
 ];
 
 describe("theme contract", () => {
-  it("every theme file defines every contract var", () => {
+  it("the single botanical theme defines every contract var", () => {
     const dir = join(__dirname, "..", "web", "src", "theme", "themes");
     const files = readdirSync(dir).filter((f) => f.endsWith(".css"));
-    expect(files.length).toBeGreaterThanOrEqual(2);
-    for (const f of files) {
-      const css = readFileSync(join(dir, f), "utf8");
-      for (const v of CONTRACT) {
-        expect(css.includes(v), `${f} missing ${v}`).toBe(true);
-      }
+    expect(files).toEqual(["botanical.css"]);
+    const css = readFileSync(join(dir, files[0]), "utf8");
+    for (const v of CONTRACT) {
+      expect(css.includes(v), `${files[0]} missing ${v}`).toBe(true);
     }
   });
 });

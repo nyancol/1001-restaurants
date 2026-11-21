@@ -65,7 +65,7 @@ export function iconSvgFor(icon: string): string {
 }
 
 /** Mirror of CSS contract for canvas pins. Single neutral fill. */
-export function pinsFor(_theme: string, _mode: string, _iconOrStatus: string): string {
+export function pinsFor(_iconOrStatus: string): string {
   return PIN_FILL;
 }
 
@@ -85,14 +85,14 @@ export function knownIcons(): string[] {
   return [...ICONS];
 }
 
-async function addImage(map: any, mode: string, name: string, url: string): Promise<void> {
-  if (ADDED.has(`${mode}:${name}`) && map.hasImage?.(name)) return;
+async function addImage(map: any, name: string, url: string): Promise<void> {
+  if (ADDED.has(name) && map.hasImage?.(name)) return;
   await new Promise<void>((resolve) => {
     const img = new Image(36, 48);
     img.onload = () => {
       try {
         if (!map.hasImage?.(name)) map.addImage(name, img);
-        ADDED.add(`${mode}:${name}`);
+        ADDED.add(name);
       } catch {
         // ignore re-add races
       }
@@ -103,7 +103,7 @@ async function addImage(map: any, mode: string, name: string, url: string): Prom
   });
 }
 
-export async function ensurePinImages(map: any, mode: string, extraTypes: string[] = []): Promise<void> {
+export async function ensurePinImages(map: any, extraTypes: string[] = []): Promise<void> {
   const all = [...new Set([...knownIcons(), ...extraTypes.map((t) => (t ?? "").trim().toLowerCase()).filter(Boolean)])];
   const defs: [string, string][] = all.map((t) => [`drop-${t}`, dropSvg(PIN_FILL, glyphFor(t))]);
   defs.push(["drop-generic", dropSvg(PIN_FILL, "🍴")]);
@@ -114,7 +114,7 @@ export async function ensurePinImages(map: any, mode: string, extraTypes: string
   defs.push(["drop-bakery", dropSvg(PIN_FILL, glyphFor("croissant"))]);
   defs.push(["drop-WANT_TO_GO", dropSvg(PIN_FILL, glyphFor("fork"))]);
   defs.push(["drop-BEEN_TO", dropSvg(PIN_FILL, glyphFor("coffee"))]);
-  await Promise.all(defs.map(([name, url]) => addImage(map, mode, name, url)));
+  await Promise.all(defs.map(([name, url]) => addImage(map, name, url)));
 }
 
 export function pinImageFor(icon: string): string {

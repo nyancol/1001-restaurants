@@ -1,7 +1,8 @@
-/* Botanical Butter & Earth — warm tactile journal theme. Defines both modes in one file. */
+/* Botanical Butter & Earth — the single app theme. Single light scheme, no variants. */
 /* Fonts loaded via web/index.html link tags (must precede CSS @imports). */
 
-[data-theme="botanical"] {
+:root {
+  color-scheme: light;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-pill: 999px;
@@ -9,9 +10,7 @@
   --font-body: "Nunito Sans", "Avenir Next", system-ui, sans-serif;
   --font-display: Literata, Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
-}
 
-[data-theme="botanical"][data-mode="light"] {
   --bg: #fff8f0;
   --surface: #ffffff;
   --surface-2: #ffedba;
@@ -34,29 +33,4 @@
   --info-bg: #fff3d6;
   --info-ink: #414940;
   --info-line: #e3d3a8;
-}
-
-[data-theme="botanical"][data-mode="dark"] {
-  --bg: #231b00;
-  --surface: #3b2f00;
-  --surface-2: #5a4a1a;
-  --ink: #fff0c8;
-  --muted: #d8c9a3;
-  --line: #6b5c33;
-  --shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
-  --accent: #96d59e;
-  --accent-ink: #00210a;
-  --focus: #96d59e;
-  --want: #f4bd63;
-  --want-ink: #281900;
-  --been: #4f7d55;
-  --been-ink: #eaffe8;
-  --star: #f4bd63;
-  --star-idle: #6b5c33;
-  --danger-bg: #4a1f1a;
-  --danger-ink: #ffdad6;
-  --danger-line: #7a3a32;
-  --info-bg: #3b2f00;
-  --info-ink: #fff0c8;
-  --info-line: #6b5c33;
 }

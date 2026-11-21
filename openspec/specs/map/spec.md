@@ -8,7 +8,7 @@ Shows the user's own filtered places as pins so neighborhoods, not just names, d
 
 ### Requirement: Map mirrors filtered list as pins
 
-The system SHALL display a Map tab showing tip-anchored drop pins for exactly the places matching the shared filters (`status`, `tags`, `q`, `openAt`, `owner=me|<userId>`), excluding places without coordinates with a visible count. Pin fill SHALL be a single neutral color in all themes with the place icon glyph on top; `CLOSED_PERMANENTLY` pins greyed and `CLOSED_TEMPORARILY` pins in WIP styling; clusters SHALL stay count circles and the basemap SHALL stay unthemed.
+The system SHALL display a Map tab showing tip-anchored drop pins for exactly the places matching the shared filters (`status`, `tags`, `q`, `openAt`, `owner=me|<userId>`), excluding places without coordinates with a visible count. Pin fill SHALL be a single neutral color with the place icon glyph on top; `CLOSED_PERMANENTLY` pins greyed and `CLOSED_TEMPORARILY` pins in WIP styling; clusters SHALL stay count circles and the basemap SHALL stay unthemed.
 
 #### Scenario: Pins match list results
 - **WHEN** the user sets status and tag filters shared with the list
@@ -74,7 +74,7 @@ The system SHALL start centered on the user location when geolocation is granted
 - **WHEN** the user taps fit-to-results
 - **THEN** the system moves the viewport to include all current pins without touching the user dot
 ### Requirement: User location dot with accuracy halo
-The system SHALL render a persistent user-location dot with an accuracy halo in standard blue, unthemed in all themes, drawn beneath pins.
+The system SHALL render a persistent user-location dot with an accuracy halo in standard blue, drawn beneath pins.
 
 #### Scenario: Dot persists across interactions
 - **WHEN** the user pans, filters, clusters, or selects a pin

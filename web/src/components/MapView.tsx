@@ -6,7 +6,6 @@ import MapPreviewCard from "./MapPreviewCard";
 import PlaceEditor from "./PlaceEditor";
 import type { Place } from "../lib/api";
 import { ensurePinImages } from "../theme/pins";
-import { useTheme } from "../theme/ThemeContext";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useMediaQuery } from "../lib/useMediaQuery";
 
@@ -107,7 +106,6 @@ export default function MapView({
   showDetails = true,
   onTagDefinitionsChanged,
 }: MapViewProps) {
-  const { mode } = useTheme();
   const { t } = useLanguage();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
@@ -217,8 +215,7 @@ export default function MapView({
     map.on("load", () => {
       void (async () => {
         try {
-          const currentMode = document.documentElement.dataset.mode ?? "light";
-          await ensurePinImages(map, currentMode);
+          await ensurePinImages(map);
           map.addSource("places", {
             type: "geojson",
             data: { type: "FeatureCollection", features: [] },
@@ -391,17 +388,10 @@ export default function MapView({
     const fc = toGeoJSON(places);
     source.setData(fc);
     const distinct = [...new Set(places.map((p) => (p.icon ?? "fork").toLowerCase()))];
-    void ensurePinImages(map, mode, distinct);
+    void ensurePinImages(map, distinct);
     // eslint-disable-next-line no-console
     console.info(`[map] pushed ${fc.features.length} pins`);
-  }, [places, mapReady, mode]);
-
-  // Ensure drop images exist for current mode (fills encode type).
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    void ensurePinImages(map, mode);
-  }, [mode, mapReady]);
+  }, [places, mapReady]);
 
   // Highlight selection halo.
   useEffect(() => {
