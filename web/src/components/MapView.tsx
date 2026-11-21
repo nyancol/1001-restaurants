@@ -120,6 +120,7 @@ export default function MapView({
   const mapReadyRef = useRef(false);
   const locatingRef = useRef(false);
   const autoLocateDoneRef = useRef(false);
+  const userMovedRef = useRef(false);
   const pendingUserRef = useRef<UserPos | null>(null);
   const userPosRef = useRef<UserPos | null>(null);
   const errorRef = useRef(onError);
@@ -143,9 +144,11 @@ export default function MapView({
     }
   }, []);
 
-  const centerOnUser = useCallback((pos: UserPos) => {
+  const centerOnUser = useCallback((pos: UserPos, opts?: { auto?: boolean }) => {
     const map = mapRef.current;
     if (!map) return;
+    // Auto-locate must never yank the viewport after the user started exploring.
+    if (opts?.auto && userMovedRef.current) return;
     const targetZoom = Math.max(map.getZoom(), USER_ZOOM);
     map.easeTo({ center: [pos.lng, pos.lat], zoom: targetZoom });
   }, []);
@@ -168,7 +171,7 @@ export default function MapView({
         const map = mapRef.current;
         if (map && mapReadyRef.current) {
           syncUserSource(next);
-          centerOnUser(next);
+          centerOnUser(next, opts?.auto ? { auto: true } : undefined);
         } else {
           pendingUserRef.current = next;
         }
@@ -206,6 +209,13 @@ export default function MapView({
       return;
     }
     map.addControl(new NavigationControl(), "top-right");
+    // Any real user gesture wins over a pending auto-locate center.
+    map.on("dragstart", (e: any) => {
+      if (e?.originalEvent) userMovedRef.current = true;
+    });
+    map.on("zoomstart", (e: any) => {
+      if (e?.originalEvent) userMovedRef.current = true;
+    });
     map.on("error", (e: any) => {
       const msg = e?.error?.message ?? "map error";
       errorRef.current(t["map.error"](msg));
@@ -370,7 +380,7 @@ export default function MapView({
     if (!pending) return;
     pendingUserRef.current = null;
     syncUserSource(pending);
-    centerOnUser(pending);
+    centerOnUser(pending, { auto: true });
   }, [mapReady, syncUserSource, centerOnUser]);
 
   // Keep the dot source in sync (pin updates never move the viewport).

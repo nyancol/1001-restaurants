@@ -6,6 +6,7 @@ import { getMe, UnauthorizedError } from "./lib/api";
 import { useMediaQuery } from "./lib/useMediaQuery";
 import LanguageSwitcher from "./i18n/LanguageSwitcher";
 import { useLanguage } from "./i18n/LanguageContext";
+import UserMenu from "./components/UserMenu";
 
 const MapPage = lazy(() => import("./pages/MapPage"));
 const SplitPage = lazy(() => import("./pages/SplitPage"));
@@ -222,9 +223,7 @@ export default function App() {
                 <span aria-hidden className="text-base leading-none">+</span> Memory
               </button>
             )}
-            <span className="edge inline-flex h-8 w-8 shrink-0 items-center justify-center border-line bg-surface-2 text-xs font-bold text-ink lg:h-9 lg:w-9" style={{ borderRadius: 999 }} aria-hidden title={user.displayName ?? t["app.meFallback"]}>
-              {(user.displayName ?? "C").slice(0, 1).toUpperCase()}
-            </span>
+            <UserMenu displayName={user.displayName} />
             <button type="button" onClick={logout} aria-label={t["app.logout"]} title={t["app.logout"]} className="edge radius-input hidden min-h-[40px] min-w-[40px] shrink-0 items-center justify-center border-line bg-surface px-2 text-xs text-muted hover:text-ink sm:inline-flex">
               <span aria-hidden>⏻</span>
               <span className="ml-1 hidden xl:inline">{t["app.logout"]}</span>

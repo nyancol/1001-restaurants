@@ -42,10 +42,11 @@ interface Props {
   onClose: () => void;
   onEdit: (p: Place) => void;
   onToggleStatus: (p: Place) => void;
+  readOnly?: boolean;
 }
 
 /** Phone "Expanded Tasting Notes" sheet from Stitch. */
-export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStatus }: Props) {
+export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStatus, readOnly }: Props) {
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<number | null>(null);
   useEffect(
@@ -86,14 +87,23 @@ export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStat
       {place && (
         <>
           <div className="flex items-center gap-2 px-4 pb-1 pt-1">
-            <button
-              type="button"
-              onClick={() => onToggleStatus(place)}
-              className="edge inline-flex min-h-[40px] items-center gap-1.5 border-transparent bg-been px-3.5 text-sm font-bold text-been-ink"
-              style={{ borderRadius: 999 }}
-            >
-              <span aria-hidden>{been ? "✓" : "🔖"}</span> {been ? "Been" : "Want to go"}
-            </button>
+            {readOnly ? (
+              <span
+                className={`edge inline-flex min-h-[40px] items-center gap-1.5 border-transparent px-3.5 text-sm font-bold ${been ? "bg-been text-been-ink" : "bg-want text-want-ink"}`}
+                style={{ borderRadius: 999 }}
+              >
+                <span aria-hidden>{been ? "✓" : "🔖"}</span> {been ? "Been" : "Want to go"}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onToggleStatus(place)}
+                className="edge inline-flex min-h-[40px] items-center gap-1.5 border-transparent bg-been px-3.5 text-sm font-bold text-been-ink"
+                style={{ borderRadius: 999 }}
+              >
+                <span aria-hidden>{been ? "✓" : "🔖"}</span> {been ? "Been" : "Want to go"}
+              </button>
+            )}
             {rating && (
               <span className="edge inline-flex items-center gap-1 border-transparent bg-want px-2.5 py-2 text-sm font-bold text-want-ink" style={{ borderRadius: 12 }}>
                 <span aria-hidden>★</span> {rating}
@@ -155,14 +165,16 @@ export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStat
           </div>
 
           <div className="grid grid-cols-[1fr_auto] gap-2 border-t border-line/60 bg-[#fff8e8] p-4">
-            <button
-              type="button"
-              onClick={() => onEdit(place)}
-              className="edge inline-flex min-h-[52px] items-center justify-center gap-2 border-accent bg-accent px-4 text-base font-bold text-accent-ink"
-              style={{ borderRadius: 12 }}
-            >
-              <span aria-hidden>✎</span> Edit Place
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => onEdit(place)}
+                className="edge inline-flex min-h-[52px] items-center justify-center gap-2 border-accent bg-accent px-4 text-base font-bold text-accent-ink"
+                style={{ borderRadius: 12 }}
+              >
+                <span aria-hidden>✎</span> Edit Place
+              </button>
+            )}
             <button
               type="button"
               onClick={() => void share()}

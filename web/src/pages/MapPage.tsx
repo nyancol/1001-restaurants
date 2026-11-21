@@ -3,7 +3,6 @@ import MapView from "../components/MapView";
 import ViewToggle from "../components/ViewToggle";
 import SearchBar from "../components/mobile/SearchBar";
 import FilterSheet from "../components/mobile/FilterSheet";
-import PhoneMapPreview from "../components/mobile/PhoneMapPreview";
 import TastingNotesSheet from "../components/mobile/TastingNotesSheet";
 import EditPlaceSheet from "../components/mobile/EditPlaceSheet";
 import AddPlaceSheet from "../components/mobile/AddPlaceSheet";
@@ -30,7 +29,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [notesPlace, setNotesPlace] = useState<(typeof places)[number] | null>(null);
+  const [notesPlaceId, setNotesPlaceId] = useState<string | null>(null);
   const [editingPlace, setEditingPlace] = useState<(typeof places)[number] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -60,8 +59,18 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
 
   const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
   const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
+  const readOnly = owner !== "me";
   const activeFilterCount = tags.length + (openEnabled ? 1 : 0) + priceSelected.length + (status ? 1 : 0);
-  const selected = selectedId ? (filtered.find((p) => p.id === selectedId) ?? null) : (filtered[0] ?? null);
+  // Single selection surface on phone: a pin tap opens the bottom sheet directly.
+  // Derived from places so status toggles stay live while the sheet is open.
+  const notesPlace = notesPlaceId
+    ? (filtered.find((p) => p.id === notesPlaceId) ?? places.find((p) => p.id === notesPlaceId) ?? null)
+    : null;
+
+  function handleSelect(id: string | null) {
+    setSelectedId(id);
+    setNotesPlaceId(id);
+  }
 
   return (
     <div className="mx-auto w-full max-w-md bg-bg px-4 pb-8 pt-3">
@@ -87,28 +96,14 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
           onDelete={deleteOne}
           onRefresh={(p) => refreshOne(p)}
           refreshingIds={refreshingIds}
-          selectedId={selected?.id ?? null}
-          onSelect={setSelectedId}
-          readOnly={false}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+          readOnly={readOnly}
           mapHeightClass="h-[62dvh] min-h-[420px]"
           showDetails={false}
           showPreview={false}
           onTagDefinitionsChanged={handleTagDefinitionsChanged}
         />
-
-        {selected && !notesPlace && !editingPlace && (
-          <div className="absolute inset-x-3 bottom-3">
-            <PhoneMapPreview
-              place={selected}
-              onClose={() => setSelectedId(null)}
-              onViewNotes={(p) => setNotesPlace(p)}
-              onToggleStatus={(pl) => void flipStatus(pl)}
-              onEdit={(pl) => setEditingPlace(pl)}
-              onRefresh={(pl) => refreshOne(pl)}
-              refreshing={refreshingIds.includes(selected.id)}
-            />
-          </div>
-        )}
       </div>
 
       <FilterSheet
@@ -130,12 +125,19 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
 
       <TastingNotesSheet
         place={notesPlace}
-        onClose={() => setNotesPlace(null)}
+        onClose={() => {
+          setNotesPlaceId(null);
+          setSelectedId(null);
+        }}
         onEdit={(p) => {
-          setNotesPlace(null);
+          if (readOnly) return;
+          setNotesPlaceId(null);
           setEditingPlace(p);
         }}
-        onToggleStatus={(p) => void flipStatus(p)}
+        onToggleStatus={(p) => {
+          if (!readOnly) void flipStatus(p);
+        }}
+        readOnly={readOnly}
       />
 
       <EditPlaceSheet
@@ -147,6 +149,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
         onDelete={async (p) => {
           await deleteOne(p);
           if (selectedId === p.id) setSelectedId(null);
+          if (notesPlaceId === p.id) setNotesPlaceId(null);
         }}
         onTagDefinitionsChanged={handleTagDefinitionsChanged}
       />

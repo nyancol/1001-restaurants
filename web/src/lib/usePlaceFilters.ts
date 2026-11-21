@@ -58,6 +58,13 @@ export function usePlaceFilters(): PlaceFilters {
   const [openAt, setOpenAt] = useState(openAtParam);
   const [price, setPrice] = useState(priceParam);
 
+  // Adopt external `?owner=` changes (e.g. header user menu) so list + map
+  // follow without a reload. Local picks flow through the same URL sync below.
+  useEffect(() => {
+    setOwner((prev) => (prev !== ownerParam ? ownerParam : prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownerParam]);
+
   const debouncedQ = useDebouncedValue(q, 300);
 
   // Sync state → URL. `me` is omitted to keep existing URLs clean.

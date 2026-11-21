@@ -62,6 +62,7 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
 
   const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
   const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
+  const readOnly = owner !== "me";
   const activeFilterCount = tags.length + (openEnabled ? 1 : 0) + priceSelected.length + (status ? 1 : 0);
 
   return (
@@ -99,11 +100,16 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
               <PhonePlaceCard
                 place={p}
                 selected={editingPlace?.id === p.id}
-                onToggleStatus={(pl) => void flipStatus(pl)}
-                onEdit={(pl) => setEditingPlace(pl)}
+                onToggleStatus={(pl) => {
+                  if (!readOnly) void flipStatus(pl);
+                }}
+                onEdit={(pl) => {
+                  if (!readOnly) setEditingPlace(pl);
+                }}
                 onOpen={(pl) => setNotesPlace(pl)}
                 onRefresh={(pl) => refreshOne(pl)}
                 refreshing={refreshingIds.includes(p.id)}
+                readOnly={readOnly}
               />
             </div>
           ))}
@@ -131,10 +137,14 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         place={notesPlace}
         onClose={() => setNotesPlace(null)}
         onEdit={(p) => {
+          if (readOnly) return;
           setNotesPlace(null);
           setEditingPlace(p);
         }}
-        onToggleStatus={(p) => void flipStatus(p)}
+        onToggleStatus={(p) => {
+          if (!readOnly) void flipStatus(p);
+        }}
+        readOnly={readOnly}
       />
 
       <EditPlaceSheet
