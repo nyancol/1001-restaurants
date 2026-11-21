@@ -210,24 +210,11 @@ export default function App() {
             >
               <span aria-hidden>🍴</span> + New Memory
             </Link>
-            <button
-              type="button"
-              aria-label="Notifications"
-              title="Notifications"
-              className="edge relative inline-flex h-10 w-10 shrink-0 items-center justify-center border-line bg-surface text-ink"
-              style={{ borderRadius: 999 }}
-            >
-              <span aria-hidden>🔔</span>
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" aria-hidden />
-            </button>
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <span className="edge inline-flex h-9 w-9 shrink-0 items-center justify-center border-line bg-surface-2 text-xs font-bold text-ink" style={{ borderRadius: 999 }} aria-hidden>
                 {(user.displayName ?? "C").slice(0, 1).toUpperCase()}
               </span>
-              <span className="hidden min-w-0 leading-tight md:block">
-                <span className="block max-w-[140px] truncate text-sm font-semibold text-ink" title={user.displayName ?? t["app.meFallback"]}>{user.displayName ?? t["app.meFallback"]}</span>
-                <span className="block text-[11px] text-muted">Paris • journal</span>
-              </span>
+              <span className="hidden max-w-[140px] truncate text-sm font-semibold text-ink md:block" title={user.displayName ?? t["app.meFallback"]}>{user.displayName ?? t["app.meFallback"]}</span>
             </div>
             <button type="button" onClick={logout} aria-label={t["app.logout"]} title={t["app.logout"]} className="edge radius-input inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center border-line bg-surface px-2 text-xs text-muted hover:text-ink">
               <span aria-hidden>⏻</span>
