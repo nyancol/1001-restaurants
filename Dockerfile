@@ -39,7 +39,13 @@ ENV NODE_ENV=production \
 RUN groupadd -r app && useradd -r -g app app \
   && mkdir -p /data /app/data && chown -R app:app /data /app
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev || npm install --omit=dev
+# better-sqlite3 ships no prebuilt binary for this Node major, so it compiles
+# from source here too — same toolchain as the build stage, purged afterwards
+# to keep the runtime image lean.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && (npm ci --omit=dev || npm install --omit=dev) \
+  && apt-get purge -y --auto-remove python3 make g++ \
+  && rm -rf /var/lib/apt/lists/* /root/.npm
 # Migrations are embedded in dist (src/db/index.ts), no drizzle/ dir needed.
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
