@@ -124,6 +124,21 @@ describe("places API auth + ownership", () => {
     expect(bobs.json().places.map((p: any) => p.name)).toEqual(["B1"]);
   });
 
+  it("filters by price tier and hides unknown prices", async () => {
+    const a = await cookieFor(ALICE);
+    await app.inject({ method: "POST", url: "/api/places", headers: { cookie: a }, payload: { name: "Cheap", icon: "fork", priceLevel: "PRICE_LEVEL_INEXPENSIVE" } });
+    await app.inject({ method: "POST", url: "/api/places", headers: { cookie: a }, payload: { name: "Mid", icon: "fork", priceLevel: "PRICE_LEVEL_MODERATE" } });
+    await app.inject({ method: "POST", url: "/api/places", headers: { cookie: a }, payload: { name: "Pricy", icon: "fork", priceLevel: "€€€" } });
+    await app.inject({ method: "POST", url: "/api/places", headers: { cookie: a }, payload: { name: "Unknown", icon: "fork" } });
+    const mid = await app.inject({ method: "GET", url: "/api/places?price=%24%24", headers: { cookie: a } });
+    expect(mid.statusCode).toBe(200);
+    expect(mid.json().places.map((p: any) => p.name)).toEqual(["Mid"]);
+    const cheap = await app.inject({ method: "GET", url: "/api/places?price=1", headers: { cookie: a } });
+    expect(cheap.json().places.map((p: any) => p.name)).toEqual(["Cheap"]);
+    const unfiltered = await app.inject({ method: "GET", url: "/api/places", headers: { cookie: a } });
+    expect(unfiltered.json().places.map((p: any) => p.name).sort()).toEqual(["Cheap", "Mid", "Pricy", "Unknown"]);
+  });
+
   it("scopes tags to own places ranked by own total count", async () => {
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);

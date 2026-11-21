@@ -10,12 +10,12 @@ import { displayNameFor, useUsers } from "../lib/useUsers";
 import { useLanguage } from "../i18n/LanguageContext";
 
 export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void }) {
-  const { owner, setOwner, statusParam, tagsParam, qParam, openAtParam, openNowParam, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt } = usePlaceFilters();
+  const { owner, setOwner, statusParam, tagsParam, qParam, openAtParam, openNowParam, priceParam, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, price, setPrice } = usePlaceFilters();
   const { me, users } = useUsers();
   const { t } = useLanguage();
 
   const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds, fetchList } = usePlaces(
-    { owner, status: statusParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam },
+    { owner, status: statusParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam, price: priceParam },
     onUnauthorized,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -51,7 +51,8 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
       <div className="mb-3">
         <OwnerPicker owner={owner} setOwner={setOwner} />
       </div>
-      <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt} statusCounts={{ all: places.length, want: wantCount, been: beenCount }} />
+      <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt}
+              price={price} setPrice={setPrice} statusCounts={{ all: places.length, want: wantCount, been: beenCount }} />
       <div className="mb-4">
         <ViewToggle />
       </div>
