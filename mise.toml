@@ -1,11 +1,12 @@
 [tools]
-node = "24.22.2"
+node = "26.13.1"
 betterleaks = "1.10.1"
 # opencode (sst/opencode v2, npm backend — explicit to avoid clash with aqua:anomalyco/opencode v1)
-"npm:@opencode/cli" = "2.2.6"
+"npm:@opencode/cli" = "2.3.2"
 # openspec (spec-driven development CLI)
-"npm:@fission-ai/openspec" = "1.16.1"
-"npm:firecrawl-cli" = "1.29.0"
+"npm:@fission-ai/openspec" = "2.1.1"
+"npm:firecrawl-cli" = "1.30.0"
+"npm:@google/stitch" = "latest"
 
 # ── Git hooks ───────────────────────────────────────────────────────────────
 # Versioned hooks live in .githooks/ (betterleaks pre-commit). Run once per clone:
