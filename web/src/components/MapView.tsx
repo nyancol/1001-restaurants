@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GeoJSONSource, LngLatBounds, Map as MapLibreMap, NavigationControl, setWorkerUrl } from "maplibre-gl";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { GeoJSONSource, Map as MapLibreMap, NavigationControl, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import PlaceCard from "./PlaceCard";
+import MapPreviewCard from "./MapPreviewCard";
 import PlaceEditor from "./PlaceEditor";
 import type { Place } from "../lib/api";
 import { ensurePinImages } from "../theme/pins";
-import { useTheme } from "../theme/ThemeContext";
 import { useLanguage } from "../i18n/LanguageContext";
-import { useMediaQuery } from "../lib/useMediaQuery";
 
 const PARIS = { lng: 2.3522, lat: 48.8566, zoom: 11.5 };
 const USER_ZOOM = 14;
@@ -67,7 +66,7 @@ interface MapViewProps {
   loading: boolean;
   onError: (msg: string) => void;
   onFlipStatus: (p: Place) => void;
-  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) => Promise<void>;
+  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) => Promise<void>;
   onDelete?: (p: Place) => Promise<void> | void;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshingIds?: string[];
@@ -78,6 +77,8 @@ interface MapViewProps {
   readOnly?: boolean;
   /** When false, pin taps only drive `onSelect` (e.g. list highlight) with no detail card on the map. */
   showDetails?: boolean;
+  /** Set false when the parent renders its own preview overlay (phone map page). */
+  showPreview?: boolean;
   onTagDefinitionsChanged?: (m: import("./TagCombobox").TagMutation) => void;
 }
 
@@ -85,9 +86,9 @@ interface MapViewProps {
  * MapLibre map with pins, clusters, user dot, and detail surface.
  * Shared by the phone Map page and the desktop split pane. The detail
  * surface is a bottom sheet on phone and — when `showDetails` is true —
- * a right-docked panel on desktop via responsive classes; `fitToResults`
- * biases padding accordingly. Split view sets `showDetails={false}` so a
- * pin tap only highlights the matching list card.
+ * a right-docked panel on desktop via responsive classes. Split view
+ * sets `showDetails={false}` so a pin tap only highlights the matching
+ * list card.
  */
 export default function MapView({
   places,
@@ -104,11 +105,10 @@ export default function MapView({
   mapHeightClass = "h-[60dvh] min-h-96",
   readOnly,
   showDetails = true,
+  showPreview = true,
   onTagDefinitionsChanged,
 }: MapViewProps) {
-  const { mode } = useTheme();
   const { t } = useLanguage();
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -127,7 +127,6 @@ export default function MapView({
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
 
-  const located = useMemo(() => places.filter((p) => p.lat != null && p.lng != null), [places]);
   const selected = selectedId ? (places.find((p) => p.id === selectedId) ?? null) : null;
 
   const syncUserSource = useCallback((pos: UserPos) => {
@@ -184,7 +183,7 @@ export default function MapView({
     [centerOnUser, syncUserSource, onGeoNote],
   );
 
-  // Init map once. Sticky viewport lives here — only explicit locate/fit/cluster moves it.
+  // Init map once. Sticky viewport lives here — only explicit locate/cluster moves it.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     setWorkerUrl("/maplibre-gl-worker.mjs");
@@ -216,8 +215,7 @@ export default function MapView({
     map.on("load", () => {
       void (async () => {
         try {
-          const currentMode = document.documentElement.dataset.mode ?? "light";
-          await ensurePinImages(map, currentMode);
+          await ensurePinImages(map);
           map.addSource("places", {
             type: "geojson",
             data: { type: "FeatureCollection", features: [] },
@@ -390,17 +388,10 @@ export default function MapView({
     const fc = toGeoJSON(places);
     source.setData(fc);
     const distinct = [...new Set(places.map((p) => (p.icon ?? "fork").toLowerCase()))];
-    void ensurePinImages(map, mode, distinct);
+    void ensurePinImages(map, distinct);
     // eslint-disable-next-line no-console
     console.info(`[map] pushed ${fc.features.length} pins`);
-  }, [places, mapReady, mode]);
-
-  // Ensure drop images exist for current mode (fills encode type).
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    void ensurePinImages(map, mode);
-  }, [mode, mapReady]);
+  }, [places, mapReady]);
 
   // Highlight selection halo.
   useEffect(() => {
@@ -410,23 +401,7 @@ export default function MapView({
     map.setFilter("pins-selected", ["all", ["!", ["has", "point_count"]], ["==", ["get", "id"], selectedId ?? ""]]);
   }, [selectedId, mapReady]);
 
-  function fitToResults() {
-    const map = mapRef.current;
-    if (!map || !located.length) return;
-    const bounds = new LngLatBounds();
-    for (const p of located) bounds.extend([p.lng as number, p.lat as number]);
-    map.fitBounds(bounds, {
-      padding: {
-        top: 60,
-        bottom: !isDesktop && selected && showDetails ? 260 : 60,
-        left: 40,
-        right: isDesktop && selected && showDetails ? 420 : 40,
-      },
-      maxZoom: 15,
-    });
-  }
-
-  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) {
+  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) {
     setEditing(false);
     try {
       await onSaveEdit(p, patch);
@@ -446,10 +421,18 @@ export default function MapView({
     }
   }
 
+  function viewNotes(p: Place) {
+    onSelect(p.id);
+    // Scroll matching feed card into view (desktop split).
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-place-id="${CSS.escape(p.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
   return (
-    <div className="edge radius-card relative overflow-hidden border-line">
-      <div ref={containerRef} className={`maplibre-themed w-full ${mapHeightClass}`} aria-label={t["map.placesMapAria"]} />
-      {/* Floating map actions top-left: NavigationControl lives top-right, so this avoids overlap */}
+    <div className="edge relative overflow-hidden border-line bg-surface-2/40" style={{ borderRadius: 16 }}>
+      <div ref={containerRef} className={`maplibre-themed w-full ${mapHeightClass}`} aria-label={t["map.placesMapAria"]} style={{ borderRadius: 16 }} />
+      {/* Locate-me action; zoom comes from the built-in NavigationControl (top-right) */}
       <div className="absolute left-3 top-3 flex flex-col gap-2">
         <button
           type="button"
@@ -457,23 +440,30 @@ export default function MapView({
           disabled={locating}
           aria-label={t["map.locateMe"]}
           title={t["map.locateMeTitle"]}
-          className="edge radius-input inline-flex min-h-[48px] min-w-[48px] items-center justify-center border-line bg-surface/95 text-lg text-ink shadow-theme backdrop-blur disabled:opacity-40"
+          className="edge radius-input inline-flex min-h-[44px] min-w-[44px] items-center justify-center border-line bg-surface/95 text-base text-ink shadow-theme backdrop-blur disabled:opacity-40"
         >
           {locating ? "…" : "◎"}
-        </button>
-        <button
-          type="button"
-          onClick={fitToResults}
-          disabled={!located.length}
-          aria-label={t["map.fitAria"]}
-          title={t["map.fitTitle"]}
-          className="edge radius-input inline-flex min-h-[48px] min-w-[48px] items-center justify-center border-line bg-surface/95 text-lg text-ink shadow-theme backdrop-blur disabled:opacity-40"
-        >
-          ⤢
         </button>
       </div>
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm text-muted">{t["map.loading"]}</div>
+      )}
+      {/* Preview card docked above footer (split view only; phone uses bottom sheet) */}
+      {selected && !showDetails && showPreview && (
+        <div className="absolute inset-x-3 bottom-3">
+          <MapPreviewCard
+            place={selected}
+            onViewNotes={viewNotes}
+            onClose={() => { onSelect(null); setEditing(false); }}
+            onToggleStatus={onFlipStatus}
+            onSaveEdit={onSaveEdit}
+            onDelete={onDelete}
+            onRefresh={onRefresh}
+            refreshing={refreshingIds?.includes(selected.id)}
+            readOnly={readOnly}
+            onTagDefinitionsChanged={onTagDefinitionsChanged}
+          />
+        </div>
       )}
       {selected && showDetails && (
         <div className="radius-card absolute inset-x-0 bottom-0 max-h-[55%] overflow-y-auto border-t border-line bg-surface p-3 shadow-theme lg:inset-x-auto lg:bottom-3 lg:right-3 lg:top-3 lg:max-h-none lg:w-96 lg:border lg:pt-2">

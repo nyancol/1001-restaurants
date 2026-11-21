@@ -9,6 +9,7 @@ export interface PlaceFilterParams {
   q?: string;
   openAt?: string;
   openNow?: boolean;
+  price?: string;
 }
 
 export type PlacePatch = Partial<Pick<Place, "status" | "tags" | "rating" | "note" | "icon">> &
@@ -21,7 +22,7 @@ export type PlacePatch = Partial<Pick<Place, "status" | "tags" | "rating" | "not
  */
 export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void) {
   const { t } = useLanguage();
-  const { owner, status, tags, q, openAt, openNow } = params;
+  const { owner, status, tags, q, openAt, openNow, price } = params;
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
         q: q || undefined,
         openAt: openAt || undefined,
         openNow: !openAt && openNow ? true : undefined,
+        price: price || undefined,
       });
       setPlaces(data);
     } catch (err: any) {
@@ -52,7 +54,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
     } finally {
       setLoading(false);
     }
-  }, [owner, status, tags, q, openAt, openNow]);
+  }, [owner, status, tags, q, openAt, openNow, price]);
 
   useEffect(() => {
     void fetchList();

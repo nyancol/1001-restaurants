@@ -1,0 +1,36 @@
+/* Botanical Butter & Earth — the single app theme. Single light scheme, no variants. */
+/* Fonts loaded via web/index.html link tags (must precede CSS @imports). */
+
+:root {
+  color-scheme: light;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+  --edge: 1px;
+  --font-body: "Nunito Sans", "Avenir Next", system-ui, sans-serif;
+  --font-display: Literata, Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --bg: #fff8f0;
+  --surface: #ffffff;
+  --surface-2: #ffedba;
+  --ink: #231b00;
+  --muted: #414940;
+  --line: #e3d3a8;
+  --shadow: 0 8px 24px -4px rgba(62, 53, 38, 0.07), 0 2px 6px -1px rgba(62, 53, 38, 0.04);
+  --accent: #225f33;
+  --accent-ink: #ffffff;
+  --focus: #225f33;
+  --want: #ffdeae;
+  --want-ink: #281900;
+  --been: #aeefb2;
+  --been-ink: #145224;
+  --star: #8f640e;
+  --star-idle: #c0c9bd;
+  --danger-bg: #ffdad6;
+  --danger-ink: #93000a;
+  --danger-line: #e8b4ad;
+  --info-bg: #fff3d6;
+  --info-ink: #414940;
+  --info-line: #e3d3a8;
+}

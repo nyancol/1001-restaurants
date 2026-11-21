@@ -79,6 +79,7 @@ export async function listPlaces(params: {
   q?: string;
   openAt?: string;
   openNow?: boolean;
+  price?: string;
 }): Promise<Place[]> {
   const sp = new URLSearchParams();
   sp.set("owner", params.owner ?? "me");
@@ -87,6 +88,7 @@ export async function listPlaces(params: {
   if (params.q) sp.set("q", params.q);
   if (params.openAt) sp.set("openAt", params.openAt);
   else if (params.openNow) sp.set("openNow", "1");
+  if (params.price) sp.set("price", params.price);
   const body = await apiFetch(`/api/places?${sp.toString()}`);
   const places: Place[] = body.places ?? [];
   // Newest first by creation.

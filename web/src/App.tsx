@@ -4,7 +4,6 @@ import AddPage from "./pages/AddPage";
 import ListPage from "./pages/ListPage";
 import { getMe, UnauthorizedError } from "./lib/api";
 import { useMediaQuery } from "./lib/useMediaQuery";
-import ThemeSwitcher from "./theme/ThemeSwitcher";
 import LanguageSwitcher from "./i18n/LanguageSwitcher";
 import { useLanguage } from "./i18n/LanguageContext";
 
@@ -51,6 +50,7 @@ function MapRoute({ onUnauthorized }: { onUnauthorized: () => void }) {
 
 export default function App() {
   const { t } = useLanguage();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [user, setUser] = useState<{ id: string; displayName: string | null } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
@@ -188,14 +188,46 @@ export default function App() {
 
   return (
     <div className="font-body flex min-h-screen flex-col bg-bg text-ink">
-      <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center gap-2 px-3 py-2 lg:max-w-[1600px] lg:px-6">
-          <Link to="/" className="font-display shrink-0 text-lg font-bold text-ink" aria-label={t["app.homeAria"]}>{t["app.title"]}</Link>
-          <div className="ml-auto flex min-w-0 items-center gap-1.5 pl-2 text-sm">
-            <span className="min-w-0 flex-1 truncate text-right text-muted" title={user.displayName ?? t["app.meFallback"]}>{user.displayName ?? t["app.meFallback"]}</span>
-            <button type="button" onClick={logout} aria-label={t["app.logout"]} title={t["app.logout"]} className="edge radius-input inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center border-line bg-surface px-2 text-xs">
+      <header className="sticky top-0 z-20 border-b border-line bg-bg/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center gap-2 px-4 py-2.5 lg:gap-3 lg:px-8 lg:py-3">
+          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2.5" aria-label={t["app.homeAria"]}>
+            <span className="edge radius-pill inline-flex h-9 w-9 items-center justify-center border-line bg-surface-2 text-lg lg:h-10 lg:w-10" aria-hidden style={{ borderRadius: 999 }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 10h16v2a8 8 0 0 1-8 8h0a8 8 0 0 1-8-8v-2Z" />
+                <path d="M9 10V5.5a1.5 1.5 0 0 1 3 0V10" />
+                <path d="M12 20v1" />
+              </svg>
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className="font-display block truncate text-[19px] font-bold tracking-tight text-ink lg:text-[22px] lg:font-semibold">{t["app.title"]}</span>
+            </span>
+          </Link>
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 pl-2 lg:gap-2.5">
+            {isDesktop ? (
+              <Link
+                to="/add"
+                className="edge inline-flex min-h-[36px] shrink-0 items-center gap-1 border-accent bg-accent px-3 text-xs font-bold text-accent-ink shadow-theme lg:min-h-[44px] lg:px-4 lg:text-sm lg:font-semibold"
+                style={{ borderRadius: 999 }}
+              >
+                <span aria-hidden className="text-base leading-none">+</span> Memory
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("inmybelly:open-add"))}
+                aria-label="Add a memory"
+                className="edge inline-flex min-h-[36px] shrink-0 items-center gap-1 border-accent bg-accent px-3 text-xs font-bold text-accent-ink shadow-theme lg:min-h-[44px] lg:px-4 lg:text-sm lg:font-semibold"
+                style={{ borderRadius: 999 }}
+              >
+                <span aria-hidden className="text-base leading-none">+</span> Memory
+              </button>
+            )}
+            <span className="edge inline-flex h-8 w-8 shrink-0 items-center justify-center border-line bg-surface-2 text-xs font-bold text-ink lg:h-9 lg:w-9" style={{ borderRadius: 999 }} aria-hidden title={user.displayName ?? t["app.meFallback"]}>
+              {(user.displayName ?? "C").slice(0, 1).toUpperCase()}
+            </span>
+            <button type="button" onClick={logout} aria-label={t["app.logout"]} title={t["app.logout"]} className="edge radius-input hidden min-h-[40px] min-w-[40px] shrink-0 items-center justify-center border-line bg-surface px-2 text-xs text-muted hover:text-ink sm:inline-flex">
               <span aria-hidden>⏻</span>
-              <span className="ml-1 hidden sm:inline">{t["app.logout"]}</span>
+              <span className="ml-1 hidden xl:inline">{t["app.logout"]}</span>
             </button>
           </div>
         </div>
@@ -208,10 +240,12 @@ export default function App() {
           <Route path="*" element={<HomeRoute onUnauthorized={() => setUnauthorized(true)} />} />
         </Routes>
       </main>
-      <footer className="border-t border-line bg-surface/95">
-        <div className="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-2 px-3 py-3 lg:max-w-[1600px] lg:px-6">
-          <ThemeSwitcher />
-          <LanguageSwitcher />
+      <footer className="border-t border-line bg-surface-2/60">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-5 text-sm lg:px-8">
+          <span className="font-display text-base font-semibold text-ink">{t["app.title"]}</span>
+          <span className="flex w-full items-center gap-2 pt-1">
+            <LanguageSwitcher />
+          </span>
         </div>
       </footer>
     </div>

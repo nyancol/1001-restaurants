@@ -1,9 +1,10 @@
 import type { Place } from "../lib/api";
 import { mapsUrlFor } from "../lib/api";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PIN_FILL } from "../theme/pins";
 import IconGlyph from "./IconGlyph";
 import TagDot from "./TagDot";
+import HoursSection from "./HoursSection";
 import { colorForDisplay, useTagColors } from "../lib/useTagColors";
 import { useLanguage, type Dict } from "../i18n/LanguageContext";
 
@@ -14,6 +15,10 @@ interface Props {
   readOnly?: boolean;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshing?: boolean;
+  /** Hide the photo placeholder grid (e.g. phone list follows Stitch: text-only cards). */
+  hidePhotos?: boolean;
+  /** Phone list uses Stitch pill buttons (Edit/Share) + icon actions; desktop uses compact icons. */
+  actionStyle?: "icons" | "pills";
 }
 
 const DAY_NAMES: string[][] = [
@@ -26,9 +31,8 @@ const DAY_NAMES: string[][] = [
   ["saturday", "sat", "samedi", "sam"],
 ];
 
-/** Find today's line in Google's weekdayDescriptions regardless of Sunday/Monday-first order. */
 function todayIndex(descs: string[]): number {
-  const today = new Date().getDay(); // 0=Sunday, matches Google Period.day
+  const today = new Date().getDay();
   for (let i = 0; i < descs.length; i++) {
     const low = (descs[i] ?? "").toLowerCase();
     if (!low) continue;
@@ -42,11 +46,6 @@ function openLabel(hours: Place["hours"]): string | null {
   if (!Array.isArray(descs) || !descs.length) return null;
   const idx = todayIndex(descs);
   return (idx >= 0 ? descs[idx] : descs[0]) ?? null;
-}
-
-function weekLines(hours: Place["hours"]): string[] {
-  const descs = (hours as any)?.weekdayDescriptions;
-  return Array.isArray(descs) ? descs.filter((d) => typeof d === "string" && d) : [];
 }
 
 function priceLabel(p: Place): string | null {
@@ -80,17 +79,33 @@ function priceLabel(p: Place): string | null {
   return rangeText;
 }
 
-export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, onRefresh, refreshing }: Props) {
+function ratingLabel(r: number | null): string {
+  if (r == null) return "";
+  if (r >= 4.8) return "Exceptional";
+  if (r >= 4.5) return "Superb";
+  if (r >= 4.0) return "Lovely";
+  if (r >= 3.0) return "Nice";
+  return "Noted";
+}
+
+export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, onRefresh, refreshing, hidePhotos, actionStyle = "icons" }: Props) {
   const { t } = useLanguage();
   const tagColors = useTagColors();
   const [copied, setCopied] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [busyLocal, setBusyLocal] = useState(false);
+  const copyTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (copyTimer.current) window.clearTimeout(copyTimer.current);
+  }, []);
   const busy = (refreshing ?? false) || busyLocal;
   const closed = p.businessStatus === "CLOSED_PERMANENTLY";
   const tempClosed = p.businessStatus === "CLOSED_TEMPORARILY";
   const iconId = (p.icon || "fork").toLowerCase();
-  const cardTone = closed ? "opacity-70" : "";
+  const been = p.status === "BEEN_TO";
+  const price = priceLabel(p);
+  const personal = p.rating ?? null;
+  const google = p.googleRating ?? null;
 
   async function shareMaps() {
     const url = mapsUrlFor(p);
@@ -106,7 +121,8 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
       ta.remove();
     }
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    if (copyTimer.current) window.clearTimeout(copyTimer.current);
+    copyTimer.current = window.setTimeout(() => setCopied(false), 2000);
   }
 
   function refreshMessage(err: any, googlePlaceId: string | null, t: Dict): string {
@@ -136,178 +152,214 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
   }
 
   return (
-    <div className={cardTone}>
-      {closed && <div className="edge radius-pill mb-2 inline-block border-danger-line bg-danger-bg px-2 py-0.5 text-xs font-medium text-danger-ink">{t["card.closed"]}</div>}
+    <div className={closed ? "opacity-80" : ""}>
+      {closed && <div className="edge radius-pill mb-2 inline-block border-danger-line bg-danger-bg px-2.5 py-1 text-xs font-semibold text-danger-ink">{t["card.closed"]}</div>}
       {tempClosed && (
         <div
-          className="edge radius-pill mb-2 inline-block border-want bg-want px-2 py-0.5 text-xs font-medium text-want-ink"
-          style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.08) 6px, rgba(0,0,0,0.08) 12px)" }}
+          className="edge radius-pill mb-2 inline-block border-want bg-want px-2.5 py-1 text-xs font-semibold text-want-ink"
         >
           {t["card.tempClosed"]}
         </div>
       )}
-      <div className={`flex items-start justify-between gap-2 ${closed ? "grayscale" : ""}`}>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span
-              className="edge radius-pill inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-2.5 py-1.5 text-white"
-              style={{ backgroundColor: PIN_FILL, borderColor: PIN_FILL }}
-              title={t[`icon.${iconId}`] ?? iconId}
-            >
-              <IconGlyph id={iconId} size={22} />
-            </span>
-            {readOnly ? (
-              <span
-                className={`edge radius-pill px-2 py-0.5 text-xs ${p.status === "BEEN_TO" ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}
-              >
-                {p.status === "BEEN_TO" ? t["card.beenTo"] : t["card.wantToGo"]}
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onToggleStatus(p)}
-                className={`edge radius-pill cursor-pointer px-2 py-0.5 text-xs transition-opacity hover:opacity-75 ${p.status === "BEEN_TO" ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}
-                aria-label={p.status === "WANT_TO_GO" ? t["card.markVisited"] : t["card.markWant"]}
-                title={p.status === "WANT_TO_GO" ? t["card.markVisited"] : t["card.markWant"]}
-              >
-                {p.status === "BEEN_TO" ? t["card.beenTo"] : t["card.wantToGo"]}
-              </button>
+      {/* Title row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="font-display min-w-0 flex-1 text-[22px] font-semibold leading-tight tracking-tight text-ink">{p.name}</h3>
+        {google != null && (
+          <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2.5 py-1 text-[13px] font-bold text-ink" style={{ borderRadius: 999 }}>
+            <span aria-hidden className="text-star">★</span> {typeof google === "number" ? google.toFixed(1) : google}
+            {p.googleRatingCount != null && (
+              <span className="font-normal text-muted">({p.googleRatingCount})</span>
             )}
-          </div>
-          <div className="font-display mt-1 text-base font-medium leading-tight text-ink">{p.name}</div>
-          {p.address && <div className="truncate text-sm text-muted">📍 {p.address}</div>}
-        </div>
+          </span>
+        )}
+        {google == null && personal != null && (
+          <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2.5 py-1 text-[13px] font-bold text-ink" style={{ borderRadius: 999 }} title={t["card.googleRatingTitle"]}>
+            <span aria-hidden className="text-star">★</span> {personal.toFixed(1)}
+          </span>
+        )}
+        {readOnly ? (
+          <span className={`edge inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold ${been ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`} style={{ borderRadius: 999 }}>
+            {been ? t["card.beenTo"] : t["card.wantToGo"]}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onToggleStatus(p)}
+            className={`edge inline-flex cursor-pointer items-center gap-1 px-2.5 py-1 text-xs font-semibold transition hover:brightness-95 ${been ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}
+            style={{ borderRadius: 999 }}
+            aria-label={p.status === "WANT_TO_GO" ? t["card.markVisited"] : t["card.markWant"]}
+          >
+            {been ? t["card.beenTo"] : t["card.wantToGo"]}
+          </button>
+        )}
       </div>
 
-      <dl className="mt-2 flex flex-col gap-1 text-xs">
-        {weekLines(p.hours).length > 0 && (
-          <details className="edge radius-input border-line bg-surface-2 px-2 py-1">
-            <summary className="cursor-pointer text-ink">
-              <span aria-hidden>🕒</span> {openLabel(p.hours)}
-              <span className="ml-1 text-muted">{t["card.all7days"]}</span>
-            </summary>
-            <ul className="mt-1 flex flex-col gap-0.5">
-              {weekLines(p.hours).map((d, i) => (
-                <li key={i} className={i === todayIndex(weekLines(p.hours)) ? "font-medium text-ink" : "text-muted"}>
-                  {i === todayIndex(weekLines(p.hours)) ? "▸ " : ""}{d}
-                </li>
-              ))}
-            </ul>
-            <dt className="sr-only">{t["card.hoursSr"]}</dt>
-          </details>
-        )}
-        {priceLabel(p) && (
-          <div className="flex items-center gap-1.5">
-            <span aria-hidden>💶</span>
-            <dt className="sr-only">{t["card.priceSr"]}</dt>
-            <dd className="text-ink">{priceLabel(p)}</dd>
-          </div>
-        )}
-        {(p.rating != null || p.googleRating != null) && (
-          <div className="flex flex-wrap items-center gap-2">
-            {p.rating != null && (
-              <span className="edge radius-pill border-line bg-surface-2 px-2 py-0.5 text-ink">
-                <span className="text-star">{"★".repeat(Math.max(0, Math.min(5, Math.round(p.rating))))}</span>
-                <span className="ml-1 text-muted">{t["card.you"]}</span>
-              </span>
-            )}
-            {p.googleRating != null && (
-              <span className="edge radius-pill border-line bg-surface-2 px-2 py-0.5 text-ink" title={t["card.googleRatingTitle"]}>
-                <span aria-hidden>🅖</span> {p.googleRating}{p.googleRatingCount != null ? <span className="text-muted"> ({p.googleRatingCount})</span> : null}
-              </span>
-            )}
-          </div>
-        )}
-      </dl>
+      {/* Meta line */}
+      {(p.address || price) && (
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-muted">
+          {p.address && <span className="truncate">📍 {p.address}</span>}
+          {p.address && price && <span aria-hidden>•</span>}
+          {price && <span className="font-semibold text-ink/80">{price}</span>}
+        </p>
+      )}
 
+      {/* Journal quote */}
+      {p.note && (
+        <blockquote className="mt-3 border-l-0 bg-surface-2/70 px-4 py-3 text-[15px] italic leading-relaxed text-ink/90" style={{ borderRadius: 12 }}>
+          “{p.note}”
+        </blockquote>
+      )}
+
+      {/* Photo placeholders (until photo support lands; hidden on phone list per Stitch) */}
+      {!hidePhotos && p.note && (
+        <div className="mt-3 grid grid-cols-2 gap-2" aria-hidden>
+          {[0, 1].map((i) => (
+            <div key={i} className="flex h-24 items-center justify-center bg-line/40 text-xs font-semibold uppercase tracking-wide text-muted" style={{ borderRadius: 12 }}>
+              img
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Tags */}
       {(p.tags ?? []).length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
           {(p.tags ?? []).map((tag) => (
-            <span key={tag} className="edge radius-pill inline-flex items-center gap-1.5 border-line bg-surface-2 px-2 py-0.5 text-xs text-ink">
+            <span key={tag} className="edge inline-flex items-center gap-1.5 border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink" style={{ borderRadius: 999 }}>
               <TagDot color={colorForDisplay(tag, tagColors)} />
               #{tag}
             </span>
           ))}
         </div>
       )}
-      {p.note && <div className="mt-1.5 border-l-2 border-line pl-2 text-sm text-ink">{p.note}</div>}
 
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
-        {!readOnly && (
-          <button
-            type="button"
-            className="edge radius-input inline-flex min-h-[40px] min-w-[40px] items-center justify-center border-line bg-surface px-3 text-ink"
-            onClick={() => onEdit(p)}
-            aria-label={t["card.edit"]}
-            title={t["card.edit"]}
+      {/* Footer: hours + actions */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line/70 pt-3 text-xs text-muted">
+        <span className="inline-flex min-w-0 flex-1 items-center gap-1.5">
+          <span
+            className="edge radius-pill inline-flex h-7 w-7 items-center justify-center border-line text-white"
+            style={{ backgroundColor: PIN_FILL, borderColor: PIN_FILL, borderRadius: 999 }}
+            title={t[`icon.${iconId}`] ?? iconId}
           >
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
-              <path d="m15 5 4 4" />
-            </svg>
-          </button>
-        )}
-        {!readOnly && onRefresh && (
-          <button
-            type="button"
-            className="edge radius-input inline-flex min-h-[40px] items-center justify-center gap-1.5 border-line bg-surface px-3 text-xs text-ink disabled:opacity-50"
-            onClick={() => void handleRefresh()}
-            disabled={busy || !p.googlePlaceId}
-            title={!p.googlePlaceId ? t["card.noGoogle"] : t["card.refreshTitle"]}
-            aria-label={busy ? t["card.refreshingAria"] : t["card.refreshAria"]}
-          >
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" className={busy ? "animate-spin" : undefined}>
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-              <path d="M8 16H3v5" />
-            </svg>
-            {busy ? t["card.refreshing"] : t["card.refresh"]}
-          </button>
-        )}
-        {p.websiteUri && (
-          <a
-            href={p.websiteUri}
-            target="_blank"
-            rel="noreferrer"
-            className="edge radius-input inline-flex min-h-[40px] min-w-[40px] items-center justify-center border-line bg-surface px-3 text-accent"
-            aria-label={t["card.website"]}
-            title={t["card.website"]}
-          >
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-              <path d="M2 12h20" />
-            </svg>
-          </a>
-        )}
-        {mapsUrlFor(p) && (
-          <button
-            type="button"
-            className="edge radius-input inline-flex min-h-[40px] min-w-[40px] items-center justify-center border-line bg-surface px-3 text-ink"
-            onClick={() => void shareMaps()}
-            aria-label={t["card.shareAria"]}
-            title={copied ? t["card.copied"] : t["card.share"]}
-          >
-            {copied ? (
-              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-                <circle cx="18" cy="5" r="3" />
-                <circle cx="6" cy="12" r="3" />
-                <circle cx="18" cy="19" r="3" />
-                <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
-                <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
-              </svg>
+            <IconGlyph id={iconId} size={15} />
+          </span>
+          {openLabel(p.hours) ? (
+            <HoursSection
+              place={p}
+              fallback={<span className="truncate">🕒 {openLabel(p.hours)}</span>}
+            />
+          ) : (
+            <span>{google != null && personal != null ? `🅖 ${google}${p.googleRatingCount != null ? ` (${p.googleRatingCount})` : ""}` : ratingLabel(personal)}</span>
+          )}
+        </span>
+        {!readOnly && actionStyle === "pills" && (
+          <span className="inline-flex w-full items-center gap-1.5 pt-1">
+            <button
+              type="button"
+              className="edge inline-flex min-h-[36px] items-center gap-1 border-line bg-surface-2/60 px-2.5 text-xs font-semibold text-ink hover:bg-surface-2"
+              style={{ borderRadius: 999 }}
+              onClick={() => onEdit(p)}
+              aria-label={t["card.edit"]}
+              title={t["card.edit"]}
+            >
+              <span aria-hidden>✎</span> {t["card.edit"]}
+            </button>
+            {mapsUrlFor(p) && (
+              <button
+                type="button"
+                className="edge inline-flex min-h-[36px] items-center gap-1 border-line bg-surface-2/60 px-2.5 text-xs font-semibold text-ink hover:bg-surface-2"
+                style={{ borderRadius: 999 }}
+                onClick={() => void shareMaps()}
+                aria-label={t["card.shareAria"]}
+                title={copied ? t["card.copied"] : t["card.share"]}
+              >
+                <span aria-hidden>{copied ? "✓" : "⤴"}</span> {t["card.sharePill"] ?? "Share"}
+              </button>
             )}
-          </button>
+            <span className="flex-1" />
+            {onRefresh && (
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+                onClick={() => void handleRefresh()}
+                disabled={busy || !p.googlePlaceId}
+                title={!p.googlePlaceId ? t["card.noGoogle"] : t["card.refreshTitle"]}
+                aria-label={busy ? t["card.refreshingAria"] : t["card.refreshAria"]}
+              >
+                <span aria-hidden className={busy ? "animate-spin inline-block" : "inline-block"}>↻</span>
+              </button>
+            )}
+            {p.websiteUri && (
+              <a
+                href={p.websiteUri}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+                aria-label={t["card.website"]}
+                title={t["card.website"]}
+              >
+                <span aria-hidden>↗</span>
+              </a>
+            )}
+          </span>
+        )}
+        {!readOnly && actionStyle !== "pills" && (
+          <span className="inline-flex items-center gap-1.5">
+            <button
+              type="button"
+              className="edge radius-input inline-flex h-9 min-w-[36px] items-center justify-center border-line bg-surface px-2.5 text-ink hover:bg-surface-2"
+              onClick={() => onEdit(p)}
+              aria-label={t["card.edit"]}
+              title={t["card.edit"]}
+            >
+              ✎
+            </button>
+            {onRefresh && (
+              <button
+                type="button"
+                className="edge radius-input inline-flex h-9 items-center justify-center gap-1 border-line bg-surface px-2.5 text-ink disabled:opacity-50 hover:bg-surface-2"
+                onClick={() => void handleRefresh()}
+                disabled={busy || !p.googlePlaceId}
+                title={!p.googlePlaceId ? t["card.noGoogle"] : t["card.refreshTitle"]}
+                aria-label={busy ? t["card.refreshingAria"] : t["card.refreshAria"]}
+              >
+                <span aria-hidden className={busy ? "animate-spin inline-block" : "inline-block"}>↻</span>
+              </button>
+            )}
+            {p.websiteUri && (
+              <a
+                href={p.websiteUri}
+                target="_blank"
+                rel="noreferrer"
+                className="edge radius-input inline-flex h-9 min-w-[36px] items-center justify-center border-line bg-surface px-2.5 text-accent"
+                aria-label={t["card.website"]}
+                title={t["card.website"]}
+              >
+                🌐
+              </a>
+            )}
+            {mapsUrlFor(p) && (
+              <button
+                type="button"
+                className="edge radius-input inline-flex h-9 min-w-[36px] items-center justify-center border-line bg-surface px-2.5 text-ink hover:bg-surface-2"
+                onClick={() => void shareMaps()}
+                aria-label={t["card.shareAria"]}
+                title={copied ? t["card.copied"] : t["card.share"]}
+              >
+                {copied ? "✓" : "⤴"}
+              </button>
+            )}
+          </span>
         )}
       </div>
       {refreshError && (
         <div className="edge radius-input mt-2 border-danger-line bg-danger-bg px-2 py-1 text-xs text-danger-ink" role="alert">
           {refreshError}
+        </div>
+      )}
+      {copied && (
+        <div className="edge radius-input mt-2 border-been bg-been px-2 py-1 text-xs font-semibold text-been-ink" role="status">
+          ✓ {t["card.copiedLive"]}
         </div>
       )}
       <div className="sr-only" aria-live="polite">{copied ? t["card.copiedLive"] : ""}</div>

@@ -8,7 +8,7 @@ Lets the user find their own places again and update them, filtering by what mat
 
 ### Requirement: Own list with filters
 
-The system SHALL show the user's own places by default with filters for status, tags, free text, and open-now/open-at datetime (no place-type filter). The system SHALL also support viewing a specific user via a Users scope picker (`Me (<name>)`, each other user) persisted in the URL (`owner=me|<userId>`), applying the same filters to the selected scope newest first.
+The system SHALL show the user's own places by default with filters for status, tags, free text, price level ($–$$$$), and open-now/open-at datetime (no place-type filter). The system SHALL also support viewing a specific user via a Users scope picker (`Me (<name>)`, each other user) persisted in the URL (`owner=me|<userId>`), applying the same filters to the selected scope newest first.
 
 #### Scenario: Default is own places
 - **WHEN** an authenticated user opens the list

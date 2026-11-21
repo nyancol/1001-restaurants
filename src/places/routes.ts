@@ -18,6 +18,29 @@ function parseJson(raw: unknown): any {
   try { return JSON.parse(raw); } catch { return null; }
 }
 
+/** Normalize a stored priceLevel to a 1–4 tier ($–$$$$); null when unknown. */
+export function priceTierFor(level: unknown): number | null {
+  if (typeof level !== "string" || !level) return null;
+  const v = level.trim().toUpperCase();
+  if (v === "PRICE_LEVEL_INEXPENSIVE" || v === "INEXPENSIVE" || v === "€") return 1;
+  if (v === "PRICE_LEVEL_MODERATE" || v === "MODERATE" || v === "€€") return 2;
+  if (v === "PRICE_LEVEL_EXPENSIVE" || v === "EXPENSIVE" || v === "€€€") return 3;
+  if (v === "PRICE_LEVEL_VERY_EXPENSIVE" || v === "VERY_EXPENSIVE" || v === "€€€€") return 4;
+  const dollars = (level.match(/\$/g) ?? []).length;
+  if (dollars >= 1 && dollars <= 4 && dollars === level.trim().length) return dollars;
+  return null;
+}
+
+/** Parse a `price` query value ($–$$$$ or 1–4) to a tier; null when invalid. */
+export function parsePriceFilter(raw: unknown): number | null {
+  if (typeof raw !== "string" || !raw) return null;
+  const t = raw.trim();
+  if (/^[1-4]$/.test(t)) return Number(t);
+  const dollars = (t.match(/\$/g) ?? []).length;
+  if (dollars >= 1 && dollars <= 4 && dollars === t.length) return dollars;
+  return null;
+}
+
 async function ownerNameMap(db: any): Promise<Map<string, string | null>> {
   try {
     const rows = await db.select().from(users);
@@ -268,6 +291,7 @@ export function registerPlaceRoutes(
           q: { type: "string" },
           openAt: { type: "string" },
           openNow: { type: "string" },
+          price: { type: "string" },
         },
       },
     },
@@ -308,6 +332,10 @@ export function registerPlaceRoutes(
         if (!periods || !periods.length) return false;
         return atValid ? isOpenAt(periods, at) : false;
       });
+    }
+    const priceTier = parsePriceFilter(q.price);
+    if (priceTier != null) {
+      filtered = filtered.filter((p) => priceTierFor((p as any).priceLevel) === priceTier);
     }
     return { places: filtered };
   });

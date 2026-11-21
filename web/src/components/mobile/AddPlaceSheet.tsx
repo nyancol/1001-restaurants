@@ -1,0 +1,496 @@
+import { useEffect, useState } from "react";
+import {
+  apiFetch,
+  createPlace,
+  listPlaces,
+  parseAutocomplete,
+  parseDetails,
+  patchPlace,
+  UnauthorizedError,
+  type Place,
+  type PlaceDetails,
+} from "../../lib/api";
+import BottomSheet from "./BottomSheet";
+import IconGlyph from "../IconGlyph";
+import TagCombobox, { type TagMutation } from "../TagCombobox";
+import { useLanguage } from "../../i18n/LanguageContext";
+
+const ICON_ROW = ["fork", "croissant", "coffee", "wine", "cocktail"] as const;
+
+function priceLabel(level: unknown): string | null {
+  const v = String(level ?? "").toUpperCase();
+  if (v.includes("VERY_EXPENSIVE") || v === "$$$$") return "$$$$";
+  if (v.includes("EXPENSIVE") || v === "$$$") return "$$$";
+  if (v.includes("MODERATE") || v === "$$") return "$$";
+  if (v.includes("INEXPENSIVE") || v === "$") return "$";
+  const m = String(level ?? "").match(/\$+/);
+  return m ? m[0] : null;
+}
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onSaved?: (p: Place) => void;
+  onUnauthorized: () => void;
+  onTagDefinitionsChanged?: (m: TagMutation) => void;
+}
+
+/** Phone "Add Place" sheet: slides from bottom over list/map, drag handle to close. */
+export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, onTagDefinitionsChanged }: Props) {
+  const { t } = useLanguage();
+  const [lookupText, setLookupText] = useState("");
+  const [suggestions, setSuggestions] = useState<{ placeId: string; text: string; secondary?: string }[]>([]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [icon, setIcon] = useState("wine");
+  const [status, setStatus] = useState<"WANT_TO_GO" | "BEEN_TO">("BEEN_TO");
+  const [tags, setTags] = useState<string[]>([]);
+  const [note, setNote] = useState("");
+  const [enrichment, setEnrichment] = useState<PlaceDetails | null>(null);
+  const [hoursOpen, setHoursOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setLookupText("");
+      setSuggestions([]);
+      setSuggestOpen(false);
+      setSearching(false);
+      setLookupError(null);
+      setName("");
+      setAddress("");
+      setGooglePlaceId(null);
+      setLat(null);
+      setLng(null);
+      setIcon("wine");
+      setStatus("BEEN_TO");
+      setTags([]);
+      setNote("");
+      setEnrichment(null);
+      setHoursOpen(false);
+      setSaving(false);
+      setError(null);
+    }
+  }, [open ]);
+
+  async function runSearch() {
+    const q = lookupText.trim();
+    if (q.length < 2) {
+      setLookupError(t["lookup.minChars"]);
+      return;
+    }
+    setLookupError(null);
+    setSearching(true);
+    try {
+      const body = await apiFetch(`/api/google/autocomplete?q=${encodeURIComponent(q)}`);
+      const parsed = parseAutocomplete(body);
+      setSuggestions(parsed);
+      setSuggestOpen(true);
+      if (!parsed.length) setLookupError(t["lookup.noMatches"]);
+    } catch (err: any) {
+      if (err?.status !== 503) setLookupError(t["lookup.failed"]);
+      else setLookupError(t["lookup.unavailable"]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function pick(placeId: string, label: string) {
+    setSuggestOpen(false);
+    setLookupError(null);
+    try {
+      const body = await apiFetch(`/api/google/details?placeId=${encodeURIComponent(placeId)}`);
+      const d = parseDetails(body, placeId, label);
+      handlePick(d);
+    } catch {
+      setLookupError(t["lookup.detailsFailed"]);
+      handlePick({ googlePlaceId: placeId, name: label, address: null, lat: null, lng: null });
+    }
+  }
+
+  function handlePick(d: PlaceDetails) {
+    setGooglePlaceId(d.googlePlaceId);
+    setName(d.name);
+    setLookupText(d.address ? `${d.name}, ${d.address.split(",")[0]}` : d.name);
+    setAddress(d.address ?? "");
+    setLat(d.lat);
+    setLng(d.lng);
+    if (d.icon) setIcon(d.icon);
+    setEnrichment(d);
+  }
+
+  async function handleSave() {
+    if (saving) return;
+    setError(null);
+    const finalName = (name || lookupText).trim();
+    if (!finalName) {
+      setError(t["add.nameRequired"]);
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload: any = {
+        name: finalName,
+        icon: (icon || "fork").trim().toLowerCase() || "fork",
+        status,
+        tags,
+        rating: null,
+        note: note ? note : null,
+        googlePlaceId,
+        address: address ? address : null,
+        lat,
+        lng,
+        hours: enrichment?.hours ?? null,
+        businessStatus: enrichment?.businessStatus ?? null,
+        priceLevel: enrichment?.priceLevel ?? null,
+        priceRange: enrichment?.priceRange ?? null,
+        googleRating: enrichment?.googleRating ?? null,
+        googleRatingCount: enrichment?.googleRatingCount ?? null,
+        websiteUri: enrichment?.websiteUri ?? null,
+        mapsLinks: enrichment?.mapsLinks ?? (enrichment?.googleMapsUri ? { placeUri: enrichment.googleMapsUri } : null),
+        utcOffsetMinutes: enrichment?.utcOffsetMinutes ?? null,
+      };
+      if (googlePlaceId) {
+        try {
+          const mine = await listPlaces({ owner: "me" });
+          const existing = mine.find((p) => p.googlePlaceId === googlePlaceId);
+          if (existing) {
+            const ok = window.confirm(t["add.duplicateNamed"](existing.name));
+            if (!ok) {
+              setSaving(false);
+              return;
+            }
+            const updated = await patchPlace(existing.id, payload);
+            onSaved?.(updated);
+            onClose();
+            return;
+          }
+        } catch (e: any) {
+          if (e instanceof UnauthorizedError) throw e;
+        }
+      }
+      try {
+        const created = await createPlace(payload);
+        onSaved?.(created);
+      } catch (e: any) {
+        if (e?.status === 409 && e?.body?.existingId) {
+          const ok = window.confirm(t["add.duplicateGeneric"]);
+          if (ok) {
+            const updated = await patchPlace(e.body.existingId, payload);
+            onSaved?.(updated);
+            onClose();
+            return;
+          }
+          setSaving(false);
+          return;
+        }
+        throw e;
+      }
+      onClose();
+    } catch (err: any) {
+      if (err instanceof UnauthorizedError) {
+        onUnauthorized();
+        return;
+      }
+      setError(err?.message ?? t["add.saveFailed"]);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const price = priceLabel(enrichment?.priceLevel);
+  const hoursList: string[] = Array.isArray(enrichment?.hours?.weekdayDescriptions)
+    ? enrichment.hours.weekdayDescriptions
+    : [];
+  const hoursSummary = hoursList.length > 2 ? `${hoursList[2]}${hoursList[3] ? `, ${hoursList[3]}` : ""}` : hoursList[0] ?? null;
+
+  return (
+    <BottomSheet open={open} onClose={onClose} ariaLabel="Add place">
+      <>
+        <div className="flex items-center justify-between px-4 pb-1 pt-1">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink">
+            <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-accent" /> Add place
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close add place"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-2/70 text-xl text-ink"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 pb-4" style={{ overscrollBehavior: "contain" }}>
+          {(name || lookupText) && (
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-bg">
+              <span aria-hidden className="inline-block h-2 w-2 animate-pulse rounded-full bg-been" />
+              <IconGlyph id={icon} size={15} />
+              <span>{(name || lookupText).slice(0, 24)} (Adding)</span>
+            </div>
+          )}
+
+          <div className="mb-2 flex flex-col gap-2">
+            <div className="relative flex items-center">
+              <span aria-hidden className="pointer-events-none absolute left-3.5 text-lg text-muted">⌕</span>
+              <input
+                value={lookupText}
+                onChange={(e) => setLookupText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void runSearch();
+                  } else if (e.key === "Escape") setSuggestOpen(false);
+                }}
+                placeholder="Search venue on Google / Maps..."
+                aria-label="Search venue"
+                className="edge w-full border-line bg-bg py-3 pl-10 pr-10 text-sm text-ink placeholder:text-muted"
+                style={{ borderRadius: 12 }}
+              />
+              {lookupText && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setLookupText("");
+                    setSuggestions([]);
+                    setSuggestOpen(false);
+                  }}
+                  className="absolute right-3 text-lg text-muted"
+                >
+                  ⊗
+                </button>
+              )}
+            </div>
+            {!enrichment && (
+              <button
+                type="button"
+                onClick={() => void runSearch()}
+                disabled={searching || lookupText.trim().length < 2}
+                className="edge border-accent bg-accent px-3 py-2 text-sm font-bold text-accent-ink disabled:opacity-50"
+                style={{ borderRadius: 12 }}
+              >
+                {searching ? "…" : t["lookup.search"]}
+              </button>
+            )}
+            {lookupError && <div className="text-xs text-want-ink">{lookupError}</div>}
+            {suggestOpen && suggestions.length > 0 && (
+              <ul className="edge radius-card z-10 max-h-60 w-full overflow-auto border-line bg-surface shadow-theme">
+                {suggestions.map((s) => (
+                  <li key={s.placeId}>
+                    <button
+                      type="button"
+                      className="block w-full px-3 py-2 text-left text-sm text-ink hover:bg-surface-2"
+                      onClick={() => void pick(s.placeId, s.text)}
+                    >
+                      <span className="block font-medium">{s.text}</span>
+                      {s.secondary && <span className="block text-muted">{s.secondary}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {enrichment && (
+              <div className="flex items-center justify-between rounded-lg bg-been/50 px-3 py-1.5 text-xs font-semibold text-been-ink">
+                <span className="flex min-w-0 items-center gap-1.5 truncate">
+                  <span aria-hidden>✓</span>
+                  <span className="truncate">Venue matched: <strong>{name}{address ? `, ${address.split(",").slice(-1)[0]?.trim()}` : ""}</strong></span>
+                </span>
+                <button type="button" className="ml-2 shrink-0 font-bold underline" onClick={() => setEnrichment(null)}>
+                  Change
+                </button>
+              </div>
+            )}
+          </div>
+
+          {enrichment && (
+            <div className="edge mb-4 rounded-xl border-transparent bg-surface-2/60 p-3.5">
+              <div className="mb-2.5 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-want-ink">
+                  <span aria-hidden>✪</span> Venue data (auto-fetched)
+                </span>
+                <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-muted">Read-only</span>
+              </div>
+              <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                {typeof enrichment.googleRating === "number" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-surface px-2.5 py-1 text-xs font-bold text-ink">
+                    <span aria-hidden className="text-star">★</span> {enrichment.googleRating.toFixed(1)}
+                    {typeof enrichment.googleRatingCount === "number" && (
+                      <span className="text-[11px] font-normal text-muted">({enrichment.googleRatingCount.toLocaleString()} Google reviews)</span>
+                    )}
+                  </span>
+                )}
+                {price && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-bold text-ink">
+                    <span className="text-want-ink">{price}</span>
+                    <span className="text-[11px] font-medium text-muted">Upscale Bistro</span>
+                  </span>
+                )}
+              </div>
+              {(hoursSummary || hoursList.length > 0) && (
+                <div className="flex items-start justify-between gap-2 rounded-lg bg-surface/70 p-2.5">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <span aria-hidden className="mt-0.5 shrink-0">◷</span>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="text-xs font-bold leading-tight text-ink">{hoursSummary ?? hoursList[0]}</span>
+                      <span className="text-[11px] font-medium text-muted">Tap to {hoursOpen ? "hide" : "see"} full week</span>
+                      {hoursOpen && (
+                        <ul className="mt-1 flex flex-col gap-0.5">
+                          {hoursList.map((d, i) => (
+                            <li key={i} className="text-[11px] text-muted">{d}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                  <button type="button" aria-label="Toggle hours" onClick={() => setHoursOpen((o) => !o)} className="shrink-0 text-muted">
+                    {hoursOpen ? "︿" : "﹀"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
+
+          <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void handleSave(); }}>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="add-place-name" className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-muted">
+                <span>Place name</span>
+                {enrichment && <span className="font-semibold normal-case text-accent">verified</span>}
+              </label>
+              <input
+                id="add-place-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Clamato"
+                className="edge w-full border-line bg-bg px-3.5 py-2.5 font-display text-base font-semibold text-ink"
+                style={{ borderRadius: 12 }}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="add-place-address" className="text-[11px] font-extrabold uppercase tracking-wider text-muted">
+                Address / arrondissement
+              </label>
+              <div className="relative flex items-center">
+                <span aria-hidden className="absolute left-3 text-lg text-muted">📍</span>
+                <input
+                  id="add-place-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="80 Rue de Charonne, 75011 Paris"
+                  className="edge w-full border-line bg-bg py-2.5 pl-9 pr-3.5 text-sm text-ink"
+                  style={{ borderRadius: 12 }}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">Visit status</span>
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-2/70 p-1" role="group" aria-label="Visit status">
+                <button
+                  type="button"
+                  aria-pressed={status === "WANT_TO_GO"}
+                  onClick={() => setStatus("WANT_TO_GO")}
+                  className={`inline-flex min-h-[48px] items-center justify-center gap-2 text-sm font-bold ${status === "WANT_TO_GO" ? "bg-surface text-ink shadow-theme" : "text-muted"}`}
+                  style={{ borderRadius: 9 }}
+                >
+                  <span aria-hidden>🔖</span> Want to go
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={status === "BEEN_TO"}
+                  onClick={() => setStatus("BEEN_TO")}
+                  className={`inline-flex min-h-[48px] items-center justify-center gap-2 text-sm font-bold ${status === "BEEN_TO" ? "bg-surface text-accent shadow-theme" : "text-muted"}`}
+                  style={{ borderRadius: 9 }}
+                >
+                  <span aria-hidden>✓</span> Been here
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">Icon (shown on map &amp; timeline)</span>
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto rounded-xl bg-surface-2/50 p-2" role="radiogroup" aria-label="place icon">
+                {ICON_ROW.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={icon === id}
+                    title={id}
+                    onClick={() => setIcon(id)}
+                    className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all active:scale-95 ${icon === id ? "bg-accent text-accent-ink shadow-theme" : "bg-surface text-muted"}`}
+                  >
+                    <IconGlyph id={id} size={20} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">Tags</span>
+              <div className="edge border-line/50 bg-bg p-2" style={{ borderRadius: 12 }}>
+                <TagCombobox value={tags} onChange={setTags} onTagDefinitionsChanged={onTagDefinitionsChanged} />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="add-place-note" className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-muted">
+                  <span aria-hidden>📝</span> My personal note
+                </label>
+                <span className="text-[10px] text-muted">Markdown supported</span>
+              </div>
+              <textarea
+                id="add-place-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={4}
+                maxLength={2000}
+                placeholder="What made this memorable?"
+                className="edge w-full resize-none rounded-xl border-line bg-bg p-3.5 text-sm leading-relaxed text-ink"
+              />
+              <div className="flex justify-end">
+                <span className="text-[11px] font-medium text-muted">{note.length} characters</span>
+              </div>
+            </div>
+            <div className="h-2" />
+          </form>
+        </div>
+
+        <div className="grid grid-cols-[1fr_2fr] items-center gap-2 border-t border-line/60 bg-[#fff8e8] p-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="edge inline-flex min-h-[52px] items-center justify-center border-line bg-surface-2/60 px-4 text-base font-bold text-ink"
+            style={{ borderRadius: 12 }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="edge inline-flex min-h-[52px] items-center justify-center gap-2 border-accent bg-accent px-4 text-base font-bold text-accent-ink disabled:opacity-50"
+            style={{ borderRadius: 12 }}
+          >
+            <span aria-hidden>🔖</span> {saving ? t["add.saving"] : "Add to Journal"}
+          </button>
+        </div>
+      </>
+    </BottomSheet>
+  );
+}

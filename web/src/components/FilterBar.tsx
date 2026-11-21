@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import TagCombobox from "./TagCombobox";
 import TagDot from "./TagDot";
 import { colorForDisplay, useTagColors } from "../lib/useTagColors";
-import { useLanguage } from "../i18n/LanguageContext";
+import { useLanguage, type Dict } from "../i18n/LanguageContext";
 
 interface Props {
   status: string;
@@ -15,8 +15,11 @@ interface Props {
   setOpenEnabled: (b: boolean) => void;
   openAt: string;
   setOpenAt: (s: string) => void;
+  price: string;
+  setPrice: (s: string) => void;
   /** `stack` (default): tag picker behind a disclosure (phone top card). `rail`: tag picker always visible (desktop sidebar). */
   layout?: "stack" | "rail";
+  statusCounts?: { all: number; want: number; been: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -115,19 +118,34 @@ function dayLabel(dateStr: string, todayLabel: string, tomorrowLabel: string, lo
   return new Intl.DateTimeFormat(loc, { weekday: "long", day: "numeric", month: "short" }).format(d);
 }
 
-const hasActive = (status: string, tags: string[], q: string, openEnabled: boolean) =>
-  Boolean(status || tags.length || q.trim() || openEnabled);
+function priceTierName(tier: string, t: Dict): string {
+  if (tier === "$") return String(t["filter.tierBudget"]);
+  if (tier === "$$") return String(t["filter.tierModerate"]);
+  if (tier === "$$$") return String(t["filter.tierPricey"]);
+  return String(t["filter.tierSplendid"]);
+}
 
-export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, layout = "stack" }: Props) {
+function formatDayMonth(dateStr: string, locale?: string): string {
+  const d = new Date(`${dateStr}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  const loc = locale ?? (typeof document !== "undefined" ? document.documentElement.lang || undefined : undefined);
+  return new Intl.DateTimeFormat(loc, { day: "numeric", month: "short" }).format(d);
+}
+
+const hasActive = (status: string, tags: string[], q: string, openEnabled: boolean, price: string) =>
+  Boolean(status || tags.length || q.trim() || openEnabled || price);
+
+export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, price, setPrice, layout = "stack", statusCounts }: Props) {
   const { t, locale } = useLanguage();
   const tagColors = useTagColors();
-  const active = hasActive(status, tags, q, openEnabled);
+  const active = hasActive(status, tags, q, openEnabled, price);
   function clearAll() {
     setStatus("");
     setTags([]);
     setQ("");
     setOpenEnabled(false);
     setOpenAt("");
+    setPrice("");
   }
   const openMode = !openEnabled ? "any" : openAt ? "at" : "now";
   const { date: openDate, time: openTime } = splitOpenAt(openAt);
@@ -148,6 +166,18 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
   const tomorrowLunchAt = `${tomorrowYMD}T12:30`;
   const tomorrowDinnerAt = `${tomorrowYMD}T20:00`;
   const tonightPast = new Date(tonightAt).getTime() < Date.now();
+  const dayOptions = [
+    { value: todayYMD, label: String(t["filter.dayTonight"]) },
+    { value: tomorrowYMD, label: String(t["filter.dayTomorrow"]) },
+    ...Array.from({ length: 5 }, (_, i) => {
+      const ymd = addDaysYMD(todayYMD, i + 2);
+      const d = new Date(`${ymd}T12:00:00`);
+      return {
+        value: ymd,
+        label: new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short" }).format(d),
+      };
+    }),
+  ];
 
   function pickAnytime() {
     setOpenEnabled(false);
@@ -167,8 +197,206 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
     setOpenAt(`${date}T${time}`);
   }
 
+  const isRail = layout === "rail";
+  const counts = statusCounts ?? { all: 0, want: 0, been: 0 };
+
   return (
-    <section aria-label={t["filter.aria"]} className="edge radius-card mb-4 border-line bg-surface p-3 shadow-theme sm:p-3">
+    <section aria-label={t["filter.aria"]} className={isRail ? "flex flex-col gap-5" : "edge radius-card mb-4 border-line bg-surface p-3 shadow-theme sm:p-3"} style={isRail ? undefined : { borderRadius: 16 }}>
+      {isRail ? (
+        <>
+          {/* Search */}
+          <div className="relative">
+            <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">⌕</span>
+            <input
+              aria-label={t["filter.searchAria"]}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Dishes, spots, arrondissements..."
+              enterKeyHint="search"
+              className="edge w-full border-line bg-surface py-2.5 pl-9 pr-12 text-sm text-ink placeholder:text-muted"
+              style={{ borderRadius: 999, minHeight: 44 }}
+            />
+            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-muted" style={{ borderRadius: 6 }}>⌘K</kbd>
+          </div>
+
+          {/* Lists & State */}
+          <div>
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">Lists &amp; State</h2>
+          <div className="flex flex-col gap-1.5">
+              {[
+                { key: "", label: "All Saved Tables", icon: "🍴", count: counts.all, active: status === "" },
+                { key: "WANT_TO_GO", label: "Want to Visit", icon: "🔖", count: counts.want, active: status === "WANT_TO_GO" },
+                { key: "BEEN_TO", label: "Been & Loved", icon: "✓", count: counts.been, active: status === "BEEN_TO" },
+              ].map((row) => (
+                <button
+                  key={row.label}
+                  type="button"
+                  onClick={() => setStatus(row.key)}
+                  aria-pressed={row.active}
+                  className={`edge flex min-h-[44px] items-center gap-2.5 px-3 text-sm font-semibold ${row.active ? "border-accent bg-accent text-accent-ink shadow-theme" : "border-transparent bg-transparent text-ink hover:bg-surface"}`}
+                  style={{ borderRadius: 12 }}
+                >
+                  <span aria-hidden>{row.icon}</span>
+                  <span className="flex-1 text-left">{row.label}</span>
+                  <span className={`inline-flex min-h-[22px] min-w-[26px] items-center justify-center px-1.5 text-[11px] font-bold ${row.active ? "bg-white/25 text-accent-ink" : "bg-surface-2 text-muted"}`} style={{ borderRadius: 999 }}>{row.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">Tags</h2>
+              <span className="text-[11px] text-muted">12 tags</span>
+            </div>
+            <TagCombobox value={tags} onChange={(next) => setTags(next)} allowCreate={false} showSelected={false} variant="filter-list" />
+          </div>
+
+          {/* Opening hours & timing */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">🕐 {t["filter.openTiming"]}</h2>
+              {openMode !== "any" && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
+                  <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />{t["filter.live"]}
+                </span>
+              )}
+            </div>
+            <div className="edge grid grid-cols-2 gap-1 bg-surface-2/60 p-1" style={{ borderRadius: 12 }} role="group" aria-label={t["filter.openingHours"]}>
+              <button
+                type="button"
+                onClick={() => { if (openMode === "now") pickAnytime(); else pickNow(); }}
+                aria-pressed={openMode === "now"}
+                className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 px-2 text-xs font-semibold ${openMode === "now" ? "bg-surface text-ink shadow-theme" : "text-muted hover:text-ink"}`}
+                style={{ borderRadius: 9 }}
+              >
+                <span aria-hidden className="text-accent">●</span> {t["filter.openNowSeg"]}
+              </button>
+              <button
+                type="button"
+                onClick={() => { if (openMode === "at") pickAnytime(); else pickAt(); }}
+                aria-pressed={openMode === "at"}
+                className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 px-2 text-xs font-semibold ${openMode === "at" ? "bg-surface text-ink shadow-theme" : "text-muted hover:text-ink"}`}
+                style={{ borderRadius: 9 }}
+              >
+                <span aria-hidden>📅</span> {t["filter.planAhead"]}
+              </button>
+            </div>
+            {openMode !== "any" && (
+              <div className="edge mt-2 border-line bg-surface-2/60 p-2.5" style={{ borderRadius: 12 }}>
+                <p className="flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink" aria-live="polite">
+                  <span className="text-muted">{t["filter.showing"]}</span>{" "}
+                  <strong>{openMode === "now" ? t["filter.openNowShowing"] : `${dayLabel(openDate, t["filter.today"], t["filter.tomorrow"], locale)}, ${formatDayMonth(openDate, locale)}`}</strong>
+                  <span className="edge bg-been px-2 py-0.5 text-[11px] font-bold text-been-ink" style={{ borderRadius: 999 }}>
+                    {openMode === "now" ? toLocalHM(new Date()) : openTime}
+                  </span>
+                </p>
+                {openMode === "at" && (
+                  <>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <label className="edge inline-flex items-center gap-1 bg-surface py-1 pl-2.5 pr-1 text-[13px]" style={{ borderRadius: 999 }}>
+                        <span aria-hidden>📅</span>
+                        <span className="sr-only">{t["filter.dayAria"]}</span>
+                        <select
+                          aria-label={t["filter.dayAria"]}
+                          value={openDate || todayYMD}
+                          onChange={(e) => { if (e.target.value) setAt(e.target.value, openTime || "20:00"); }}
+                          className="w-full bg-transparent font-semibold text-ink outline-none"
+                        >
+                          {dayOptions.map((d) => (
+                            <option key={d.value} value={d.value}>{d.label}</option>
+                          ))}
+                        </select>
+                        <span aria-hidden className="pr-1.5 text-muted">▾</span>
+                      </label>
+                      <label className="edge inline-flex items-center gap-1 bg-surface py-1 pl-2.5 pr-1 text-[13px]" style={{ borderRadius: 999 }}>
+                        <span aria-hidden>🕐</span>
+                        <span className="sr-only">{t["filter.hourAria"]}</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder={t["filter.hourPlaceholder"]}
+                          maxLength={5}
+                          aria-label={t["filter.hourAria"]}
+                          aria-invalid={!timeValid}
+                          value={timeDraft}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            setTimeDraft(raw);
+                            const v = normalizeTimeDraft(raw);
+                            if (v) setAt(openDate || todayYMD, v);
+                          }}
+                          onBlur={() => {
+                            const v = normalizeTimeDraft(timeDraft);
+                            if (v) {
+                              setTimeDraft(v);
+                              setAt(openDate || todayYMD, v);
+                            } else {
+                              setTimeDraft(openTime || "20:00");
+                            }
+                          }}
+                          className="w-full bg-transparent font-semibold text-ink outline-none"
+                        />
+                      </label>
+                    </div>
+                    {showTimeError && <p className="mt-1 text-xs text-danger-ink">{t["filter.timeError"]}</p>}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {[
+                        { label: t["filter.tonight"], value: tonightAt, disabled: tonightPast, title: tonightPast ? t["filter.tonightPastTitle"] : t["filter.tonightTitle"] },
+                        { label: t["filter.tomorrowLunch"], value: tomorrowLunchAt, disabled: false, title: t["filter.tomorrowLunchTitle"] },
+                        { label: t["filter.tomorrowDinner"], value: tomorrowDinnerAt, disabled: false, title: t["filter.tomorrowDinnerTitle"] },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          disabled={preset.disabled}
+                          title={preset.title}
+                          onClick={() => { setOpenEnabled(true); setOpenAt(preset.value); }}
+                          aria-pressed={openAt === preset.value}
+                          className={`radius-pill min-h-[32px] px-2.5 text-[11px] ${openAt === preset.value ? "bg-accent font-semibold text-accent-ink" : "edge border-line bg-surface text-ink"} ${preset.disabled ? "cursor-not-allowed opacity-40" : ""}`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-muted">{t["filter.unknownHidden"]}</p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Price level */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">{t["filter.priceLevel"]}</h2>
+              <span className="text-[11px] text-muted">{price ? `${priceTierName(price, t)} (${price})` : t["filter.anyPrice"]}</span>
+            </div>
+            <div className="edge grid grid-cols-4 gap-1 bg-surface-2/60 p-1 text-sm" style={{ borderRadius: 12 }} role="group" aria-label={t["filter.priceLevel"]}>
+              {(["$", "$$", "$$$", "$$$$"] as const).map((tier) => (
+                <button
+                  key={tier}
+                  type="button"
+                  onClick={() => setPrice(price === tier ? "" : tier)}
+                  aria-pressed={price === tier}
+                  title={priceTierName(tier, t)}
+                  className={`inline-flex min-h-[40px] items-center justify-center font-semibold ${price === tier ? "bg-surface text-ink shadow-theme" : "text-muted hover:text-ink"}`}
+                  style={{ borderRadius: 9 }}
+                >
+                  {tier}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button type="button" onClick={clearAll} className="block w-full text-center text-xs text-muted underline underline-offset-4 hover:text-ink">
+            Reset all journal filters
+          </button>
+        </>
+      ) : (
+        <>
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-xs font-medium uppercase tracking-wide text-muted">{t["filter.title"]}</h2>
         {active && (
@@ -209,6 +437,29 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
         </label>
       </div>
 
+      {/* Price level */}
+      <div className="mt-2">
+        <span className="mb-1 block text-xs text-muted">{t["filter.priceLevel"]}{price ? ` · ${priceTierName(price, t)} (${price})` : ""}</span>
+        <div className="edge radius-pill grid grid-cols-4 overflow-hidden border-line text-sm" role="group" aria-label={t["filter.priceLevel"]}>
+          {(["$", "$$", "$$$", "$$$$"] as const).map((tier) => (
+            <button
+              key={tier}
+              type="button"
+              onClick={() => setPrice(price === tier ? "" : tier)}
+              aria-pressed={price === tier}
+              title={priceTierName(tier, t)}
+              className={`min-h-[44px] px-2 ${price === tier ? "bg-accent font-medium text-accent-ink" : "bg-surface text-muted"}`}
+            >
+              {tier}
+            </button>
+          ))}
+        </div>
+      </div>
+        </>
+      )}
+
+      {!isRail && (
+        <>
       {/* Open filter: Anytime / Now / pick a moment with presets + separate date/time */}
       <fieldset className="mt-2 min-w-0 border-0 p-0">
         <legend id="open-label" className="mb-1 block text-xs text-muted">{t["filter.openingHours"]}</legend>
@@ -352,6 +603,8 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
           />
         </div>
       </details>
+        </>
+      )}
     </section>
   );
 }

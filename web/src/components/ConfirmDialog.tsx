@@ -17,7 +17,7 @@ interface Props {
 /**
  * Destructive-action confirmation dialog.
  * Themed via contract vars (`edge`, `radius-card`, `shadow-theme`,
- * `danger-*`), so XP / Retro / light / dark all pick it up.
+ * `danger-*`), so the single Botanical theme picks it up.
  * Accessible: `alertdialog`, Escape + backdrop close, initial focus on
  * the safe action, body scroll locked while open.
  */

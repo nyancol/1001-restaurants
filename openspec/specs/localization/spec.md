@@ -21,7 +21,7 @@ The system SHALL select the initial UI language from the browser language: `fr*`
 - **WHEN** a user with no stored preference opens the app with a language that is neither French nor English (e.g. `de-DE`)
 - **THEN** the system renders all UI chrome in English
 ### Requirement: Persistent two-state language switcher
-The system SHALL offer an EN | FR switcher next to the theme switcher in the footer on all authenticated views and persist the choice per device, with the stored value winning over browser detection on later visits.
+The system SHALL offer an EN | FR switcher in the footer on all authenticated views and persist the choice per device, with the stored value winning over browser detection on later visits.
 
 #### Scenario: Switch language from footer
 - **WHEN** the user clicks the other language while browsing
@@ -36,7 +36,7 @@ The system SHALL offer an EN | FR switcher next to the theme switcher in the foo
 - **THEN** the system keeps rendering the stored language
 ### Requirement: Complete UI chrome translation
 
-The system SHALL render all frontend UI chrome in the active language, including navigation, login, filters, empty states, add form, cards, editor, delete confirmation and delete failure messages, comboboxes, validation and lookup/refresh/share messages, duplicate-place prompts, placeholders, `aria-label`/`title` texts, and theme/mode labels, and set `document.documentElement.lang` accordingly. Visible place-type strings are removed; icon names exist only as `aria-label`/tooltip and picker search metadata in FR/EN.
+The system SHALL render all frontend UI chrome in the active language, including navigation, login, filters, empty states, add form, cards, editor, delete confirmation and delete failure messages, comboboxes, validation and lookup/refresh/share messages, duplicate-place prompts, placeholders, `aria-label`/`title` texts, and set `document.documentElement.lang` accordingly. Visible place-type strings are removed; icon names exist only as `aria-label`/tooltip and picker search metadata in FR/EN.
 
 #### Scenario: Full French pass
 - **WHEN** French is active and the user visits login, list, map, and add views including error and empty states

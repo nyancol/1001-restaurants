@@ -17,6 +17,7 @@ export interface PlaceFilters {
   qParam: string;
   openAtParam: string;
   openNowParam: boolean;
+  priceParam: string;
   owner: string;
   setOwner: (s: string) => void;
   status: string;
@@ -29,6 +30,8 @@ export interface PlaceFilters {
   setOpenEnabled: (b: boolean) => void;
   openAt: string;
   setOpenAt: (s: string) => void;
+  price: string;
+  setPrice: (s: string) => void;
   debouncedQ: string;
 }
 
@@ -45,6 +48,7 @@ export function usePlaceFilters(): PlaceFilters {
   const qParam = searchParams.get("q") ?? "";
   const openAtParam = searchParams.get("openAt") ?? "";
   const openNowParam = searchParams.get("openNow") === "1";
+  const priceParam = searchParams.get("price") ?? "";
 
   const [owner, setOwner] = useState(ownerParam);
   const [status, setStatus] = useState(statusParam);
@@ -52,6 +56,7 @@ export function usePlaceFilters(): PlaceFilters {
   const [q, setQ] = useState(qParam);
   const [openEnabled, setOpenEnabled] = useState(Boolean(openAtParam || openNowParam));
   const [openAt, setOpenAt] = useState(openAtParam);
+  const [price, setPrice] = useState(priceParam);
 
   const debouncedQ = useDebouncedValue(q, 300);
 
@@ -67,9 +72,10 @@ export function usePlaceFilters(): PlaceFilters {
       if (openAt) next.set("openAt", openAt);
       else next.set("openNow", "1");
     }
+    if (price) next.set("price", price);
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [owner, status, tags, debouncedQ, openEnabled, openAt]);
+  }, [owner, status, tags, debouncedQ, openEnabled, openAt, price]);
 
-  return { ownerParam, statusParam, tagsParam, qParam, openAtParam, openNowParam, owner, setOwner, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, debouncedQ };
+  return { ownerParam, statusParam, tagsParam, qParam, openAtParam, openNowParam, priceParam, owner, setOwner, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, price, setPrice, debouncedQ };
 }
