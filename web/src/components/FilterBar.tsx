@@ -17,6 +17,7 @@ interface Props {
   setOpenAt: (s: string) => void;
   /** `stack` (default): tag picker behind a disclosure (phone top card). `rail`: tag picker always visible (desktop sidebar). */
   layout?: "stack" | "rail";
+  statusCounts?: { all: number; want: number; been: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +119,7 @@ function dayLabel(dateStr: string, todayLabel: string, tomorrowLabel: string, lo
 const hasActive = (status: string, tags: string[], q: string, openEnabled: boolean) =>
   Boolean(status || tags.length || q.trim() || openEnabled);
 
-export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, layout = "stack" }: Props) {
+export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, layout = "stack", statusCounts }: Props) {
   const { t, locale } = useLanguage();
   const tagColors = useTagColors();
   const active = hasActive(status, tags, q, openEnabled);
@@ -167,8 +168,92 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
     setOpenAt(`${date}T${time}`);
   }
 
+  const isRail = layout === "rail";
+  const counts = statusCounts ?? { all: 0, want: 0, been: 0 };
+
   return (
-    <section aria-label={t["filter.aria"]} className="edge radius-card mb-4 border-line bg-surface p-3 shadow-theme sm:p-3">
+    <section aria-label={t["filter.aria"]} className={isRail ? "flex flex-col gap-5" : "edge radius-card mb-4 border-line bg-surface p-3 shadow-theme sm:p-3"} style={isRail ? undefined : { borderRadius: 16 }}>
+      {isRail ? (
+        <>
+          {/* Search */}
+          <div className="relative">
+            <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">⌕</span>
+            <input
+              aria-label={t["filter.searchAria"]}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Dishes, spots, arrondissements..."
+              enterKeyHint="search"
+              className="edge w-full border-line bg-surface py-2.5 pl-9 pr-12 text-sm text-ink placeholder:text-muted"
+              style={{ borderRadius: 999, minHeight: 44 }}
+            />
+            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-muted" style={{ borderRadius: 6 }}>⌘K</kbd>
+          </div>
+
+          {/* Lists & State */}
+          <div>
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">Lists &amp; State</h2>
+          <div className="flex flex-col gap-1.5">
+              {[
+                { key: "", label: "All Saved Tables", icon: "🍴", count: counts.all, active: status === "" },
+                { key: "WANT_TO_GO", label: "Want to Visit", icon: "🔖", count: counts.want, active: status === "WANT_TO_GO" },
+                { key: "BEEN_TO", label: "Been & Loved", icon: "✓", count: counts.been, active: status === "BEEN_TO" },
+              ].map((row) => (
+                <button
+                  key={row.label}
+                  type="button"
+                  onClick={() => setStatus(row.key)}
+                  aria-pressed={row.active}
+                  className={`edge flex min-h-[44px] items-center gap-2.5 px-3 text-sm font-semibold ${row.active ? "border-accent bg-accent text-accent-ink shadow-theme" : "border-transparent bg-transparent text-ink hover:bg-surface"}`}
+                  style={{ borderRadius: 12 }}
+                >
+                  <span aria-hidden>{row.icon}</span>
+                  <span className="flex-1 text-left">{row.label}</span>
+                  <span className={`inline-flex min-h-[22px] min-w-[26px] items-center justify-center px-1.5 text-[11px] font-bold ${row.active ? "bg-white/25 text-accent-ink" : "bg-surface-2 text-muted"}`} style={{ borderRadius: 999 }}>{row.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted">Tags</h2>
+              <span className="text-[11px] text-muted">12 tags</span>
+            </div>
+            <TagCombobox value={tags} onChange={(next) => setTags(next)} allowCreate={false} showSelected={false} variant="filter-list" />
+            {(active || true) && (
+              <button type="button" onClick={clearAll} className="mt-3 block w-full text-center text-xs text-muted underline underline-offset-4 hover:text-ink">
+                Reset all journal filters
+              </button>
+            )}
+          </div>
+
+          {/* Open filter compact */}
+          <details className="text-sm">
+            <summary className="inline-flex min-h-[36px] cursor-pointer items-center text-xs font-semibold uppercase tracking-wide text-muted">{t["filter.openingHours"]}</summary>
+            <div className="mt-1">
+              <div className="edge grid grid-cols-3 overflow-hidden border-line text-xs" style={{ borderRadius: 999 }} role="group" aria-labelledby="open-label">
+                <button type="button" onClick={pickAnytime} aria-pressed={openMode === "any"} className={`min-h-[40px] px-2 ${openMode === "any" ? "bg-accent font-semibold text-accent-ink" : "bg-surface text-muted"}`}>{t["filter.anytime"]}</button>
+                <button type="button" onClick={pickNow} aria-pressed={openMode === "now"} className={`min-h-[40px] px-2 ${openMode === "now" ? "bg-accent font-semibold text-accent-ink" : "bg-surface text-muted"}`}>{t["filter.now"]}</button>
+                <button type="button" onClick={pickAt} aria-pressed={openMode === "at"} className={`min-h-[40px] px-2 ${openMode === "at" ? "bg-accent font-semibold text-accent-ink" : "bg-surface text-muted"}`}>{t["filter.choose"]}</button>
+              </div>
+              {(openAt || tags.length > 0) && (
+                <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                  {tags.map((tg) => (
+                    <span key={tg} className="edge inline-flex min-h-[32px] items-center gap-1.5 border-accent bg-accent px-2.5 py-1 text-accent-ink" style={{ borderRadius: 999 }}>
+                      <TagDot color={colorForDisplay(tg, tagColors)} />
+                      #{tg}
+                      <button type="button" aria-label={t["filter.removeFilter"](tg)} onClick={() => setTags(tags.filter((x) => x !== tg))} className="inline-flex min-h-[28px] min-w-[28px] items-center justify-center">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </details>
+        </>
+      ) : (
+        <>
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-xs font-medium uppercase tracking-wide text-muted">{t["filter.title"]}</h2>
         {active && (
@@ -208,7 +293,11 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
           </select>
         </label>
       </div>
+        </>
+      )}
 
+      {!isRail && (
+        <>
       {/* Open filter: Anytime / Now / pick a moment with presets + separate date/time */}
       <fieldset className="mt-2 min-w-0 border-0 p-0">
         <legend id="open-label" className="mb-1 block text-xs text-muted">{t["filter.openingHours"]}</legend>
@@ -352,6 +441,8 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
           />
         </div>
       </details>
+        </>
+      )}
     </section>
   );
 }

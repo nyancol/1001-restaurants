@@ -17,6 +17,7 @@ export const en = {
   "theme.modeAria": "mode",
   "theme.xp": "XP",
   "theme.retro": "Retro",
+  "theme.botanical": "Botanical",
   "theme.light": "Light",
   "theme.dark": "Dark",
   "language.groupAria": "language",

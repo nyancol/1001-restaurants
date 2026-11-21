@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSONSource, LngLatBounds, Map as MapLibreMap, NavigationControl, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import PlaceCard from "./PlaceCard";
+import MapPreviewCard from "./MapPreviewCard";
 import PlaceEditor from "./PlaceEditor";
 import type { Place } from "../lib/api";
 import { ensurePinImages } from "../theme/pins";
@@ -67,7 +68,7 @@ interface MapViewProps {
   loading: boolean;
   onError: (msg: string) => void;
   onFlipStatus: (p: Place) => void;
-  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) => Promise<void>;
+  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) => Promise<void>;
   onDelete?: (p: Place) => Promise<void> | void;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshingIds?: string[];
@@ -426,7 +427,7 @@ export default function MapView({
     });
   }
 
-  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string }) {
+  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) {
     setEditing(false);
     try {
       await onSaveEdit(p, patch);
@@ -446,34 +447,69 @@ export default function MapView({
     }
   }
 
+  function viewNotes(p: Place) {
+    onSelect(p.id);
+    // Scroll matching feed card into view (desktop split).
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-place-id="${CSS.escape(p.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
   return (
-    <div className="edge radius-card relative overflow-hidden border-line">
-      <div ref={containerRef} className={`maplibre-themed w-full ${mapHeightClass}`} aria-label={t["map.placesMapAria"]} />
-      {/* Floating map actions top-left: NavigationControl lives top-right, so this avoids overlap */}
-      <div className="absolute left-3 top-3 flex flex-col gap-2">
+    <div className="edge relative overflow-hidden border-line bg-surface-2/40" style={{ borderRadius: 16 }}>
+      <div ref={containerRef} className={`maplibre-themed w-full ${mapHeightClass}`} aria-label={t["map.placesMapAria"]} style={{ borderRadius: 16 }} />
+      {/* Top pills: location + RE-CENTER, Artisan/Transit, zoom */}
+      <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={fitToResults}
+            disabled={!located.length}
+            aria-label={t["map.fitAria"]}
+            title={t["map.fitTitle"]}
+            className="edge inline-flex min-h-[40px] items-center gap-1.5 border-line bg-surface/95 px-3 text-[13px] font-semibold text-ink shadow-theme backdrop-blur"
+            style={{ borderRadius: 999 }}
+          >
+            <span aria-hidden>➤</span> Paris 11e &amp; 2e
+            <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Re-center</span>
+          </button>
+        </div>
+        <div className="pointer-events-auto ml-auto flex items-center gap-2">
+          <div className="edge inline-flex bg-surface/95 p-1 shadow-theme backdrop-blur" style={{ borderRadius: 999 }} role="group" aria-label="Map style">
+            <span className="inline-flex min-h-[32px] items-center bg-been px-3 text-xs font-bold text-been-ink" style={{ borderRadius: 999 }}>Artisan</span>
+            <span className="inline-flex min-h-[32px] items-center px-3 text-xs font-semibold text-muted">Transit</span>
+          </div>
+          <div className="edge hidden flex-col overflow-hidden border-line bg-surface/95 shadow-theme backdrop-blur sm:flex" style={{ borderRadius: 12 }}>
+            <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()} className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-surface-2">+</button>
+            <button type="button" aria-label="Zoom out" onClick={() => mapRef.current?.zoomOut()} className="inline-flex h-9 w-9 items-center justify-center border-t border-line text-ink hover:bg-surface-2">−</button>
+          </div>
+        </div>
+      </div>
+      {/* Locate + fit actions */}
+      <div className="absolute left-3 top-[68px] flex flex-col gap-2">
         <button
           type="button"
           onClick={() => void locate()}
           disabled={locating}
           aria-label={t["map.locateMe"]}
           title={t["map.locateMeTitle"]}
-          className="edge radius-input inline-flex min-h-[48px] min-w-[48px] items-center justify-center border-line bg-surface/95 text-lg text-ink shadow-theme backdrop-blur disabled:opacity-40"
+          className="edge radius-input inline-flex min-h-[44px] min-w-[44px] items-center justify-center border-line bg-surface/95 text-base text-ink shadow-theme backdrop-blur disabled:opacity-40"
         >
           {locating ? "…" : "◎"}
-        </button>
-        <button
-          type="button"
-          onClick={fitToResults}
-          disabled={!located.length}
-          aria-label={t["map.fitAria"]}
-          title={t["map.fitTitle"]}
-          className="edge radius-input inline-flex min-h-[48px] min-w-[48px] items-center justify-center border-line bg-surface/95 text-lg text-ink shadow-theme backdrop-blur disabled:opacity-40"
-        >
-          ⤢
         </button>
       </div>
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm text-muted">{t["map.loading"]}</div>
+      )}
+      {/* Preview card docked above footer (split view only; phone uses bottom sheet) */}
+      {selected && !showDetails && (
+        <div className="absolute inset-x-3 bottom-3">
+          <MapPreviewCard
+            place={selected}
+            onViewNotes={viewNotes}
+            onClose={() => { onSelect(null); setEditing(false); }}
+          />
+        </div>
       )}
       {selected && showDetails && (
         <div className="radius-card absolute inset-x-0 bottom-0 max-h-[55%] overflow-y-auto border-t border-line bg-surface p-3 shadow-theme lg:inset-x-auto lg:bottom-3 lg:right-3 lg:top-3 lg:max-h-none lg:w-96 lg:border lg:pt-2">

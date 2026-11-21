@@ -1,7 +1,8 @@
-export type ThemeId = "xp" | "retro";
+export type ThemeId = "botanical" | "xp" | "retro";
 export type ModeId = "light" | "dark";
 
 export const THEMES: { id: ThemeId; label: string }[] = [
+  { id: "botanical", label: "Botanical" },
   { id: "xp", label: "XP" },
   { id: "retro", label: "Retro" },
 ];
@@ -17,11 +18,11 @@ export const MODE_STORAGE_KEY = "oyster-mode";
 export function getInitialTheme(): ThemeId {
   try {
     const v = localStorage.getItem(THEME_STORAGE_KEY);
-    if (v === "xp" || v === "retro") return v;
+    if (v === "botanical" || v === "xp" || v === "retro") return v;
   } catch {
     // ignore
   }
-  return "xp";
+  return "botanical";
 }
 
 export function getInitialMode(): ModeId {

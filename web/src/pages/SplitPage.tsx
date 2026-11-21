@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import FilterBar from "../components/FilterBar";
+import FeedHeader, { sortPlaces, type SortId, type ViewMode } from "../components/FeedHeader";
 import MapView from "../components/MapView";
 import OwnerPicker from "../components/OwnerPicker";
 import PlaceListPane from "../components/PlaceListPane";
@@ -11,9 +12,8 @@ import { displayNameFor, useUsers } from "../lib/useUsers";
 import { useLanguage } from "../i18n/LanguageContext";
 
 /**
- * Desktop split view (`lg:`+): permanent filter rail, scrollable list pane,
- * sticky map pane. One `usePlaceFilters` writer and one `usePlaces` fetch
- * feed both panes; selection syncs both ways.
+ * Desktop journal split (`lg:`+): filter rail, scrollable feed, sticky map.
+ * Phone: stacked rail summary + feed; map lives on /map.
  */
 export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => void }) {
   const { owner, setOwner, statusParam, tagsParam, qParam, openAtParam, openNowParam, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt } = usePlaceFilters();
@@ -26,6 +26,8 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [geoNote, setGeoNote] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortId>("recent");
+  const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const listElRef = useRef<HTMLUListElement | null>(null);
 
   const handleTagDefinitionsChanged = useCallback((m: TagMutation) => {
@@ -39,10 +41,12 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
 
   const locatedCount = places.filter((p) => p.lat != null && p.lng != null).length;
   const unlocatedCount = places.length - locatedCount;
+  const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
+  const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
   const readOnly = owner !== "me";
   const scopeName = owner === "me" ? t["scope.me"] : owner === "all" ? t["scope.everyone"] : (displayNameFor(owner, me, users) ?? t["scope.userFallback"]);
+  const sorted = useMemo(() => sortPlaces(places, sort), [places, sort]);
 
-  // Pin tap → highlight + scroll the matching card into view.
   const handleSelect = useCallback((id: string | null) => {
     setSelectedId(id);
     if (id) {
@@ -55,44 +59,45 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] bg-bg px-4 pb-16 pt-4 lg:px-6">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-display text-xl font-bold text-ink">{t["scope.viewingPlaces"](scopeName)}</h1>
-        {!loading && (
-          <p className="text-xs text-muted" aria-live="polite">
-            {t["scope.locatedSummary"](places.length, locatedCount, unlocatedCount, readOnly)}
-          </p>
-        )}
-      </div>
+    <div className="mx-auto w-full max-w-[1600px] bg-bg px-4 pb-16 pt-4 lg:px-8">
+      <p className="sr-only" aria-live="polite">{t["scope.locatedSummary"](places.length, locatedCount, unlocatedCount, readOnly)}</p>
       {geoNote && (
         <div className="edge radius-input mb-3 border-line bg-surface-2 px-3 py-2 text-xs text-muted">{geoNote}</div>
       )}
-      <div className="flex items-start gap-4">
-        <aside className="sticky top-16 hidden w-72 shrink-0 self-start lg:block xl:w-80">
-          <div className="mb-3">
-            <OwnerPicker owner={owner} setOwner={setOwner} />
+      <div className="gap-6 lg:grid lg:grid-cols-[280px_minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start">
+        {/* Left rail */}
+        <aside className="mb-4 lg:sticky lg:top-[76px] lg:mb-0 lg:max-h-[calc(100dvh-96px)] lg:overflow-y-auto lg:pr-1">
+          <div className="edge radius-card border-line bg-surface p-3 shadow-theme lg:bg-transparent lg:p-0 lg:shadow-none lg:border-transparent" style={{ borderRadius: 16 }}>
+            <div className="mb-4">
+              <OwnerPicker owner={owner} setOwner={setOwner} />
+            </div>
+            <FilterBar
+              status={status} setStatus={setStatus}
+              tags={tags} setTags={setTags}
+              q={q} setQ={setQ}
+              openEnabled={openEnabled} setOpenEnabled={setOpenEnabled}
+              openAt={openAt} setOpenAt={setOpenAt}
+              layout="rail"
+              statusCounts={{ all: places.length, want: wantCount, been: beenCount }}
+            />
           </div>
-          <FilterBar
-            status={status} setStatus={setStatus}
-            tags={tags} setTags={setTags}
-            q={q} setQ={setQ}
-            
-            openEnabled={openEnabled} setOpenEnabled={setOpenEnabled}
-            openAt={openAt} setOpenAt={setOpenAt}
-            layout="rail"
-          />
         </aside>
-        <section aria-label={t["map.listAria"]} className="min-w-0 flex-1">
+
+        {/* Center feed */}
+        <section aria-label={t["map.listAria"]} className="min-w-0">
+          <FeedHeader total={places.length} sort={sort} setSort={setSort} viewMode={viewMode} setViewMode={setViewMode} />
           {!readOnly && (
             <Link
               to="/add"
-              className="edge radius-input mb-4 inline-flex min-h-[44px] w-full items-center justify-center border-accent bg-accent text-sm font-medium text-accent-ink lg:min-h-9"
+              className="edge mb-4 hidden min-h-[44px] w-full items-center justify-center border-accent bg-accent text-sm font-semibold text-accent-ink lg:inline-flex"
+              style={{ borderRadius: 12 }}
             >
               {t["action.addPlacePlus"]}
             </Link>
           )}
+          <p className="mb-2 text-xs text-muted">Viewing {scopeName} · {locatedCount} shown{unlocatedCount > 0 ? ` · ${unlocatedCount} hidden` : ""}{readOnly ? " · read-only" : ""}</p>
           <PlaceListPane
-            places={places}
+            places={sorted}
             loading={loading}
             error={error}
             onToggleStatus={(p) => void flipStatus(p)}
@@ -106,6 +111,7 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             listRef={(el) => { listElRef.current = el; }}
             readOnly={readOnly}
             onTagDefinitionsChanged={handleTagDefinitionsChanged}
+            viewMode={viewMode}
             emptyTitle={readOnly ? t["empty.scopeHasNoPlaces"](scopeName) : undefined}
             emptySubtitle={readOnly ? t["empty.tryClear"] : undefined}
             emptyHint={
@@ -115,7 +121,9 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             }
           />
         </section>
-        <section aria-label={t["map.mapAria"]} className="sticky top-16 hidden min-w-0 flex-[1.2] lg:block">
+
+        {/* Right map */}
+        <section aria-label={t["map.mapAria"]} className="mt-6 min-w-0 lg:sticky lg:top-[76px] lg:mt-0">
           <MapView
             places={places}
             loading={loading}
@@ -128,7 +136,7 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             selectedId={selectedId}
             onSelect={handleSelect}
             onGeoNote={setGeoNote}
-            mapHeightClass="h-[calc(100dvh-8rem)] min-h-[480px]"
+            mapHeightClass="h-[62dvh] min-h-[420px] lg:h-[calc(100dvh-8rem)] lg:min-h-[560px]"
             readOnly={readOnly}
             showDetails={false}
             onTagDefinitionsChanged={handleTagDefinitionsChanged}

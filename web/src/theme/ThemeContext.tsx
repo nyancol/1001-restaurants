@@ -8,7 +8,7 @@ interface ThemeCtx {
   setMode: (m: ModeId) => void;
 }
 
-const Ctx = createContext<ThemeCtx>({ theme: "xp", mode: "light", setTheme: () => {}, setMode: () => {} });
+const Ctx = createContext<ThemeCtx>({ theme: "botanical", mode: "light", setTheme: () => {}, setMode: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeId>(() => getInitialTheme());

@@ -4,9 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>In my Belly — Places</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Literata:wght@400;500;600;700&family=Nunito+Sans:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <script>
       try {
-        var t = localStorage.getItem("oyster-theme") || "xp";
+        var t = localStorage.getItem("oyster-theme") || "botanical";
         var m = localStorage.getItem("oyster-mode");
         if (m !== "light" && m !== "dark") {
           m = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -14,7 +20,7 @@
         document.documentElement.dataset.theme = t;
         document.documentElement.dataset.mode = m;
       } catch (e) {
-        document.documentElement.dataset.theme = "xp";
+        document.documentElement.dataset.theme = "botanical";
         document.documentElement.dataset.mode = "light";
       }
     </script>

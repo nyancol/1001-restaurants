@@ -19,6 +19,7 @@ export const fr: typeof en = {
   "theme.modeAria": "mode",
   "theme.xp": "XP",
   "theme.retro": "Rétro",
+  "theme.botanical": "Botanique",
   "theme.light": "Clair",
   "theme.dark": "Sombre",
   "language.groupAria": "langue",

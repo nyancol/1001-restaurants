@@ -1,6 +1,7 @@
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import FilterBar from "../components/FilterBar";
+import FeedHeader, { sortPlaces, type SortId, type ViewMode } from "../components/FeedHeader";
 import OwnerPicker from "../components/OwnerPicker";
 import PlaceListPane from "../components/PlaceListPane";
 import type { TagMutation } from "../components/TagCombobox";
@@ -20,8 +21,12 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
     onUnauthorized,
   );
 
-  // Option A: after a tag rename/delete elsewhere, refetch places so every
-  // card reflects it without a page reload; keep the active filter in sync.
+  const [sort, setSort] = useState<SortId>("recent");
+  const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const sorted = useMemo(() => sortPlaces(places, sort), [places, sort]);
+  const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
+  const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
+
   const handleTagDefinitionsChanged = useCallback((m: TagMutation) => {
     if (m.type === "rename") {
       setTags(tags.map((tg) => (tg === m.oldName ? m.newName : tg)));
@@ -36,21 +41,22 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
   const emptyTitle = readOnly ? (places.length === 0 && !loading && !error ? t["empty.scopeHasNoPlaces"](scopeName) : t["empty.noPlaces"]) : t["empty.noPlaces"];
 
   return (
-    <div className="mx-auto max-w-xl bg-bg px-4 pb-16 pt-4">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-display text-xl font-bold text-ink">{t["scope.viewingList"](scopeName)}</h1>
-        {!loading && !error && places.length > 0 && (
-          <p className="text-xs text-muted" aria-live="polite">{t["scope.countPlaces"](places.length)}{readOnly ? ` · ${t["scope.readOnlySuffix"]}` : ""}</p>
-        )}
-      </div>
+    <div className="mx-auto max-w-xl bg-bg px-4 pb-16 pt-4 lg:max-w-[1600px]">
+      <FeedHeader total={places.length} sort={sort} setSort={setSort} viewMode={viewMode} setViewMode={setViewMode} />
+      <p className="mb-2 text-xs text-muted">Viewing {scopeName}{readOnly ? " · read-only" : ""}</p>
       <div className="mb-3">
         <OwnerPicker owner={owner} setOwner={setOwner} />
       </div>
-      <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt} />
+      <FilterBar
+        status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ}
+        openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt}
+        statusCounts={{ all: places.length, want: wantCount, been: beenCount }}
+      />
       {!readOnly && (
         <Link
           to="/add"
-          className="edge radius-input mb-3 inline-flex min-h-[48px] w-full items-center justify-center border-accent bg-accent text-sm font-medium text-accent-ink"
+          className="edge mb-3 inline-flex min-h-[48px] w-full items-center justify-center border-accent bg-accent text-sm font-semibold text-accent-ink"
+          style={{ borderRadius: 12 }}
         >
           {t["action.addPlacePlus"]}
         </Link>
@@ -60,7 +66,7 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
       </div>
 
       <PlaceListPane
-        places={places}
+        places={sorted}
         loading={loading}
         error={error}
         onToggleStatus={(p) => void flipStatus(p)}
@@ -71,6 +77,7 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         onError={setError}
         readOnly={readOnly}
         onTagDefinitionsChanged={handleTagDefinitionsChanged}
+        viewMode={viewMode}
         emptyTitle={readOnly ? (places.length === 0 ? t["empty.scopeHasNoPlaces"](scopeName) : t["empty.scopeHasNoPlacesFilter"](scopeName)) : emptyTitle}
         emptySubtitle={readOnly ? t["empty.tryClear"] : undefined}
         emptyHint={

@@ -5,7 +5,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 export default function ThemeSwitcher() {
   const { theme, mode, setTheme, setMode } = useTheme();
   const { t } = useLanguage();
-  const themeLabel = (id: string) => (id === "retro" ? t["theme.retro"] : t["theme.xp"]);
+  const themeLabel = (id: string) => (id === "retro" ? t["theme.retro"] : id === "botanical" ? t["theme.botanical"] : t["theme.xp"]);
   const modeLabel = (id: string) => (id === "dark" ? t["theme.dark"] : t["theme.light"]);
   return (
     <div className="flex shrink-0 items-center gap-1 text-xs">

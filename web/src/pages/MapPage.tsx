@@ -36,10 +36,13 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
     void fetchList();
   }, [tags, setTags, fetchList]);
 
+  const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
+  const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
+
   return (
-    <div className="mx-auto max-w-xl bg-bg px-4 pb-16 pt-4">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-display text-xl font-bold text-ink">{t["scope.viewingMap"](scopeName)}</h1>
+    <div className="mx-auto w-full max-w-xl overflow-x-hidden bg-bg px-4 pb-16 pt-4">
+      <div className="edge radius-card mb-3 flex flex-wrap items-center gap-2 border-line bg-surface p-3 shadow-theme" style={{ borderRadius: 16 }}>
+        <h1 className="font-display mr-auto text-xl font-semibold text-ink">Saved Tables <span className="text-xs font-normal text-muted">({places.length})</span></h1>
         {!loading && (
           <p className="text-xs text-muted" aria-live="polite">
             {t["scope.mapSummary"](locatedCount, unlocatedCount, readOnly)}
@@ -49,7 +52,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
       <div className="mb-3">
         <OwnerPicker owner={owner} setOwner={setOwner} />
       </div>
-      <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt} />
+      <FilterBar status={status} setStatus={setStatus} tags={tags} setTags={setTags} q={q} setQ={setQ} openEnabled={openEnabled} setOpenEnabled={setOpenEnabled} openAt={openAt} setOpenAt={setOpenAt} statusCounts={{ all: places.length, want: wantCount, been: beenCount }} />
       {!readOnly && (
         <Link
           to="/add"
@@ -85,6 +88,7 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
         onSelect={setSelectedId}
         onGeoNote={setGeoNote}
         readOnly={readOnly}
+        mapHeightClass="h-[62dvh] min-h-[420px]"
         onTagDefinitionsChanged={handleTagDefinitionsChanged}
       />
       <p className="mt-2 text-[11px] text-muted">
