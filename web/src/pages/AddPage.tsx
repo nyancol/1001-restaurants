@@ -7,7 +7,28 @@ import Stars from "../components/Stars";
 import { createPlace, listPlaces, patchPlace, UnauthorizedError, type PlaceDetails } from "../lib/api";
 import { useLanguage } from "../i18n/LanguageContext";
 
+import AddPlaceSheet from "../components/mobile/AddPlaceSheet";
+import { useMediaQuery } from "../lib/useMediaQuery";
+
 export default function AddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const navigate = useNavigate();
+  if (!isDesktop) {
+    return (
+      <div className="mx-auto w-full max-w-md bg-bg px-4 pb-8 pt-3">
+        <AddPlaceSheet
+          open
+          onClose={() => navigate("/")}
+          onSaved={() => navigate("/")}
+          onUnauthorized={onUnauthorized}
+        />
+      </div>
+    );
+  }
+  return <DesktopAddPage onUnauthorized={onUnauthorized} />;
+}
+
+function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [lookupText, setLookupText] = useState("");

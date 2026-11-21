@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ViewToggle from "../components/ViewToggle";
 import SearchBar from "../components/mobile/SearchBar";
 import FilterSheet from "../components/mobile/FilterSheet";
 import PhonePlaceCard from "../components/mobile/PhonePlaceCard";
 import TastingNotesSheet from "../components/mobile/TastingNotesSheet";
 import EditPlaceSheet from "../components/mobile/EditPlaceSheet";
+import AddPlaceSheet from "../components/mobile/AddPlaceSheet";
 import type { TagMutation } from "../components/TagCombobox";
 import { usePlaceFilters } from "../lib/usePlaceFilters";
 import { usePlaces } from "../lib/usePlaces";
@@ -30,6 +31,13 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
   const [sheetOpen, setSheetOpen] = useState(false);
   const [notesPlace, setNotesPlace] = useState<(typeof places)[number] | null>(null);
   const [editingPlace, setEditingPlace] = useState<(typeof places)[number] | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  useEffect(() => {
+    const onOpenAdd = () => setAddOpen(true);
+    window.addEventListener("inmybelly:open-add", onOpenAdd);
+    return () => window.removeEventListener("inmybelly:open-add", onOpenAdd);
+  }, []);
 
   const priceSelected = price ? price.split(",").map((s) => s.trim()).filter(Boolean) : [];
   const filtered = useMemo(() => {
@@ -76,9 +84,13 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         <div className="edge radius-card border-line bg-surface px-4 py-10 text-center shadow-theme" style={{ borderRadius: 16 }}>
           <p className="font-display text-lg font-semibold text-ink">No places yet</p>
           <p className="mt-1 text-sm text-muted">Try clearing filters or save your first spot.</p>
-          <a href="/add" className="edge radius-input mt-3 inline-block border-accent bg-accent px-4 py-2 text-sm text-accent-ink">
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="edge radius-input mt-3 inline-block border-accent bg-accent px-4 py-2 text-sm text-accent-ink"
+          >
             Add a place
-          </a>
+          </button>
         </div>
       ) : (
         <div className="flex flex-col gap-3.5">
@@ -143,6 +155,14 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         onDelete={async (p) => {
           await deleteOne(p);
         }}
+        onTagDefinitionsChanged={handleTagDefinitionsChanged}
+      />
+
+      <AddPlaceSheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSaved={() => void fetchList()}
+        onUnauthorized={onUnauthorized}
         onTagDefinitionsChanged={handleTagDefinitionsChanged}
       />
     </div>

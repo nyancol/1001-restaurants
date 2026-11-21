@@ -50,6 +50,7 @@ function MapRoute({ onUnauthorized }: { onUnauthorized: () => void }) {
 
 export default function App() {
   const { t } = useLanguage();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [user, setUser] = useState<{ id: string; displayName: string | null } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
@@ -202,13 +203,25 @@ export default function App() {
             </span>
           </Link>
           <div className="ml-auto flex min-w-0 items-center gap-1.5 pl-2 lg:gap-2.5">
-            <Link
-              to="/add"
-              className="edge inline-flex min-h-[36px] shrink-0 items-center gap-1 border-accent bg-accent px-3 text-xs font-bold text-accent-ink shadow-theme lg:min-h-[44px] lg:px-4 lg:text-sm lg:font-semibold"
-              style={{ borderRadius: 999 }}
-            >
-              <span aria-hidden className="text-base leading-none">+</span> Memory
-            </Link>
+            {isDesktop ? (
+              <Link
+                to="/add"
+                className="edge inline-flex min-h-[36px] shrink-0 items-center gap-1 border-accent bg-accent px-3 text-xs font-bold text-accent-ink shadow-theme lg:min-h-[44px] lg:px-4 lg:text-sm lg:font-semibold"
+                style={{ borderRadius: 999 }}
+              >
+                <span aria-hidden className="text-base leading-none">+</span> Memory
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("inmybelly:open-add"))}
+                aria-label="Add a memory"
+                className="edge inline-flex min-h-[36px] shrink-0 items-center gap-1 border-accent bg-accent px-3 text-xs font-bold text-accent-ink shadow-theme lg:min-h-[44px] lg:px-4 lg:text-sm lg:font-semibold"
+                style={{ borderRadius: 999 }}
+              >
+                <span aria-hidden className="text-base leading-none">+</span> Memory
+              </button>
+            )}
             <span className="edge inline-flex h-8 w-8 shrink-0 items-center justify-center border-line bg-surface-2 text-xs font-bold text-ink lg:h-9 lg:w-9" style={{ borderRadius: 999 }} aria-hidden title={user.displayName ?? t["app.meFallback"]}>
               {(user.displayName ?? "C").slice(0, 1).toUpperCase()}
             </span>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MapView from "../components/MapView";
 import ViewToggle from "../components/ViewToggle";
 import SearchBar from "../components/mobile/SearchBar";
@@ -6,6 +6,7 @@ import FilterSheet from "../components/mobile/FilterSheet";
 import PhoneMapPreview from "../components/mobile/PhoneMapPreview";
 import TastingNotesSheet from "../components/mobile/TastingNotesSheet";
 import EditPlaceSheet from "../components/mobile/EditPlaceSheet";
+import AddPlaceSheet from "../components/mobile/AddPlaceSheet";
 import type { TagMutation } from "../components/TagCombobox";
 import { usePlaceFilters } from "../lib/usePlaceFilters";
 import { usePlaces } from "../lib/usePlaces";
@@ -31,6 +32,13 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
   const [sheetOpen, setSheetOpen] = useState(false);
   const [notesPlace, setNotesPlace] = useState<(typeof places)[number] | null>(null);
   const [editingPlace, setEditingPlace] = useState<(typeof places)[number] | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  useEffect(() => {
+    const onOpenAdd = () => setAddOpen(true);
+    window.addEventListener("inmybelly:open-add", onOpenAdd);
+    return () => window.removeEventListener("inmybelly:open-add", onOpenAdd);
+  }, []);
 
   const priceSelected = price ? price.split(",").map((s) => s.trim()).filter(Boolean) : [];
   const filtered = useMemo(() => {
@@ -136,6 +144,14 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
           await deleteOne(p);
           if (selectedId === p.id) setSelectedId(null);
         }}
+        onTagDefinitionsChanged={handleTagDefinitionsChanged}
+      />
+
+      <AddPlaceSheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSaved={() => void fetchList()}
+        onUnauthorized={onUnauthorized}
         onTagDefinitionsChanged={handleTagDefinitionsChanged}
       />
     </div>
