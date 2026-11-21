@@ -230,8 +230,6 @@ export const fr: typeof en = {
   "map.mapAria": "carte des lieux",
   "map.locateMe": "me localiser",
   "map.locateMeTitle": "Me localiser",
-  "map.fitTitle": "Ajuster aux résultats",
-  "map.fitAria": "ajuster la carte aux résultats",
   "map.loading": "Chargement…",
   "map.closeDetails": "Fermer",
   "map.closeDetailsAria": "fermer les détails",

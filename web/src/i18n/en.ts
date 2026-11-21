@@ -228,8 +228,6 @@ export const en = {
   "map.mapAria": "places map",
   "map.locateMe": "locate me",
   "map.locateMeTitle": "Locate me",
-  "map.fitTitle": "Fit to results",
-  "map.fitAria": "fit map to results",
   "map.loading": "Loading…",
   "map.closeDetails": "Close",
   "map.closeDetailsAria": "close details",

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GeoJSONSource, LngLatBounds, Map as MapLibreMap, NavigationControl, setWorkerUrl } from "maplibre-gl";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { GeoJSONSource, Map as MapLibreMap, NavigationControl, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import PlaceCard from "./PlaceCard";
 import MapPreviewCard from "./MapPreviewCard";
@@ -7,7 +7,6 @@ import PlaceEditor from "./PlaceEditor";
 import type { Place } from "../lib/api";
 import { ensurePinImages } from "../theme/pins";
 import { useLanguage } from "../i18n/LanguageContext";
-import { useMediaQuery } from "../lib/useMediaQuery";
 
 const PARIS = { lng: 2.3522, lat: 48.8566, zoom: 11.5 };
 const USER_ZOOM = 14;
@@ -85,9 +84,9 @@ interface MapViewProps {
  * MapLibre map with pins, clusters, user dot, and detail surface.
  * Shared by the phone Map page and the desktop split pane. The detail
  * surface is a bottom sheet on phone and — when `showDetails` is true —
- * a right-docked panel on desktop via responsive classes; `fitToResults`
- * biases padding accordingly. Split view sets `showDetails={false}` so a
- * pin tap only highlights the matching list card.
+ * a right-docked panel on desktop via responsive classes. Split view
+ * sets `showDetails={false}` so a pin tap only highlights the matching
+ * list card.
  */
 export default function MapView({
   places,
@@ -107,7 +106,6 @@ export default function MapView({
   onTagDefinitionsChanged,
 }: MapViewProps) {
   const { t } = useLanguage();
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -126,7 +124,6 @@ export default function MapView({
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
 
-  const located = useMemo(() => places.filter((p) => p.lat != null && p.lng != null), [places]);
   const selected = selectedId ? (places.find((p) => p.id === selectedId) ?? null) : null;
 
   const syncUserSource = useCallback((pos: UserPos) => {
@@ -183,7 +180,7 @@ export default function MapView({
     [centerOnUser, syncUserSource, onGeoNote],
   );
 
-  // Init map once. Sticky viewport lives here — only explicit locate/fit/cluster moves it.
+  // Init map once. Sticky viewport lives here — only explicit locate/cluster moves it.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     setWorkerUrl("/maplibre-gl-worker.mjs");
@@ -401,22 +398,6 @@ export default function MapView({
     map.setFilter("pins-selected", ["all", ["!", ["has", "point_count"]], ["==", ["get", "id"], selectedId ?? ""]]);
   }, [selectedId, mapReady]);
 
-  function fitToResults() {
-    const map = mapRef.current;
-    if (!map || !located.length) return;
-    const bounds = new LngLatBounds();
-    for (const p of located) bounds.extend([p.lng as number, p.lat as number]);
-    map.fitBounds(bounds, {
-      padding: {
-        top: 60,
-        bottom: !isDesktop && selected && showDetails ? 260 : 60,
-        left: 40,
-        right: isDesktop && selected && showDetails ? 420 : 40,
-      },
-      maxZoom: 15,
-    });
-  }
-
   async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) {
     setEditing(false);
     try {
@@ -448,35 +429,8 @@ export default function MapView({
   return (
     <div className="edge relative overflow-hidden border-line bg-surface-2/40" style={{ borderRadius: 16 }}>
       <div ref={containerRef} className={`maplibre-themed w-full ${mapHeightClass}`} aria-label={t["map.placesMapAria"]} style={{ borderRadius: 16 }} />
-      {/* Top pills: location + RE-CENTER, Artisan/Transit, zoom */}
-      <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start gap-2">
-        <div className="pointer-events-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={fitToResults}
-            disabled={!located.length}
-            aria-label={t["map.fitAria"]}
-            title={t["map.fitTitle"]}
-            className="edge inline-flex min-h-[40px] items-center gap-1.5 border-line bg-surface/95 px-3 text-[13px] font-semibold text-ink shadow-theme backdrop-blur"
-            style={{ borderRadius: 999 }}
-          >
-            <span aria-hidden>➤</span> Paris 11e &amp; 2e
-            <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Re-center</span>
-          </button>
-        </div>
-        <div className="pointer-events-auto ml-auto flex items-center gap-2">
-          <div className="edge inline-flex bg-surface/95 p-1 shadow-theme backdrop-blur" style={{ borderRadius: 999 }} role="group" aria-label="Map style">
-            <span className="inline-flex min-h-[32px] items-center bg-been px-3 text-xs font-bold text-been-ink" style={{ borderRadius: 999 }}>Artisan</span>
-            <span className="inline-flex min-h-[32px] items-center px-3 text-xs font-semibold text-muted">Transit</span>
-          </div>
-          <div className="edge hidden flex-col overflow-hidden border-line bg-surface/95 shadow-theme backdrop-blur sm:flex" style={{ borderRadius: 12 }}>
-            <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()} className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-surface-2">+</button>
-            <button type="button" aria-label="Zoom out" onClick={() => mapRef.current?.zoomOut()} className="inline-flex h-9 w-9 items-center justify-center border-t border-line text-ink hover:bg-surface-2">−</button>
-          </div>
-        </div>
-      </div>
-      {/* Locate + fit actions */}
-      <div className="absolute left-3 top-[68px] flex flex-col gap-2">
+      {/* Locate-me action; zoom comes from the built-in NavigationControl (top-right) */}
+      <div className="absolute left-3 top-3 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => void locate()}
