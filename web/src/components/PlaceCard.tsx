@@ -162,6 +162,9 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
         {google != null && personal == null && (
           <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2.5 py-1 text-[13px] font-bold text-ink" style={{ borderRadius: 999 }} title={t["card.googleRatingTitle"]}>
             <span aria-hidden className="text-star">★</span> {typeof google === "number" ? google.toFixed(1) : google}
+            {p.googleRatingCount != null && (
+              <span className="font-normal text-muted">({p.googleRatingCount})</span>
+            )}
           </span>
         )}
         {readOnly ? (
