@@ -29,7 +29,6 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
   const [note, setNote] = useState(p.note ?? "");
   const [icon, setIcon] = useState((p.icon ?? "fork"));
   const [status, setStatus] = useState(p.status ?? "WANT_TO_GO");
-  const [visits, setVisits] = useState(p.status === "BEEN_TO" ? 1 : 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -60,7 +59,7 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
       </div>
       {p.address && <p className="mt-1 text-xs text-muted">📍 {p.address}</p>}
 
-      {/* Status segmented + visits */}
+      {/* Status segmented */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <div className="edge inline-flex bg-surface-2 p-1" style={{ borderRadius: 999 }} role="group" aria-label="Visit status">
           <button
@@ -74,19 +73,13 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
           </button>
           <button
             type="button"
-            onClick={() => { setStatus("BEEN_TO"); setVisits((v) => Math.max(v, 1)); }}
+            onClick={() => { setStatus("BEEN_TO"); }}
             aria-pressed={status === "BEEN_TO"}
             className={`inline-flex min-h-[36px] items-center gap-1 px-3 text-xs font-semibold ${status === "BEEN_TO" ? "bg-been text-been-ink shadow-theme" : "text-muted"}`}
             style={{ borderRadius: 999 }}
           >
             ✓ Been here
           </button>
-        </div>
-        <div className="edge ml-auto inline-flex items-center gap-2 border-line bg-surface px-2 py-1" style={{ borderRadius: 999 }}>
-          <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Visits</span>
-          <button type="button" aria-label="Fewer visits" onClick={() => setVisits((v) => Math.max(0, v - 1))} className="inline-flex h-7 w-7 items-center justify-center bg-surface-2 text-sm font-bold text-ink" style={{ borderRadius: 999 }}>−</button>
-          <span className="min-w-[16px] text-center text-sm font-bold text-ink" aria-live="polite">{visits}</span>
-          <button type="button" aria-label="More visits" onClick={() => setVisits((v) => v + 1)} className="inline-flex h-7 w-7 items-center justify-center bg-surface-2 text-sm font-bold text-ink" style={{ borderRadius: 999 }}>+</button>
         </div>
       </div>
 
