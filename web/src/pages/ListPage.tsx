@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import FilterBar from "../components/FilterBar";
-import FeedHeader, { sortPlaces, type SortId, type ViewMode } from "../components/FeedHeader";
+import FeedHeader, { sortPlaces, type SortId } from "../components/FeedHeader";
 import OwnerPicker from "../components/OwnerPicker";
 import PlaceListPane from "../components/PlaceListPane";
 import type { TagMutation } from "../components/TagCombobox";
@@ -21,7 +21,6 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
   );
 
   const [sort, setSort] = useState<SortId>("recent");
-  const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const sorted = useMemo(() => sortPlaces(places, sort), [places, sort]);
   const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
   const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
@@ -41,7 +40,7 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
 
   return (
     <div className="mx-auto max-w-xl bg-bg px-4 pb-16 pt-4 lg:max-w-[1600px]">
-      <FeedHeader total={places.length} sort={sort} setSort={setSort} viewMode={viewMode} setViewMode={setViewMode} />
+      <FeedHeader total={places.length} sort={sort} setSort={setSort} />
       <p className="mb-2 text-xs text-muted">Viewing {scopeName}{readOnly ? " · read-only" : ""}</p>
       <div className="mb-3">
         <OwnerPicker owner={owner} setOwner={setOwner} />
@@ -67,7 +66,6 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         onError={setError}
         readOnly={readOnly}
         onTagDefinitionsChanged={handleTagDefinitionsChanged}
-        viewMode={viewMode}
         emptyTitle={readOnly ? (places.length === 0 ? t["empty.scopeHasNoPlaces"](scopeName) : t["empty.scopeHasNoPlacesFilter"](scopeName)) : emptyTitle}
         emptySubtitle={readOnly ? t["empty.tryClear"] : undefined}
         emptyHint={

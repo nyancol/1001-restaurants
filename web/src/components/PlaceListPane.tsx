@@ -23,11 +23,10 @@ interface Props {
   emptyTitle?: string;
   emptySubtitle?: string;
   onTagDefinitionsChanged?: (m: TagMutation) => void;
-  viewMode?: "cards" | "grid";
 }
 
 /** Journal feed of place cards with inline editing. Shared by phone list and desktop split pane. */
-export default function PlaceListPane({ places, loading, error, onToggleStatus, onSaveEdit, onDeleteEdit, onRefresh, refreshingIds, onError, focusedId, listRef, emptyHint, onCardSelect, readOnly, emptyTitle, emptySubtitle, onTagDefinitionsChanged, viewMode = "cards" }: Props) {
+export default function PlaceListPane({ places, loading, error, onToggleStatus, onSaveEdit, onDeleteEdit, onRefresh, refreshingIds, onError, focusedId, listRef, emptyHint, onCardSelect, readOnly, emptyTitle, emptySubtitle, onTagDefinitionsChanged }: Props) {
   const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -64,7 +63,7 @@ export default function PlaceListPane({ places, loading, error, onToggleStatus, 
     );
   }
   return (
-    <ul ref={listRef} className={viewMode === "grid" ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : "flex flex-col gap-4"}>
+    <ul ref={listRef} className="flex flex-col gap-4">
       {places.map((p) => (
         <li
           key={p.id}

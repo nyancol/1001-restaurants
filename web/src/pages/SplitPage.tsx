@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import FilterBar from "../components/FilterBar";
-import FeedHeader, { sortPlaces, type SortId, type ViewMode } from "../components/FeedHeader";
+import FeedHeader, { sortPlaces, type SortId } from "../components/FeedHeader";
 import MapView from "../components/MapView";
 import OwnerPicker from "../components/OwnerPicker";
 import PlaceListPane from "../components/PlaceListPane";
@@ -26,7 +26,6 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [geoNote, setGeoNote] = useState<string | null>(null);
   const [sort, setSort] = useState<SortId>("recent");
-  const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const listElRef = useRef<HTMLUListElement | null>(null);
 
   const handleTagDefinitionsChanged = useCallback((m: TagMutation) => {
@@ -84,7 +83,7 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
 
         {/* Center feed */}
         <section aria-label={t["map.listAria"]} className="min-w-0">
-          <FeedHeader total={places.length} sort={sort} setSort={setSort} viewMode={viewMode} setViewMode={setViewMode} />
+          <FeedHeader total={places.length} sort={sort} setSort={setSort} />
           <p className="mb-2 text-xs text-muted">Viewing {scopeName} · {locatedCount} shown{unlocatedCount > 0 ? ` · ${unlocatedCount} hidden` : ""}{readOnly ? " · read-only" : ""}</p>
           <PlaceListPane
             places={sorted}
@@ -101,7 +100,6 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             listRef={(el) => { listElRef.current = el; }}
             readOnly={readOnly}
             onTagDefinitionsChanged={handleTagDefinitionsChanged}
-            viewMode={viewMode}
             emptyTitle={readOnly ? t["empty.scopeHasNoPlaces"](scopeName) : undefined}
             emptySubtitle={readOnly ? t["empty.tryClear"] : undefined}
             emptyHint={

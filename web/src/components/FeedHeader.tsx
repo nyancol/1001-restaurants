@@ -1,15 +1,12 @@
 export type SortId = "recent" | "rating" | "name";
-export type ViewMode = "cards" | "grid";
 
 interface Props {
   total: number;
   sort: SortId;
   setSort: (s: SortId) => void;
-  viewMode: ViewMode;
-  setViewMode: (v: ViewMode) => void;
 }
 
-export default function FeedHeader({ total, sort, setSort, viewMode, setViewMode }: Props) {
+export default function FeedHeader({ total, sort, setSort }: Props) {
   return (
     <div className="edge radius-card mb-4 flex flex-wrap items-center gap-2 border-line bg-surface p-3 shadow-theme" style={{ borderRadius: 16 }}>
       <h2 className="font-display mr-auto text-[26px] font-semibold tracking-tight text-ink">
@@ -30,28 +27,6 @@ export default function FeedHeader({ total, sort, setSort, viewMode, setViewMode
         </select>
         <span aria-hidden className="pr-1 text-muted">▾</span>
       </label>
-      <div className="edge inline-flex items-center bg-surface-2 p-1" style={{ borderRadius: 999 }} role="group" aria-label="Feed density">
-        <button
-          type="button"
-          onClick={() => setViewMode("cards")}
-          aria-pressed={viewMode === "cards"}
-          title="Card view"
-          className={`inline-flex h-9 w-9 items-center justify-center ${viewMode === "cards" ? "bg-surface text-ink shadow-theme" : "text-muted"}`}
-          style={{ borderRadius: 999 }}
-        >
-          <span aria-hidden>☰</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode("grid")}
-          aria-pressed={viewMode === "grid"}
-          title="Grid view"
-          className={`inline-flex h-9 w-9 items-center justify-center ${viewMode === "grid" ? "bg-surface text-ink shadow-theme" : "text-muted"}`}
-          style={{ borderRadius: 999 }}
-        >
-          <span aria-hidden>▦</span>
-        </button>
-      </div>
     </div>
   );
 }
