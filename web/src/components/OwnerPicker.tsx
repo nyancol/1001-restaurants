@@ -44,6 +44,7 @@ export default function OwnerPicker({ owner, setOwner }: Props) {
   }, []);
 
   const others = meId ? users.filter((u) => u.id !== meId) : users;
+  const hasFriends = meId != null && others.length > 0;
   const meCount = meId ? (users.find((u) => u.id === meId)?.placeCount ?? 0) : 0;
   const friendsCount = others.reduce((n, u) => n + (u.placeCount ?? 0), 0);
   const isSelfId = meId != null && owner === meId;
@@ -57,7 +58,6 @@ export default function OwnerPicker({ owner, setOwner }: Props) {
   }
   function pickFriends() {
     if (others.length > 0) setOwner(others[0].id);
-    else setOwner("all");
   }
 
   return (
@@ -84,7 +84,9 @@ export default function OwnerPicker({ owner, setOwner }: Props) {
           type="button"
           onClick={pickFriends}
           aria-pressed={isFriends}
-          className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 px-3 text-sm font-semibold ${isFriends ? "bg-accent text-accent-ink shadow-theme" : "text-muted hover:text-ink"}`}
+          disabled={loading || !hasFriends}
+          title={hasFriends ? undefined : "No friends yet"}
+          className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 px-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${isFriends ? "bg-accent text-accent-ink shadow-theme" : "text-muted hover:text-ink"}`}
           style={{ borderRadius: 999 }}
         >
           <span aria-hidden>👥</span> Friends
@@ -93,7 +95,7 @@ export default function OwnerPicker({ owner, setOwner }: Props) {
           </span>
         </button>
       </div>
-      {isFriends && (
+      {isFriends && hasFriends && (
         <label className="flex flex-col gap-1 text-xs text-muted">
           <span className="font-semibold uppercase tracking-wide">Friend</span>
           <select
