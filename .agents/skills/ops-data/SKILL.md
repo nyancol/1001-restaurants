@@ -1,9 +1,16 @@
+---
+name: ops-data
+description: Ad-hoc Google refresh sweeps (per-place snapshot rewrites) and SQLite backup/restore for "places". Use when refreshing stale Google data or when a backup/restore of app data is explicitly ordered.
+---
+
 # Places Data Skill
 
 Google snapshot refresh sweeps and SQLite backup / restore. These are the
 only writers to app data outside the app itself — and both stay narrow:
 the refresh endpoint rewrites snapshots only, restores replace the prod
 volume only on explicit order.
+
+Sources of truth: `hermes.yaml` (backup section), `src/` refresh endpoint.
 
 ## Part 1 — Ad-hoc Google refresh sweep
 

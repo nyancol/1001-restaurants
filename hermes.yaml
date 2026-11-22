@@ -9,8 +9,8 @@ docker_access:
   rule: auto-detect (no sudo when `docker info` works, sudo only when needed)
   override: DOCKER_SUDO="" (never sudo) or DOCKER_SUDO="sudo" (always sudo)
   applies_to:
-    - skills/ops-preview/scripts/preprod-deploy.sh
-    - skills/ops-preview/scripts/preprod-verify.sh
+    - .agents/skills/ops-preview/scripts/preprod-deploy.sh
+    - .agents/skills/ops-preview/scripts/preprod-verify.sh
     - mise run preprod-up/down/logs
   verify_exit_codes: 0=green, 1=red, 2=check-errored-indeterminate-not-a-red
 
@@ -99,7 +99,7 @@ quota:
   thresholds: 70% watch / 90% urgent of each SKU free cap, MTD (details+refresh share the Enterprise cap; textsearch tracked against Pro 5k with Enterprise-equivalent noted until tier confirmed)
   authoritative: cloud console billing reports grouped by SKU (tier confirmation)
   generated_by: hermes cron "Places quota check" (weekly, ops-observe skill, terminal tools) — silent GREEN, notice per WATCH/URGENT transition + recovery
-  job_spec: run skills/ops-observe/scripts/quota-check.sh with GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json in /home/yann/Documents/1001-restaurants (requires follow-up PR merged so the script is on main)
+  job_spec: run .agents/skills/ops-observe/scripts/quota-check.sh with GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json in /home/yann/Documents/1001-restaurants (requires follow-up PR merged so the script is on main)
   key: service account places-billing-viewer (billing.viewer + monitoring.viewer), 0600 at ~/.secrets/gcp-billing-viewer.json
   textsearch: tracked but unattributed (no Text Search path in repo) — tier unconfirmed, verify in Billing Reports; consider per-consumer keys
   restore: stop places, restore snapshot into volume, PRAGMA integrity_check, start places, verify /api/health db:ok
@@ -107,14 +107,14 @@ quota:
 
 runner:
   container: github-runner # self-hosted, same host as prod/preprod
-  check: skills/ops-runner/scripts/runner-watch.sh # 0=green, 1=red, 2=check-errored-indeterminate-not-a-red
+  check: .agents/skills/ops-runner/scripts/runner-watch.sh # 0=green, 1=red, 2=check-errored-indeterminate-not-a-red
   watches:
     - container_alive
     - preview_queue_fresh_15m # every open `preview` PR has a preprod-preview run on its head
   alert_policy: one_alert_per_red_transition_plus_one_recovery_notice
 
 patching:
-  check: skills/ops-ship/scripts/patch-check.sh # 0=checked-ok, 1=attention (SAST failed on main or dependabot.yml missing), 2=check-errored-indeterminate-not-a-verdict
+  check: .agents/skills/ops-ship/scripts/patch-check.sh # 0=checked-ok, 1=attention (SAST failed on main or dependabot.yml missing), 2=check-errored-indeterminate-not-a-verdict
   inspects:
     - open Dependabot PRs (monthly npm + docker input, informational — never a red by itself)
     - latest SAST sast.yml run on main (failure blocks the monthly train)

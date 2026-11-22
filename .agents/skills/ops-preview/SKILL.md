@@ -1,3 +1,9 @@
+---
+name: ops-preview
+description: Deploy a branch to the single preprod staging slot and verify it green for requestor validation. Mutates preprod — invoke explicitly (e.g. /skill:ops-preview).
+disable-model-invocation: true
+---
+
 # Places Preview Skill
 
 Deploy a branch to the single staging slot for requestor validation.
@@ -8,10 +14,12 @@ manual runs, `$PREPROD_SLOT_FILE` (`/tmp/places-preprod-slot` on the
 persistent runner filesystem) in CI — runner workspaces do not reliably
 persist untracked files between runs.
 
-Secrets: the agent MAY read `.env.preprod` for presence/shape validation
-(set?, valid URL?, length >= 32?). It MUST never print, commit, forward, or
-include secret values in alerts, logs, prompts, or reports — presence/shape
-only (e.g. `SESSION_SECRET set, length ok`).
+Sources of truth: `compose.preprod.yaml`, `Dockerfile`, `mise.toml`
+(preprod tasks).
+
+Secrets and docker-access conventions follow the family conventions in the
+`ops` router skill — load `.agents/skills/ops/SKILL.md` if not already
+loaded.
 
 ## Shared context
 
@@ -21,7 +29,7 @@ only (e.g. `SESSION_SECRET set, length ok`).
   `:8093 -> places:5173`), no host publication. The Arcane-managed prod
   `.env` MUST NOT set `HOST_PORT` (base `compose.yaml` only `expose:`s it;
   the variable is dead weight that invites a harmful publish).
-* Docker access: `skills/ops-preview/scripts/lib-docker.sh` (sourced by the preprod scripts)
+* Docker access: `.agents/skills/ops-preview/scripts/lib-docker.sh` (sourced by the preprod scripts)
   auto-detects — runs docker directly when `docker info` already works,
   sudo only when needed. `mise run preprod-up/down/logs` honor the same
   rule. Override explicitly per host: `DOCKER_SUDO=""` (never sudo) or

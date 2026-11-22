@@ -1,27 +1,36 @@
+---
+name: ops-ship
+description: Monthly patching inspection (Dependabot + SAST, read-only) and version cuts (release PR + tag) for "places". Mutates releases — invoke explicitly (e.g. /skill:ops-ship).
+disable-model-invocation: true
+---
+
 # Places Ship Skill
 
 Monthly patching inspection (read-only) and version cuts (release PR +
 tag). Patching never merges, rebuilds, or deploys; releases never bundle
 feature code with the version bump and never move a pushed tag.
 
+Sources of truth: `.github/dependabot.yml`, `.github/workflows/sast.yml`
+(`sast.yml` run on main).
+
 ---
 
 ## Part 1 — Patching inspection (Dependabot + SAST, read-only)
 
 Read-only: never merges, rebuilds, or deploys. Check with
-`skills/ops-ship/scripts/patch-check.sh` (host-side, needs `gh` + `jq`): open Dependabot
+`.agents/skills/ops-ship/scripts/patch-check.sh` (host-side, needs `gh` + `jq`): open Dependabot
 PRs (npm + docker, per `.github/dependabot.yml`) plus the latest SAST
 (`sast.yml`) run on `main`.
 
 ```bash
-./skills/ops-ship/scripts/patch-check.sh
+.agents/skills/ops-ship/scripts/patch-check.sh
 # exit 0 checked-ok / 1 attention (SAST failed on main, or dependabot.yml
 # missing from the checkout) / 2 check-errored
 ```
 
-Exit codes match the preprod/runner convention: `0` = checked ok,
-`1` = attention, `2` = check-errored (gh/jq missing, auth failed,
-indeterminate — NOT a verdict, fix access and re-run). Open Dependabot
+Exit codes follow the family check convention (`ops` router skill):
+`0` = checked ok, `1` = attention, `2` = check-errored (gh/jq missing,
+auth failed, indeterminate). Open Dependabot
 PRs are informational, never a red by themselves; a SAST failure on
 `main` is the red (it blocks the monthly train).
 
