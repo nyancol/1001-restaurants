@@ -66,15 +66,15 @@ describe("places-bearer helper", () => {
     expect(getBearerToken("Bearer abc")).toBe("abc");
     expect(getBearerToken("nope")).toBeNull();
     expect(getBearerToken(undefined)).toBeNull();
-    expect(isPlacesPath("/api/places")).toBe(true);
-    expect(isPlacesPath("/api/places/x/refresh")).toBe(true);
-    expect(isPlacesPath("/api/users")).toBe(false);
-    expect(requiredScopeForPlaces("GET", "/api/places")).toBe("read:places");
-    expect(requiredScopeForPlaces("GET", "/api/places/x")).toBe("read:places");
-    expect(requiredScopeForPlaces("POST", "/api/places/x/refresh")).toBe("refresh:places");
-    expect(requiredScopeForPlaces("PATCH", "/api/places/x")).toBeNull();
-    expect(requiredScopeForPlaces("POST", "/api/places")).toBeNull();
-    expect(requiredScopeForPlaces("DELETE", "/api/places/x")).toBeNull();
+    expect(isPlacesPath("/api/v1/places")).toBe(true);
+    expect(isPlacesPath("/api/v1/places/x/refresh")).toBe(true);
+    expect(isPlacesPath("/api/v1/users")).toBe(false);
+    expect(requiredScopeForPlaces("GET", "/api/v1/places")).toBe("read:places");
+    expect(requiredScopeForPlaces("GET", "/api/v1/places/x")).toBe("read:places");
+    expect(requiredScopeForPlaces("POST", "/api/v1/places/x/refresh")).toBe("refresh:places");
+    expect(requiredScopeForPlaces("PATCH", "/api/v1/places/x")).toBeNull();
+    expect(requiredScopeForPlaces("POST", "/api/v1/places")).toBeNull();
+    expect(requiredScopeForPlaces("DELETE", "/api/v1/places/x")).toBeNull();
     expect(hasScope(["read:places"], "read:places")).toBe(true);
     expect(hasScope(["read:places"], "refresh:places")).toBe(false);
   });
@@ -112,7 +112,7 @@ describe("places-bearer helper", () => {
   });
 });
 
-describe("POST /api/places/:id/refresh", () => {
+describe("POST /api/v1/places/:id/refresh", () => {
   let app: any;
   let dir: string;
   let calls: any[];
@@ -154,7 +154,7 @@ describe("POST /api/places/:id/refresh", () => {
   async function createPlace(cookie: string, payload: any): Promise<any> {
     const res = await app.inject({
       method: "POST",
-      url: "/api/places",
+      url: "/api/v1/places",
       headers: { cookie },
       payload,
     });
@@ -184,7 +184,7 @@ describe("POST /api/places/:id/refresh", () => {
     });
     const before = created.updatedAt;
     await new Promise((r) => setTimeout(r, 5));
-    const res = await app.inject({ method: "POST", url: `/api/places/${created.id}/refresh`, headers: { cookie: a } });
+    const res = await app.inject({ method: "POST", url: `/api/v1/places/${created.id}/refresh`, headers: { cookie: a } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.googleRating).toBe(4.5);
@@ -208,17 +208,17 @@ describe("POST /api/places/:id/refresh", () => {
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);
     const created = await createPlace(a, { name: "A1", icon: "fork", googlePlaceId: "ChIJ123" });
-    const res = await app.inject({ method: "POST", url: `/api/places/${created.id}/refresh`, headers: { cookie: b } });
+    const res = await app.inject({ method: "POST", url: `/api/v1/places/${created.id}/refresh`, headers: { cookie: b } });
     expect(res.statusCode).toBe(403);
   });
 
   it("returns 404 for unknown id and 422 without googlePlaceId", async () => {
     await makeRefreshApp();
     const a = await cookieFor(ALICE);
-    const missing = await app.inject({ method: "POST", url: "/api/places/nope/refresh", headers: { cookie: a } });
+    const missing = await app.inject({ method: "POST", url: "/api/v1/places/nope/refresh", headers: { cookie: a } });
     expect(missing.statusCode).toBe(404);
     const manual = await createPlace(a, { name: "Manual", icon: "cocktail" });
-    const res = await app.inject({ method: "POST", url: `/api/places/${manual.id}/refresh`, headers: { cookie: a } });
+    const res = await app.inject({ method: "POST", url: `/api/v1/places/${manual.id}/refresh`, headers: { cookie: a } });
     expect(res.statusCode).toBe(422);
   });
 
@@ -227,7 +227,7 @@ describe("POST /api/places/:id/refresh", () => {
     const a = await cookieFor(ALICE);
     // create needs no google key; inject directly since googleFetch unused for create
     const created = await createPlace(a, { name: "A1", icon: "fork", googlePlaceId: "ChIJ123" });
-    const res = await app.inject({ method: "POST", url: `/api/places/${created.id}/refresh`, headers: { cookie: a } });
+    const res = await app.inject({ method: "POST", url: `/api/v1/places/${created.id}/refresh`, headers: { cookie: a } });
     expect(res.statusCode).toBe(503);
   });
 
@@ -263,9 +263,9 @@ describe("POST /api/places/:id/refresh", () => {
       placesKeyResolver: async () => publicKey,
     }));
     const created2 = await createPlace(a, { name: "B1", icon: "cocktail", googlePlaceId: "ChIJ999", googleRating: 3.1 });
-    const r429 = await app.inject({ method: "POST", url: `/api/places/${created2.id}/refresh`, headers: { cookie: a } });
+    const r429 = await app.inject({ method: "POST", url: `/api/v1/places/${created2.id}/refresh`, headers: { cookie: a } });
     expect(r429.statusCode).toBe(429);
-    const after = await app.inject({ method: "GET", url: `/api/places/${created2.id}`, headers: { cookie: a } });
+    const after = await app.inject({ method: "GET", url: `/api/v1/places/${created2.id}`, headers: { cookie: a } });
     expect(after.json().googleRating).toBe(3.1);
     void created;
   });
@@ -280,14 +280,14 @@ describe("POST /api/places/:id/refresh", () => {
     const wrongAud = await mintToken(privateKey, { aud: "https://other.example.com" });
 
     // read:places lists all without cookie
-    const list = await app.inject({ method: "GET", url: "/api/places?owner=all", headers: { authorization: `Bearer ${both}` } });
+    const list = await app.inject({ method: "GET", url: "/api/v1/places?owner=all", headers: { authorization: `Bearer ${both}` } });
     expect(list.statusCode).toBe(200);
-    expect(list.json().places.length).toBe(1);
+    expect(list.json().data.length).toBe(1);
 
     // refresh:places works cross-user (bob token on alice row)
     const cross = await app.inject({
       method: "POST",
-      url: `/api/places/${created.id}/refresh`,
+      url: `/api/v1/places/${created.id}/refresh`,
       headers: { authorization: `Bearer ${both}` },
     });
     expect(cross.statusCode).toBe(200);
@@ -296,13 +296,13 @@ describe("POST /api/places/:id/refresh", () => {
     // missing scope -> 403
     const noScope = await app.inject({
       method: "POST",
-      url: `/api/places/${created.id}/refresh`,
+      url: `/api/v1/places/${created.id}/refresh`,
       headers: { authorization: `Bearer ${readOnly}` },
     });
     expect(noScope.statusCode).toBe(403);
     const readDenied = await app.inject({
       method: "GET",
-      url: "/api/places?owner=all",
+      url: "/api/v1/places?owner=all",
       headers: { authorization: `Bearer ${refreshOnly}` },
     });
     expect(readDenied.statusCode).toBe(403);
@@ -310,13 +310,13 @@ describe("POST /api/places/:id/refresh", () => {
     // bad / wrong-aud -> 401
     const bad = await app.inject({
       method: "GET",
-      url: "/api/places?owner=all",
+      url: "/api/v1/places?owner=all",
       headers: { authorization: "Bearer not-a-token" },
     });
     expect(bad.statusCode).toBe(401);
     const badAud = await app.inject({
       method: "GET",
-      url: "/api/places?owner=all",
+      url: "/api/v1/places?owner=all",
       headers: { authorization: `Bearer ${wrongAud}` },
     });
     expect(badAud.statusCode).toBe(401);
@@ -324,7 +324,7 @@ describe("POST /api/places/:id/refresh", () => {
     // Bearer ignored outside Places API
     const users = await app.inject({
       method: "GET",
-      url: "/api/users",
+      url: "/api/v1/users",
       headers: { authorization: `Bearer ${both}` },
     });
     expect(users.statusCode).toBe(401);
@@ -332,14 +332,14 @@ describe("POST /api/places/:id/refresh", () => {
     // M2M cannot use user-only writes
     const patch = await app.inject({
       method: "PATCH",
-      url: `/api/places/${created.id}`,
+      url: `/api/v1/places/${created.id}`,
       headers: { authorization: `Bearer ${both}` },
       payload: { note: "x" },
     });
     expect(patch.statusCode).toBe(403);
     const del = await app.inject({
       method: "DELETE",
-      url: `/api/places/${created.id}`,
+      url: `/api/v1/places/${created.id}`,
       headers: { authorization: `Bearer ${both}` },
     });
     expect(del.statusCode).toBe(403);

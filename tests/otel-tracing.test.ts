@@ -90,7 +90,7 @@ describe("health span filter", () => {
         name: "GET",
         attributes: {
           "http.request.method": "GET",
-          "url.path": "/api/places",
+          "url.path": "/api/v1/places",
           "url.scheme": "http",
           "http.response.status_code": 200,
           "X-Goog-Api-Key": "secret-key",
@@ -99,15 +99,15 @@ describe("health span filter", () => {
     );
     proc.onEnd(
       fakeSpan({
-        name: "GET /api/places",
-        attributes: { "http.route": "/api/places", "X-Goog-Api-Key": "secret-key" },
+        name: "GET /api/v1/places",
+        attributes: { "http.route": "/api/v1/places", "X-Goog-Api-Key": "secret-key" },
       })
     );
     expect(seen).toHaveLength(2);
     for (const s of seen) {
       expect(s.attributes["X-Goog-Api-Key"]).toBe("[Redacted]");
     }
-    expect(seen[0].attributes["url.path"]).toBe("/api/places");
-    expect(seen[1].attributes["http.route"]).toBe("/api/places");
+    expect(seen[0].attributes["url.path"]).toBe("/api/v1/places");
+    expect(seen[1].attributes["http.route"]).toBe("/api/v1/places");
   });
 });

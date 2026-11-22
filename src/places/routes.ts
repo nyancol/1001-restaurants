@@ -5,8 +5,10 @@ import type { AppConfig } from "../config.js";
 import { places, users } from "../db/schema.js";
 import { normalizeTags } from "../tags/normalize.js";
 import { ensureTagDefinitions } from "../tags/definitions.js";
+import { deletePlaceTags, syncPlaceTags } from "../db/index.js";
 import { normalizeIcon, isValidIcon } from "../place-icons/infer.js";
 import { isOpenAt, parseHoursJson } from "./open.js";
+import { decodeCursor, encodeCursor, envelope, parseLimit } from "../pagination.js";
 import { withSpan } from "../observability/trace.js";
 
 export const STATUSES = ["WANT_TO_GO", "BEEN_TO"] as const;
@@ -41,6 +43,13 @@ export function parsePriceFilter(raw: unknown): number | null {
   return null;
 }
 
+const PRICE_TIER_VALUES: Record<number, string[]> = {
+  1: ["PRICE_LEVEL_INEXPENSIVE", "INEXPENSIVE", "€", "$"],
+  2: ["PRICE_LEVEL_MODERATE", "MODERATE", "€€", "$$"],
+  3: ["PRICE_LEVEL_EXPENSIVE", "EXPENSIVE", "€€€", "$$$"],
+  4: ["PRICE_LEVEL_VERY_EXPENSIVE", "VERY_EXPENSIVE", "€€€€", "$$$$"],
+};
+
 async function ownerNameMap(db: any): Promise<Map<string, string | null>> {
   try {
     const rows = await db.select().from(users);
@@ -62,7 +71,7 @@ function toPlace(row: typeof places.$inferSelect, displayName?: string | null) {
     lng: row.lng,
     status: row.status,
     icon: (row as any).icon ?? "fork",
-    tags: JSON.parse(row.tagsJson ?? "[]") as string[],
+    tags: JSON.parse(row.tagsJson ?? "[]" ) as string[],
     rating: row.rating,
     note: row.note,
     hours: parseJson((row as any).hoursJson),
@@ -195,12 +204,13 @@ export function mapGoogleDetailsToSnapshot(body: any): Record<string, any> {
 
 export function registerPlaceRoutes(
   app: FastifyInstance,
-  deps: { db: any; config?: any; googleFetch?: GoogleFetch },
+  deps: { db: any; sqlite?: any; config?: any; googleFetch?: GoogleFetch },
 ) {
   const { db, config, googleFetch } = deps;
   const gfetch: GoogleFetch = googleFetch ?? fetch;
+  const getSqlite = (): any => (deps as any).sqlite ?? (app as any).sqlite;
 
-  app.post("/api/places", {
+  app.post("/api/v1/places", {
     schema: {
       body: {
         type: "object",
@@ -224,7 +234,6 @@ export function registerPlaceRoutes(
     const userId = (req as any).userId as string;
     const { error, value } = validatePlaceInput(req.body ?? {}, false);
     if (error) return reply.code(400).send({ error });
-    // Duplicate googlePlaceId per owner: update instead of forking.
         if (value.googlePlaceId) {
       const dup = await db
         .select()
@@ -240,6 +249,7 @@ export function registerPlaceRoutes(
         await db.update(places).set(patch).where(eq(places.id, dup[0].id));
         if (value.tags !== undefined) {
           try { await ensureTagDefinitions(db, userId, value.tags); } catch { /* ignore */ }
+          try { syncPlaceTags(getSqlite(), userId, dup[0].id, value.tags); } catch { /* ignore */ }
         }
         const updated = await db.select().from(places).where(eq(places.id, dup[0].id)).limit(1);
         const names = await ownerNameMap(db);
@@ -250,7 +260,7 @@ export function registerPlaceRoutes(
     const id = randomUUID();
     await db.insert(places).values({
       id,
-      ownerId: userId, // forced to session user; client cannot set owner
+      ownerId: userId,
       googlePlaceId: value.googlePlaceId ?? null,
       name: value.name,
       address: value.address ?? null,
@@ -276,10 +286,11 @@ export function registerPlaceRoutes(
     const rows = await db.select().from(places).where(eq(places.id, id)).limit(1);
     const names = await ownerNameMap(db);
     try { await ensureTagDefinitions(db, userId, value.tags ?? []); } catch { /* ignore */ }
+    try { syncPlaceTags(getSqlite(), userId, id, value.tags ?? []); } catch { /* ignore */ }
     return reply.code(201).send(toPlace(rows[0], names.get(rows[0].ownerId) ?? null));
   });
 
-  app.get("/api/places", {
+  app.get("/api/v1/places", {
     schema: {
       querystring: {
         type: "object",
@@ -292,62 +303,104 @@ export function registerPlaceRoutes(
           openAt: { type: "string" },
           openNow: { type: "string" },
           price: { type: "string" },
+          limit: { type: "string" },
+          cursor: { type: "string" },
         },
       },
     },
-  }, async (req) => {
+  }, async (req, reply) => {
     const userId = (req as any).userId as string | undefined;
     const servicePrincipal = (req as any).servicePrincipal as { scopes: string[] } | undefined;
     const q = req.query as any;
+    if (q.cursor !== undefined) {
+      const c = decodeCursor(q.cursor);
+      if (!c) return reply.code(400).send({ error: "invalid_cursor" });
+    }
     const owner: string = q.owner ?? "me";
-    const rows = await db.select().from(places).orderBy(desc(places.updatedAt));
-    const names = await ownerNameMap(db);
-    let filtered: ReturnType<typeof toPlace>[] = rows.map((r: any) => toPlace(r, names.get(r.ownerId) ?? null));
+    const limit = parseLimit(q.limit);
+    const cursor = q.cursor ? decodeCursor(q.cursor)! : null;
+    const wantedTags = q.tags ? normalizeTags(String(q.tags).split(",")) : [];
+    const status = typeof q.status === "string" && q.status ? q.status : null;
+    const needle = typeof q.q === "string" && q.q ? String(q.q).toLowerCase() : null;
+    const priceTier = parsePriceFilter(q.price);
+
+    const sqlite = getSqlite();
+    const where: string[] = [];
+    const params: any[] = [];
     if (servicePrincipal) {
-      if (owner !== "all" && owner !== "me") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === owner);
-    } else if (owner === "me") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === userId);
-    else if (owner !== "all") filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.ownerId === owner);
-    if (q.status) filtered = filtered.filter((p: ReturnType<typeof toPlace>) => p.status === q.status);
-    // placeType is removed: legacy ?placeType= URLs are ignored.
-    if (q.tags) {
-      const wanted = normalizeTags(String(q.tags).split(","));
-      if (wanted.length) filtered = filtered.filter((p: ReturnType<typeof toPlace>) => wanted.every((t) => p.tags.includes(t)));
+      if (owner !== "all" && owner !== "me") { where.push(`owner_id = ?`); params.push(owner); }
+    } else if (owner === "me") { where.push(`owner_id = ?`); params.push(userId); }
+    else if (owner !== "all") { where.push(`owner_id = ?`); params.push(owner); }
+    if (status) { where.push(`status = ?`); params.push(status); }
+    if (needle) { where.push(`(lower(name) LIKE ? OR lower(coalesce(address,'')) LIKE ? OR lower(coalesce(note,'')) LIKE ?)`); params.push(`%${needle}%`, `%${needle}%`, `%${needle}%`); }
+    if (priceTier != null) {
+      const vals = PRICE_TIER_VALUES[priceTier] ?? [];
+      if (vals.length) { where.push(`price_level IN (${vals.map(() => "?").join(",")})`); params.push(...vals); }
+      else { where.push(`1 = 0`); }
     }
-    if (q.q) {
-      const needle = String(q.q).toLowerCase();
-      filtered = filtered.filter((p: ReturnType<typeof toPlace>) =>
-        p.name.toLowerCase().includes(needle) ||
-        (p.address ?? "").toLowerCase().includes(needle) ||
-        (p.note ?? "").toLowerCase().includes(needle)
-      );
+    for (const t of wantedTags) {
+      where.push(`EXISTS (SELECT 1 FROM place_tags pt WHERE pt.place_id = places.id AND pt.tag_name = ?)`);
+      params.push(t);
     }
+    if (cursor) {
+      where.push(`(updated_at < ? OR (updated_at = ? AND id < ?))`);
+      params.push(cursor.updatedAt, cursor.updatedAt, cursor.id);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    let total = 0;
+    try {
+      // total excludes cursor slice but includes all filters
+      const totalWhereParts = where.filter((w) => !w.startsWith("(updated_at < ?"));
+      const totalSql = `SELECT COUNT(*) AS c FROM places ${totalWhereParts.length ? `WHERE ${totalWhereParts.join(" AND ")}` : ""}`;
+      const totalParams = params.slice(0, params.length - (cursor ? 3 : 0));
+      const row: any = sqlite.prepare(totalSql).get(...totalParams);
+      total = Number(row?.c ?? 0);
+    } catch { total = 0; }
+    let rows: any[] = [];
+    try {
+      rows = sqlite.prepare(
+        `SELECT * FROM places ${whereSql} ORDER BY updated_at DESC, id DESC LIMIT ?`
+      ).all(...params, limit + 1);
+    } catch {
+      rows = [];
+    }
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+    const names = await ownerNameMap(db);
+    let items = pageRows.map((r: any) => toPlace({
+      id: r.id, ownerId: r.owner_id, googlePlaceId: r.google_place_id, name: r.name,
+      address: r.address, lat: r.lat, lng: r.lng, status: r.status, icon: r.icon,
+      tagsJson: r.tags_json, rating: r.rating, note: r.note, hoursJson: r.hours_json,
+      businessStatus: r.business_status, priceLevel: r.price_level, priceRangeJson: r.price_range_json,
+      googleRating: r.google_rating, googleRatingCount: r.google_rating_count, websiteUri: r.website_uri,
+      mapsLinksJson: r.maps_links_json, utcOffsetMinutes: r.utc_offset_minutes,
+      createdAt: r.created_at, updatedAt: r.updated_at,
+    } as any, names.get(r.owner_id) ?? null));
     const openFilter = q.openAt || q.openNow === "1" || q.openNow === "true";
     if (openFilter) {
       const at = q.openAt ? new Date(q.openAt) : new Date();
       const atValid = !Number.isNaN(at.getTime());
-      filtered = filtered.filter((p) => {
-        if (p.businessStatus && CLOSED.has(p.businessStatus)) return false;
-        const parsed = typeof p.hours === "string" ? parseHoursJson(p.hours) : p.hours?.periods ? p.hours : parseHoursJson(JSON.stringify(p.hours));
+      items = items.filter((p) => {
+        if ((p as any).businessStatus && CLOSED.has((p as any).businessStatus)) return false;
+        const parsed = typeof (p as any).hours === "string" ? parseHoursJson((p as any).hours) : (p as any).hours?.periods ? (p as any).hours : parseHoursJson(JSON.stringify((p as any).hours));
         const periods = (parsed as any)?.periods ?? (Array.isArray((p as any).hours) ? (p as any).hours : null);
         if (!periods || !periods.length) return false;
         return atValid ? isOpenAt(periods, at) : false;
       });
     }
-    const priceTier = parsePriceFilter(q.price);
-    if (priceTier != null) {
-      filtered = filtered.filter((p) => priceTierFor((p as any).priceLevel) === priceTier);
-    }
-    return { places: filtered };
+    const last = pageRows[pageRows.length - 1];
+    const nextCursor = hasMore && last ? encodeCursor(last.updated_at, last.id) : null;
+    return envelope(items, limit, nextCursor, total);
   });
 
-  app.get("/api/places/:id", async (req, reply) => {
+  app.get("/api/v1/places/:id", async (req, reply) => {
     const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
     if (!rows.length) return reply.code(404).send({ error: "not_found" });
     const names = await ownerNameMap(db);
     return toPlace(rows[0], names.get(rows[0].ownerId) ?? null);
   });
 
-  app.post("/api/places/:id/refresh", async (req, reply) => {
+  app.post("/api/v1/places/:id/refresh", async (req, reply) => {
     const servicePrincipal = (req as any).servicePrincipal as { scopes: string[] } | undefined;
     const userId = (req as any).userId as string | undefined;
     const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
@@ -397,7 +450,7 @@ export function registerPlaceRoutes(
     return toPlace(updated[0], names.get(updated[0].ownerId) ?? null);
   });
 
-  app.patch("/api/places/:id", async (req, reply) => {
+  app.patch("/api/v1/places/:id", async (req, reply) => {
     if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
     const userId = (req as any).userId as string;
     const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
@@ -413,19 +466,21 @@ export function registerPlaceRoutes(
     await db.update(places).set(patch).where(eq(places.id, rows[0].id));
     if (value.tags !== undefined) {
       try { await ensureTagDefinitions(db, userId, value.tags); } catch { /* ignore */ }
+      try { syncPlaceTags(getSqlite(), userId, rows[0].id, value.tags); } catch { /* ignore */ }
     }
     const updated = await db.select().from(places).where(eq(places.id, rows[0].id)).limit(1);
     const names = await ownerNameMap(db);
     return toPlace(updated[0], names.get(updated[0].ownerId) ?? null);
   });
 
-  app.delete("/api/places/:id", async (req, reply) => {
+  app.delete("/api/v1/places/:id", async (req, reply) => {
     if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
     const userId = (req as any).userId as string;
     const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
     if (!rows.length) return reply.code(404).send({ error: "not_found" });
     if (rows[0].ownerId !== userId) return reply.code(403).send({ error: "forbidden" });
     await db.delete(places).where(eq(places.id, rows[0].id));
+    try { deletePlaceTags(getSqlite(), userId, rows[0].id); } catch { /* ignore */ }
     return { ok: true };
   });
 }

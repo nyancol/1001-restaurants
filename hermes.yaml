@@ -17,6 +17,7 @@ docker_access:
 prod:
   url: https://places.patates.club
   health: https://places.patates.club/api/health
+  api_base: https://places.patates.club/api/v1 # versioned JSON contract; legacy /api/* returns 404
   container: places
   internal_target: places:5173
   caddy: :8093
@@ -45,6 +46,7 @@ preprod:
   direct_url: http://localhost:5174
   health: https://places-staging.patates.club/api/health
   direct_health: http://localhost:5174/api/health
+  api_base: https://places-staging.patates.club/api/v1
   container: places-staging
   internal_port: 5173
   host_port: 5174 # vite HMR keeps host 5173; preprod publishes 5174 so both bind together.

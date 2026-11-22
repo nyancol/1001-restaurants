@@ -38,7 +38,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
     }
     setLoading(true);
     try {
-      const body = await apiFetch(`/api/google/autocomplete?q=${encodeURIComponent(q)}`);
+      const body = await apiFetch(`/api/v1/google/autocomplete?q=${encodeURIComponent(q)}`);
       const parsed = parseAutocomplete(body);
       cache.set(key, parsed);
       setSuggestions(parsed);
@@ -63,7 +63,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
     setOpen(false);
     setError(null);
     try {
-      const body = await apiFetch(`/api/google/details?placeId=${encodeURIComponent(placeId)}`);
+      const body = await apiFetch(`/api/v1/google/details?placeId=${encodeURIComponent(placeId)}`);
       if (seq === pickSeqRef.current) onPick(parseDetails(body, placeId, label));
     } catch (err) {
       if (err instanceof UnauthorizedError) {

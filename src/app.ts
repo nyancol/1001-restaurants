@@ -24,18 +24,31 @@ import { registerPlaceRoutes } from "./places/routes.js";
 import { registerUserRoutes } from "./users/routes.js";
 import { registerTagRoutes } from "./tags/routes.js";
 
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+function packageVersion(): string {
+  try {
+    return (require("../package.json") as any)?.version ?? "0.0.0";
+  } catch {
+    try {
+      return (require("../../package.json") as any)?.version ?? "0.0.0";
+    } catch {
+      return "0.0.0";
+    }
+  }
+}
+
 const PUBLIC_PATHS = new Set([
   "/api/health",
   "/api/auth/login",
   "/api/auth/callback",
   "/api/auth/dev-login", // only registered when DEV_LOGIN=true + non-production; 404 otherwise
-  "/api/openapi.json",
-  "/api/docs",
+  "/api/v1/openapi.json",
 ]);
 
 function isPublic(path: string): boolean {
   if (PUBLIC_PATHS.has(path)) return true;
-  if (path.startsWith("/api/docs")) return true;
   return false;
 }
 
@@ -70,16 +83,26 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   await app.register(swagger, {
     openapi: {
       openapi: "3.0.3",
-      info: { title: "In my Belly API", version: "0.1.0" },
+      info: { title: "In my Belly API", version: packageVersion() },
     },
   });
 
-  // Session guard: all /api/* require session except allowlist.
-  // M2M Bearer (Pocket ID client-credentials) is accepted on /api/places* only.
+  // Session guard: /api/v1/* requires session except allowlist; /api/auth/*
+  // handled for login/logout/me. All other legacy /api/* paths fall through
+  // to the 404 handler (strict hard-cut, no auth gate).
+  // M2M Bearer is accepted on /api/v1/places* only.
   app.addHook("onRequest", async (req, reply) => {
     const urlPath = req.url.split("?")[0];
     if (!urlPath.startsWith("/api/")) return;
     if (isPublic(urlPath)) return;
+    if (urlPath.startsWith("/api/auth/")) {
+      const token = req.cookies?.[sessionCookieName()];
+      const userId = token ? await verifySession(config.sessionSecret, token) : null;
+      if (!userId) return reply.code(401).send({ error: "unauthorized" });
+      (req as any).userId = userId;
+      return;
+    }
+    if (!urlPath.startsWith("/api/v1/")) return;
     const bearer = getBearerToken(req.headers.authorization);
     if (bearer && isPlacesPath(urlPath)) {
       const required = requiredScopeForPlaces(req.method, urlPath);
@@ -113,7 +136,7 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
     return { status: "ok", db: dbHealth(sqliteHandle), time: new Date().toISOString() };
   });
 
-  app.get("/api/openapi.json", async () => app.swagger());
+  app.get("/api/v1/openapi.json", async () => app.swagger());
 
   // OIDC discovery (fail fast on bad issuer unless skipped for tests).
   let oidcConfig: any = null;
@@ -135,9 +158,9 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
     app.log.warn("DEV_LOGIN enabled — POST /api/auth/dev-login mints test sessions. Never enable in production.");
     registerDevLoginRoute(app, { config, db });
   }
-  registerPlaceRoutes(app, { db, config, googleFetch: opts.googleFetch });
+  registerPlaceRoutes(app, { db, sqlite, config, googleFetch: opts.googleFetch });
   registerUserRoutes(app, { db });
-  registerTagRoutes(app, { db });
+  registerTagRoutes(app, { db, sqlite });
   registerGoogleRoutes(app, { config, googleFetch: opts.googleFetch });
 
   const here = path.dirname(fileURLToPath(import.meta.url));

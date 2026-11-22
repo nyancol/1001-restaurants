@@ -142,6 +142,21 @@ export const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_tag_definitions_owner ON tag_definitions(owner_id);
     `,
   },
+  {
+    version: 7,
+    name: "place_tags join table",
+    sql: `
+      CREATE TABLE IF NOT EXISTS place_tags (
+        owner_id TEXT NOT NULL,
+        tag_name TEXT NOT NULL,
+        place_id TEXT NOT NULL,
+        PRIMARY KEY (owner_id, tag_name, place_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_place_tags_owner_tag ON place_tags(owner_id, tag_name);
+      CREATE INDEX IF NOT EXISTS idx_place_tags_place ON place_tags(place_id);
+      CREATE INDEX IF NOT EXISTS idx_places_owner_updated ON places(owner_id, updated_at DESC, id DESC);
+    `,
+  },
 ];
 
 export interface DbHandle {
@@ -175,6 +190,7 @@ export function runMigrations(sqlite: Database.Database): void {
     txn();
   }
   backfillTagDefinitions(sqlite);
+  backfillPlaceTags(sqlite);
 }
 
 const BACKFILL_PALETTE = [
@@ -232,6 +248,71 @@ export function backfillTagDefinitions(sqlite: Database.Database): void {
     }
   });
   try { txn(); } catch { /* ignore */ }
+}
+
+/** One-time backfill: join rows from tags_json. Idempotent. */
+export function backfillPlaceTags(sqlite: Database.Database): void {
+  try {
+    sqlite.exec(
+      `CREATE TABLE IF NOT EXISTS place_tags (
+        owner_id TEXT NOT NULL, tag_name TEXT NOT NULL, place_id TEXT NOT NULL,
+        PRIMARY KEY (owner_id, tag_name, place_id)
+      );`
+    );
+  } catch { return; }
+  let rows: any[] = [];
+  try {
+    rows = sqlite.prepare(`SELECT id, owner_id, tags_json FROM places`).all() as any[];
+  } catch { return; }
+  const insert = sqlite.prepare(
+    `INSERT OR IGNORE INTO place_tags (owner_id, tag_name, place_id) VALUES (?, ?, ?)`
+  );
+  const txn = sqlite.transaction(() => {
+    for (const r of rows) {
+      const ownerId = (r as any).owner_id as string;
+      const placeId = (r as any).id as string;
+      if (!ownerId || !placeId) continue;
+      let tags: string[] = [];
+      try { tags = JSON.parse((r as any).tags_json ?? "[]"); } catch { tags = []; }
+      const seen = new Set<string>();
+      for (const t of tags) {
+        if (typeof t !== "string") continue;
+        const name = t.trim().toLowerCase();
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        insert.run(ownerId, name, placeId);
+      }
+    }
+  });
+  try { txn(); } catch { /* ignore */ }
+}
+
+/** Keep join in sync with a place's normalized tag list. */
+export function syncPlaceTags(sqlite: Database.Database, ownerId: string, placeId: string, tags: string[]): void {
+  try {
+    const del = sqlite.prepare(`DELETE FROM place_tags WHERE owner_id = ? AND place_id = ?`);
+    del.run(ownerId, placeId);
+    const insert = sqlite.prepare(
+      `INSERT OR IGNORE INTO place_tags (owner_id, tag_name, place_id) VALUES (?, ?, ?)`
+    );
+    const seen = new Set<string>();
+    const txn = sqlite.transaction(() => {
+      for (const raw of tags ?? []) {
+        if (typeof raw !== "string") continue;
+        const name = raw.trim().toLowerCase();
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        insert.run(ownerId, name, placeId);
+      }
+    });
+    txn();
+  } catch { /* ignore */ }
+}
+
+export function deletePlaceTags(sqlite: Database.Database, ownerId: string, placeId: string): void {
+  try {
+    sqlite.prepare(`DELETE FROM place_tags WHERE owner_id = ? AND place_id = ?`).run(ownerId, placeId);
+  } catch { /* ignore */ }
 }
 
 export function dbHealth(sqlite: Database.Database): "ok" | "error" {

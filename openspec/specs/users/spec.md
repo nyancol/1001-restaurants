@@ -7,7 +7,7 @@ Lets the user pick whose lists and maps to browse by exposing all app users with
 ## Requirements
 
 ### Requirement: User directory listing
-The system SHALL expose an authenticated `GET /api/users` listing all users with `id`, `displayName`, and `placeCount`, sorted by display name with the current user identifiable.
+The system SHALL expose an authenticated `GET /api/v1/users` listing all users with `id`, `displayName`, and `placeCount`, sorted by display name with the current user identifiable, wrapped in the paginated envelope `{ data, pagination: { limit, nextCursor, total } }`.
 
 #### Scenario: List users with counts
 - **WHEN** an authenticated user requests the user directory

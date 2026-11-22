@@ -27,16 +27,16 @@ export function getBearerToken(header: unknown): string | null {
 }
 
 export function isPlacesPath(urlPath: string): boolean {
-  return urlPath === "/api/places" || urlPath.startsWith("/api/places/");
+  return urlPath === "/api/v1/places" || urlPath.startsWith("/api/v1/places/");
 }
 
 function isRefreshPath(urlPath: string): boolean {
-  return /^\/api\/places\/[^/]+\/refresh$/.test(urlPath);
+  return /^\/api\/v1\/places\/[^/]+\/refresh$/.test(urlPath);
 }
 
 /**
  * Scope required for an M2M call, or null when M2M is not allowed there at all
- * (user-only writes: POST create, PATCH, DELETE on /api/places*).
+ * (user-only writes: POST create, PATCH, DELETE on /api/v1/places*).
  */
 export function requiredScopeForPlaces(method: string, urlPath: string): string | null {
   if (!isPlacesPath(urlPath)) return "__not_places__";

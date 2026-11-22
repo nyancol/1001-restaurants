@@ -42,7 +42,7 @@ describe("otel domain spans", () => {
         const cookie = `oyster_session=${await signSession(SECRET, "u1")}`;
         const res = await app.inject({
           method: "GET",
-          url: "/api/google/details?placeId=ChIJParis",
+          url: "/api/v1/google/details?placeId=ChIJParis",
           headers: { cookie },
         });
         expect(res.statusCode).toBe(200);

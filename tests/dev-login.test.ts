@@ -67,7 +67,7 @@ describe("POST /api/auth/dev-login", () => {
     const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(";")[0];
 
     const create = await app.inject({
-      method: "POST", url: "/api/places", headers: { cookie }, payload: { name: "Dev spot", icon: "fork" },
+      method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "Dev spot", icon: "fork" },
     });
     expect(create.statusCode).toBe(201);
     expect(create.json().ownerId).toBe(login.json().id);
@@ -78,8 +78,8 @@ describe("POST /api/auth/dev-login", () => {
     });
     const bobCookie = (bobLogin.headers["set-cookie"] as string).split(";")[0];
     const id = create.json().id;
-    expect((await app.inject({ method: "GET", url: `/api/places/${id}`, headers: { cookie: bobCookie } })).statusCode).toBe(200);
-    expect((await app.inject({ method: "PATCH", url: `/api/places/${id}`, headers: { cookie: bobCookie }, payload: { note: "x" } })).statusCode).toBe(403);
+    expect((await app.inject({ method: "GET", url: `/api/v1/places/${id}`, headers: { cookie: bobCookie } })).statusCode).toBe(200);
+    expect((await app.inject({ method: "PATCH", url: `/api/v1/places/${id}`, headers: { cookie: bobCookie }, payload: { note: "x" } })).statusCode).toBe(403);
   });
 
   it("is stable across logins (same user id) and rejects bad names", async () => {

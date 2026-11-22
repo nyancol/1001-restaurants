@@ -8,7 +8,7 @@ Lets the user find their own places again and update them, filtering by what mat
 
 ### Requirement: Own list with filters
 
-The system SHALL show the user's own places by default with filters for status, tags, free text, price level ($–$$$$), and open-now/open-at datetime (no place-type filter). The system SHALL also support viewing a specific user via a Users scope picker (`Me (<name>)`, each other user) persisted in the URL (`owner=me|<userId>`), applying the same filters to the selected scope newest first.
+The system SHALL show the user's own places by default with filters for status, tags, free text, price level ($–$$$$), and open-now/open-at datetime (no place-type filter) backed by `GET /api/v1/places` server-side filtering plus cursor pagination. The system SHALL also support viewing a specific user via a Users scope picker (`Me (<name>)`, each other user) persisted in the URL (`owner=me|<userId>`), applying the same filters to the selected scope newest first across pages.
 
 #### Scenario: Default is own places
 - **WHEN** an authenticated user opens the list
@@ -33,6 +33,14 @@ The system SHALL show the user's own places by default with filters for status, 
 #### Scenario: Legacy placeType URLs ignored
 - **WHEN** the user opens a list URL containing `placeType=bar`
 - **THEN** the system ignores the parameter and shows the unfiltered scope with no error
+
+#### Scenario: Paged list walks cursor
+- **WHEN** the first `GET /api/v1/places` page returns `pagination.nextCursor`
+- **THEN** the list fetches the next page on scroll and appends without duplicates
+
+#### Scenario: Open filter may short-fill pages
+- **WHEN** the open filter is active on a paginated list
+- **THEN** a page MAY show fewer than `limit` cards while still offering the next page via `nextCursor`
 ### Requirement: Inline edit from list
 The system SHALL allow editing status, tags, stars, and note from the list entry. The edit section SHALL offer owner-only Delete with explicit confirmation; on confirm the place is removed from the list, on cancel nothing changes. Editing and delete SHALL be available only when viewing `Me`; views of another user SHALL be read-only with no edit affordance, while notes, tags, and ratings remain visible.
 

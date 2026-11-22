@@ -26,7 +26,7 @@ describe("otel metrics", () => {
     // Legacy 0.x shape.
     hist.record(120, {
       "http.method": "GET",
-      "http.route": "/api/places",
+      "http.route": "/api/v1/places",
       "http.status_code": 200,
       userId: "u1",
       placeId: "p9",
@@ -34,11 +34,11 @@ describe("otel metrics", () => {
     // Stable 1.x shape actually emitted by current instrumentations.
     hist.record(80, {
       "http.request.method": "GET",
-      "http.route": "/api/places",
+      "http.route": "/api/v1/places",
       "http.response.status_code": 200,
       "url.scheme": "http",
       "server.address": "places",
-      "url.path": "/api/places",
+      "url.path": "/api/v1/places",
       "url.query": "owner=all",
     });
     await provider.forceFlush();
@@ -53,7 +53,7 @@ describe("otel metrics", () => {
     }
     expect(points.length).toBeGreaterThan(0);
     const byRoute = points.filter(
-      (p: any) => (p.attributes as Record<string, unknown>)["http.route"] === "/api/places"
+      (p: any) => (p.attributes as Record<string, unknown>)["http.route"] === "/api/v1/places"
     );
     expect(byRoute.length).toBeGreaterThan(0);
     for (const p of points) {
@@ -65,11 +65,11 @@ describe("otel metrics", () => {
       expect(attrs).not.toHaveProperty("url.query");
     }
     const legacy = points.find((p: any) => (p.attributes as any)["http.method"] === "GET");
-    expect(legacy?.attributes["http.route"]).toBe("/api/places");
+    expect(legacy?.attributes["http.route"]).toBe("/api/v1/places");
     const stable = points.find(
       (p: any) => (p.attributes as any)["http.request.method"] === "GET"
     );
-    expect(stable?.attributes["http.route"]).toBe("/api/places");
+    expect(stable?.attributes["http.route"]).toBe("/api/v1/places");
     expect(stable?.attributes["http.response.status_code"]).toBe(200);
     await provider.shutdown().catch(() => {});
   });

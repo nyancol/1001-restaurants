@@ -76,23 +76,23 @@ Image notes: single image, runs as non-root `app`, `NODE_ENV=production`,
 SQLite WAL file at `/data/app.db` (persist via the `/data` volume). Migrations
 run automatically at container start; `/api/health` reports `db: ok` once applied.
 
-## API
+## API (`/api/v1`, except health/auth)
 
-- `GET /api/health` (public) → `{status, db, time}`
-- `GET /api/openapi.json` (public) → generated OpenAPI
+- `GET /api/health` (public, unversioned) → `{status, db, time}`
+- `GET /api/v1/openapi.json` (public) → generated OpenAPI (`info.version` = `package.json` version)
 - `POST /api/auth/dev-login` (dev only, double-gated) → `{id, displayName}`, sets `oyster_session`. Example: `curl -X POST localhost:3000/api/auth/dev-login -H 'Content-Type: application/json' -d '{"user":"alice"}'`
 - `GET /api/auth/login` → redirect to PocketID (503 when OIDC unconfigured)
 - `GET /api/auth/callback` → code+PKCE exchange, user upsert by `sub`, sets `oyster_session` cookie (`HttpOnly/Secure/SameSite=Lax`)
 - `POST /api/auth/logout`, `GET /api/auth/me`
-- `POST /api/places` (owner forced to session user; `status` defaults `WANT_TO_GO`; `rating` 0–5 or null; tags normalized)
-- `GET /api/places?owner=me|all|<userId>&status=&tags=&q=` (defaults to own; each place includes `ownerDisplayName`)
-- `GET /api/users` → `{ users: [{ id, displayName, placeCount }] }` sorted by display name (all app users are friends)
-- `GET/PATCH/DELETE /api/places/:id` (read-any, edit-own → `403` for others)
-- `GET /api/tags?q=` (global pool, frequency then recency, counts)
-- `GET /api/google/autocomplete?q=` (Places API New, `POST places:autocomplete` upstream; optional `sessionToken` for session billing), `GET /api/google/details?placeId=` (Places API New, minimal field masks), `GET /api/google/geocode?address=`
+- `POST /api/v1/places` (owner forced to session user; `status` defaults `WANT_TO_GO`; `rating` 0–5 or null; tags normalized)
+- `GET /api/v1/places?owner=me|all|<userId>&status=&tags=&q=&price=&limit=&cursor=` → `{ data, pagination: { limit, nextCursor, total } }` in `(updatedAt DESC, id DESC)` order (defaults to own; each place includes `ownerDisplayName`; `openAt/openNow` may short-fill pages)
+- `GET /api/v1/users?limit=&cursor=` → `{ data, pagination }` sorted by display name (all app users are friends)
+- `GET/PATCH/DELETE /api/v1/places/:id` (read-any, edit-own → `403` for others)
+- `GET /api/v1/tags?q=&limit=&cursor=` → `{ data, pagination }` (frequency then recency, counts)
+- `GET /api/v1/google/autocomplete?q=` (Places API New, `POST places:autocomplete` upstream; optional `sessionToken` for session billing), `GET /api/v1/google/details?placeId=` (Places API New, minimal field masks), `GET /api/v1/google/geocode?address=`
 
-All `/api/*` except health/login/callback/openapi-docs require a session and
-return `401` without one.
+All `/api/v1/*` except `/api/v1/openapi.json` require a session (or M2M Bearer on `GET /api/v1/places*`) and
+return `401` without one. Legacy unversioned `/api/places|tags|users|google|openapi.json` return `404`.
 
 ## Telemetry (OTEL → homelab LGTM, prod only)
 

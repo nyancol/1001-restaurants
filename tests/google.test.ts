@@ -62,7 +62,7 @@ describe("google proxy (Places API New) with mocked fetch", () => {
   });
 
   it("proxies autocomplete via POST with key in header, never in URL", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/google/autocomplete?q=par", headers: { cookie } });
+    const res = await app.inject({ method: "GET", url: "/api/v1/google/autocomplete?q=par", headers: { cookie } });
     expect(res.statusCode).toBe(200);
     expect(res.json().suggestions).toBeTruthy();
     expect(calls).toHaveLength(1);
@@ -75,7 +75,7 @@ describe("google proxy (Places API New) with mocked fetch", () => {
   });
 
   it("proxies details with field mask", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/google/details?placeId=ChIJParis", headers: { cookie } });
+    const res = await app.inject({ method: "GET", url: "/api/v1/google/details?placeId=ChIJParis", headers: { cookie } });
     expect(res.statusCode).toBe(200);
     expect(res.json().id).toBe("ChIJ Paris");
     const mask = calls[0].init.headers["X-Goog-FieldMask"] as string;
@@ -89,7 +89,7 @@ describe("google proxy (Places API New) with mocked fetch", () => {
   });
 
   it("requires auth", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/google/autocomplete?q=par" });
+    const res = await app.inject({ method: "GET", url: "/api/v1/google/autocomplete?q=par" });
     expect(res.statusCode).toBe(401);
   });
 
@@ -104,7 +104,7 @@ describe("google proxy (Places API New) with mocked fetch", () => {
       oidcEnabled: false, googlePlacesKey: "", trustProxy: false,
     };
     const { app: app2 } = await buildApp({ config, skipOidcDiscovery: true });
-    const res = await app2.inject({ method: "GET", url: "/api/google/autocomplete?q=par", headers: { cookie } });
+    const res = await app2.inject({ method: "GET", url: "/api/v1/google/autocomplete?q=par", headers: { cookie } });
     expect(res.statusCode).toBe(503);
     await app2.close();
     fs.rmSync(dir2, { recursive: true, force: true });

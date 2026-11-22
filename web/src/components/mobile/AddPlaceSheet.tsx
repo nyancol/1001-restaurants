@@ -82,7 +82,7 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
     setLookupError(null);
     setSearching(true);
     try {
-      const body = await apiFetch(`/api/google/autocomplete?q=${encodeURIComponent(q)}`);
+      const body = await apiFetch(`/api/v1/google/autocomplete?q=${encodeURIComponent(q)}`);
       if (my !== searchSeq.current) return; // a newer search superseded this one
       const parsed = parseAutocomplete(body);
       setSuggestions(parsed);
@@ -102,7 +102,7 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
     setSuggestOpen(false);
     setLookupError(null);
     try {
-      const body = await apiFetch(`/api/google/details?placeId=${encodeURIComponent(placeId)}`);
+      const body = await apiFetch(`/api/v1/google/details?placeId=${encodeURIComponent(placeId)}`);
       if (my !== pickSeq.current) return;
       const d = parseDetails(body, placeId, label);
       handlePick(d);

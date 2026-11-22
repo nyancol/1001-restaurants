@@ -39,6 +39,8 @@ else
   fail "OIDC login reachable check got HTTP $LOGIN_CODE (want 3xx redirect; 503 = OIDC misconfigured)"
 fi
 
+if http_get /api/v1/openapi.json 2>/dev/null && printf '%s' "$HTTP_BODY" | grep -q '"/api/v1/places"'; then pass "v1 openapi serves versioned routes"; else fail "v1 openapi missing /api/v1/places (code ${HTTP_CODE:-?})"; fi
+
 # shellcheck disable=SC2086
 if LOGS="$($COMPOSE logs --no-log-prefix --tail 200 places 2>&1)"; then LOGS_RC=0; else LOGS_RC=$?; fi
 if [ "$LOGS_RC" -ne 0 ]; then

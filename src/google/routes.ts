@@ -71,7 +71,7 @@ export function registerGoogleRoutes(
     }
   }
 
-  app.get("/api/google/autocomplete", async (req, reply) => {
+  app.get("/api/v1/google/autocomplete", async (req, reply) => {
     if (!requireKey(reply)) return;
     const query = req.query as any;
     const q = query?.q ?? query?.input;
@@ -103,7 +103,7 @@ export function registerGoogleRoutes(
     }
   });
 
-  app.get("/api/google/details", async (req, reply) => {
+  app.get("/api/v1/google/details", async (req, reply) => {
     if (!requireKey(reply)) return;
     const query = req.query as any;
     const placeId = query?.placeId ?? query?.place_id;
@@ -133,7 +133,7 @@ export function registerGoogleRoutes(
     }
   });
 
-  app.get("/api/google/geocode", async (req, reply) => {
+  app.get("/api/v1/google/geocode", async (req, reply) => {
     if (!requireKey(reply)) return;
     const query = req.query as any;
     const address = query?.address ?? query?.latlng;

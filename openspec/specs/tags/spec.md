@@ -14,7 +14,7 @@ The system SHALL store `tags` as a flat string array per place, normalized to tr
 - **THEN** the system stores `["japonais", "cozy"]`
 
 ### Requirement: Global tag suggestions
-The system SHALL suggest tags from the authenticated user's own places, ranked by total usage count descending then recency, filterable by prefix query. Each suggestion SHALL include the total number of the user's places carrying that tag.
+The system SHALL suggest tags from the authenticated user's own places via `GET /api/v1/tags`, ranked by total usage count descending then recency, filterable by prefix query, backed by the `place_tags` join table. Each suggestion SHALL include the total number of the user's places carrying that tag. Listing SHALL return the paginated envelope `{ data, pagination: { limit, nextCursor, total } }`.
 
 #### Scenario: Suggest existing tags
 - **WHEN** an authenticated user queries suggestions with `q=co`
@@ -27,6 +27,21 @@ The system SHALL suggest tags from the authenticated user's own places, ranked b
 #### Scenario: Empty query returns ranked own tags
 - **WHEN** an authenticated user queries suggestions with no `q`
 - **THEN** the system returns all of that user's tags ranked by total count descending then recency, each with its total count
+
+#### Scenario: Paginated suggestions envelope
+- **WHEN** an authenticated user queries `GET /api/v1/tags?limit=50`
+- **THEN** the system returns `{ data, pagination }` with tag entries carrying `tag`, `color`, and `count`
+
+### Requirement: Tag storage backed by join table
+The system SHALL persist place-tag membership in a `place_tags` join table as the source of truth for filtering and counts, keeping `tagsJson` (if retained) as a derived mirror only. Rename, merge, recolor, and delete SHALL preserve join-table consistency for the owning user.
+
+#### Scenario: Join table drives suggestions
+- **WHEN** a place is created or patched with tags
+- **THEN** the join table reflects the normalized membership used by `GET /api/v1/tags` counts
+
+#### Scenario: Rename preserves membership
+- **WHEN** the owner renames a tag
+- **THEN** affected join rows move to the new name with no orphan membership remaining
 
 ### Requirement: Tag creation limited to edit contexts
 The system SHALL only offer creation of new tags in place edit contexts (add-place form and inline place editor); the tag filter SHALL NOT offer tag creation.

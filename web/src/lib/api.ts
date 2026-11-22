@@ -83,8 +83,8 @@ export interface DirectoryUser {
 }
 
 export async function listUsers(): Promise<DirectoryUser[]> {
-  const body = await apiFetch("/api/users");
-  return body.users ?? [];
+  const body = await apiFetch("/api/v1/users");
+  return (body.data ?? body.users ?? []) as DirectoryUser[];
 }
 
 export async function listPlaces(params: {
@@ -95,6 +95,8 @@ export async function listPlaces(params: {
   openAt?: string;
   openNow?: boolean;
   price?: string;
+  limit?: number;
+  cursor?: string;
 }): Promise<Place[]> {
   const sp = new URLSearchParams();
   sp.set("owner", params.owner ?? "me");
@@ -104,9 +106,11 @@ export async function listPlaces(params: {
   if (params.openAt) sp.set("openAt", params.openAt);
   else if (params.openNow) sp.set("openNow", "1");
   if (params.price) sp.set("price", params.price);
-  const body = await apiFetch(`/api/places?${sp.toString()}`);
-  const places: Place[] = body.places ?? [];
-  // Newest first by creation.
+  if (params.limit) sp.set("limit", String(params.limit));
+  if (params.cursor) sp.set("cursor", params.cursor);
+  const body = await apiFetch(`/api/v1/places?${sp.toString()}`);
+  const places: Place[] = (body.data ?? body.places ?? []) as Place[];
+  // Newest first by creation (server already orders by updatedAt DESC).
   return [...places].sort((a, b) => b.createdAt - a.createdAt);
 }
 
@@ -131,24 +135,24 @@ export async function createPlace(input: {
   mapsLinks?: any;
   utcOffsetMinutes?: number | null;
 }): Promise<Place> {
-  return apiFetch("/api/places", { method: "POST", body: JSON.stringify(input) });
+  return apiFetch("/api/v1/places", { method: "POST", body: JSON.stringify(input) });
 }
 
 export async function patchPlace(id: string, patch: Partial<Place> & Record<string, unknown>): Promise<Place> {
-  return apiFetch(`/api/places/${encodeURIComponent(id)}`, {
+  return apiFetch(`/api/v1/places/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
   });
 }
 
 export async function refreshPlace(id: string): Promise<Place> {
-  return apiFetch(`/api/places/${encodeURIComponent(id)}/refresh`, {
+  return apiFetch(`/api/v1/places/${encodeURIComponent(id)}/refresh`, {
     method: "POST",
   });
 }
 
 export async function deletePlace(id: string): Promise<{ ok: true }> {
-  return apiFetch(`/api/places/${encodeURIComponent(id)}`, {
+  return apiFetch(`/api/v1/places/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
@@ -160,8 +164,8 @@ export interface TagCount {
 }
 
 export async function getTags(q = ""): Promise<TagCount[]> {
-  const body = await apiFetch(`/api/tags${q ? `?q=${encodeURIComponent(q)}` : ""}`);
-  const raw: any[] = body.tags ?? [];
+  const body = await apiFetch(`/api/v1/tags${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+  const raw: any[] = (body.data ?? body.tags ?? []) as any[];
   // Backward-compatible fallback: legacy {tag,count} without color.
   const { colorForTag } = await import("./tagPalette");
   return raw.map((t) => ({
@@ -172,7 +176,7 @@ export async function getTags(q = ""): Promise<TagCount[]> {
 }
 
 export async function createTag(name: string, color?: string): Promise<TagCount & { tag: string }> {
-  const body = await apiFetch("/api/tags", {
+  const body = await apiFetch("/api/v1/tags", {
     method: "POST",
     body: JSON.stringify(color ? { name, color } : { name }),
   });
@@ -183,14 +187,14 @@ export async function patchTag(
   name: string,
   patch: { newName?: string; color?: string },
 ): Promise<{ tag: string; color: string; merged?: boolean }> {
-  return apiFetch(`/api/tags/${encodeURIComponent(name)}`, {
+  return apiFetch(`/api/v1/tags/${encodeURIComponent(name)}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
   });
 }
 
 export async function deleteTag(name: string): Promise<{ ok: true }> {
-  return apiFetch(`/api/tags/${encodeURIComponent(name)}`, { method: "DELETE" });
+  return apiFetch(`/api/v1/tags/${encodeURIComponent(name)}`, { method: "DELETE" });
 }
 
 export interface PlaceTypeCount {

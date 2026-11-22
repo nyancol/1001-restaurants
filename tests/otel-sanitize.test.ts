@@ -11,7 +11,7 @@ describe("sanitizeAttributes", () => {
       OIDC_CLIENT_SECRET: "shhh",
       SESSION_SECRET: "shhh",
       googlePlacesKey: "k",
-      "http.route": "/api/places",
+      "http.route": "/api/v1/places",
       "http.status_code": 200,
     });
     const dump = JSON.stringify(out);
@@ -22,7 +22,7 @@ describe("sanitizeAttributes", () => {
     expect(out["X-Goog-Api-Key"]).toBe("[Redacted]");
     expect(out.authorization).toBe("[Redacted]");
     expect(out.cookie).toBe("[Redacted]");
-    expect(out["http.route"]).toBe("/api/places");
+    expect(out["http.route"]).toBe("/api/v1/places");
     expect(out["http.status_code"]).toBe(200);
   });
 

@@ -1,13 +1,21 @@
 import type { FastifyInstance } from "fastify";
 import { places, users } from "../db/schema.js";
+import { decodeOffset, encodeOffset, envelope, parseLimit } from "../pagination.js";
 
 // User directory for the Users scope picker (`Me`, `Everyone`, each user).
-// All app users are considered friends: any authenticated user may list them.
-// Returns [{ id, displayName, placeCount }] sorted by displayName
-// (nulls last, case-insensitive), with placeCount = number of places owned.
 export function registerUserRoutes(app: FastifyInstance, deps: { db: any }) {
   const { db } = deps;
-  app.get("/api/users", async () => {
+  app.get("/api/v1/users", {
+    schema: {
+      querystring: {
+        type: "object",
+        properties: { limit: { type: "string" }, cursor: { type: "string" } },
+      },
+    },
+  }, async (req, reply) => {
+    const limit = parseLimit((req.query as any)?.limit);
+    const offset = decodeOffset((req.query as any)?.cursor);
+    if (offset === null) return reply.code(400).send({ error: "invalid_cursor" });
     const userRows = await db.select().from(users);
     const placeRows = await db.select().from(places);
     const counts = new Map<string, number>();
@@ -25,6 +33,9 @@ export function registerUserRoutes(app: FastifyInstance, deps: { db: any }) {
       if (b.displayName == null) return -1;
       return String(a.displayName).localeCompare(String(b.displayName), undefined, { sensitivity: "base" });
     });
-    return { users: out };
+    const total = out.length;
+    const slice = out.slice(offset, offset + limit);
+    const nextCursor = offset + limit < total ? encodeOffset(offset + limit) : null;
+    return envelope(slice, limit, nextCursor, total);
   });
 }

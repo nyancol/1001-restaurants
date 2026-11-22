@@ -7,8 +7,7 @@ Stores each user's personal restaurant/bar/cafe memory (status, tags, rating, no
 ## Requirements
 
 ### Requirement: Place CRUD with ownership
-
-The system SHALL store places with Google link fields, status, icon, tags, rating, note, snapshotted Google enrichment (hours, businessStatus, priceLevel, priceRange, Google rating and count, website, Maps links), `ownerId`, and `ownerDisplayName` on read, forcing `ownerId` to the authenticated user on create. Listing SHALL support `owner=me|all|<userId>` with `owner=all` returning every user's places. Owner `DELETE` SHALL permanently remove the owned place.
+The system SHALL store places with Google link fields, status, icon, tags, rating, note, snapshotted Google enrichment (hours, businessStatus, priceLevel, priceRange, Google rating and count, website, Maps links), `ownerId`, and `ownerDisplayName` on read, forcing `ownerId` to the authenticated user on create. Listing SHALL support `owner=me|all|<userId>` with `owner=all` returning every user's places via `GET /api/v1/places` with server-side filtering and cursor pagination returning `{ data, pagination: { limit, nextCursor, total } }` in stable `(updatedAt DESC, id DESC)` order, backed by SQL predicates plus a `place_tags` join table for `tags`. Owner `DELETE` SHALL permanently remove the owned place.
 
 #### Scenario: Create own place
 - **WHEN** an authenticated user posts a valid place payload
@@ -35,8 +34,17 @@ The system SHALL store places with Google link fields, status, icon, tags, ratin
 - **THEN** the system returns only places owned by that user
 
 #### Scenario: Delete own place
-- **WHEN** the owner sends `DELETE /api/places/:id` for a place they own
+- **WHEN** the owner sends `DELETE /api/v1/places/:id` for a place they own
 - **THEN** the system permanently deletes that row and returns `{ok:true}`, and subsequent reads no longer return it
+
+#### Scenario: Paginated list envelope
+- **WHEN** an authenticated user sends `GET /api/v1/places?owner=me&limit=20`
+- **THEN** the system returns `{ data, pagination }` with at most 20 items, `total` equal to the server-side match count, and `nextCursor` set when more pages remain
+
+#### Scenario: Tags filter uses join table
+- **WHEN** an authenticated user lists with `tags=japonais,cozy` on `GET /api/v1/places`
+- **THEN** the system returns only places carrying all requested tags via the `place_tags` join
+
 ### Requirement: Status toggle replaces Pending/Approved tags
 The system SHALL expose `status` as `WANT_TO_GO` or `BEEN_TO`, defaulting to `WANT_TO_GO` on create.
 
@@ -78,7 +86,7 @@ The system SHALL store `icon` (one of the 12 place-icon values, defaulting to `f
 - **THEN** the system ignores the parameter and returns the unfiltered owner scope
 ### Requirement: Google enrichment snapshot
 
-The system SHALL persist the Google snapshot fields sent at save (`hoursJson` with periods plus weekday descriptions, `businessStatus`, `priceLevel`, `priceRange`, `googleRating`, `googleRatingCount`, `websiteUri`, `mapsLinks`, `googlePlaceId`, `address`, `lat`, `lng`) without live revalidation on read, and refresh them only via explicit save or `POST /api/places/:id/refresh`, which rewrites pure-snapshot columns and bumps `updatedAt`.
+The system SHALL persist the Google snapshot fields sent at save (`hoursJson` with periods plus weekday descriptions, `businessStatus`, `priceLevel`, `priceRange`, `googleRating`, `googleRatingCount`, `websiteUri`, `mapsLinks`, `googlePlaceId`, `address`, `lat`, `lng`) without live revalidation on read, and refresh them only via explicit save or `POST /api/v1/places/:id/refresh`, which rewrites pure-snapshot columns and bumps `updatedAt`.
 
 #### Scenario: Snapshot stored at create
 - **WHEN** a place is created with hours periods and Google rating `4.3 (1200)`
@@ -89,7 +97,7 @@ The system SHALL persist the Google snapshot fields sent at save (`hoursJson` wi
 - **THEN** the system returns the stored snapshot unchanged without calling Google
 
 #### Scenario: Snapshot refreshed via refresh endpoint
-- **WHEN** `POST /api/places/:id/refresh` succeeds for a row with a stored `googlePlaceId`
+- **WHEN** `POST /api/v1/places/:id/refresh` succeeds for a row with a stored `googlePlaceId`
 - **THEN** the system replaces pure-snapshot columns with fresh Google values, bumps `updatedAt`, and leaves user fields unchanged
 
 #### Scenario: Refresh without Google id rejected
@@ -97,7 +105,7 @@ The system SHALL persist the Google snapshot fields sent at save (`hoursJson` wi
 - **THEN** the system responds `422` and changes nothing
 ### Requirement: Open-state inference and filtering
 
-The system SHALL infer open or closed from snapshotted hours periods for a given datetime, and list filtering SHALL support `openAt` (ISO datetime, default now when the open filter is enabled) with no `placeType` parameter; places with unknown hours SHALL be excluded whenever the open filter is active, and places with `businessStatus` closed (temporary or permanent) SHALL be excluded from open-filtered results.
+The system SHALL infer open or closed from snapshotted hours periods for a given datetime, and list filtering SHALL support `openAt` (ISO datetime, default now when the open filter is enabled) with no `placeType` parameter; places with unknown hours SHALL be excluded whenever the open filter is active, and places with `businessStatus` closed (temporary or permanent) SHALL be excluded from open-filtered results. The open filter SHALL apply as a documented post-filter after the paginated SQL page, so a page MAY return fewer than `limit` items while `pagination.total` reflects the pre-filter count.
 
 #### Scenario: Filter open now
 - **WHEN** the user enables the open filter without choosing a datetime
@@ -114,3 +122,7 @@ The system SHALL infer open or closed from snapshotted hours periods for a given
 #### Scenario: Closed statuses excluded from open results
 - **WHEN** the open filter is active and a place has `businessStatus` `CLOSED_TEMPORARILY` or `CLOSED_PERMANENTLY`
 - **THEN** the system excludes that place even if periods would otherwise match
+
+#### Scenario: Short page documents post-filter
+- **WHEN** a paginated `GET /api/v1/places` page carries the open filter
+- **THEN** `data` MAY contain fewer than `limit` items while `pagination.nextCursor` still walks the underlying SQL order
