@@ -5,13 +5,15 @@ All notable changes to this project are documented here, following
 [Semantic Versioning](https://semver.org/).
 Releases are cut by pushing a `v*` tag — see `.github/workflows/release.yml`.
 
-## [Unreleased]
+## [0.1.3] - 2026-11-22
 
 ### Added
 
 - Vitest V8 coverage gate (`npm test` runs with `--coverage`; thresholds: lines 60 / branches 45 / functions 50 / statements 55).
 - Prettier (`npm run format` / `format:check`) + ESLint (`npm run lint`) enforced in CI and pre-commit.
 - Conventional Commits enforced via versioned `.githooks/commit-msg`.
+
+## [Unreleased]
 
 ## [0.1.2] - 2026-11-15
 
