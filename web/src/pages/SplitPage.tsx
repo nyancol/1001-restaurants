@@ -128,6 +128,7 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             mapHeightClass="h-[62dvh] min-h-[420px] lg:h-[calc(100dvh-8rem)] lg:min-h-[560px]"
             readOnly={readOnly}
             showDetails={false}
+            showPreview={false}
             onTagDefinitionsChanged={handleTagDefinitionsChanged}
           />
           <p className="mt-2 text-[11px] text-muted">
