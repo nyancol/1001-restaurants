@@ -55,6 +55,7 @@ export default function App() {
   const [user, setUser] = useState<{ id: string; displayName: string | null } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const checkAuth = useCallback(async () => {
@@ -62,10 +63,14 @@ export default function App() {
       const me = await getMe();
       setUser(me);
       setUnauthorized(false);
-    } catch (err: any) {
+      setAuthError(null);
+    } catch (err: unknown) {
       if (err instanceof UnauthorizedError) {
         setUnauthorized(true);
         setUser(null);
+      } else {
+        // Network/5xx: don't pretend the user is logged out; surface retryable error.
+        setAuthError(err instanceof Error ? err.message : "Auth check failed");
       }
     } finally {
       setAuthChecked(true);
@@ -129,18 +134,38 @@ export default function App() {
 
   async function logout() {
     try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      const res = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      if (!res.ok) {
+        // Server did not confirm teardown — keep logged-in UI instead of
+        // flipping to logged-out and bouncing back via checkAuth().
+        return;
+      }
     } catch {
-      // ignore
+      // Network failure: session may still be alive; keep logged-in UI.
+      return;
     }
     setUser(null);
     setUnauthorized(true);
     navigate("/");
-    void checkAuth();
   }
 
   if (!authChecked) {
     return <div className="font-body mx-auto max-w-xl bg-bg px-4 py-10 text-sm text-muted">{t["app.loading"]}</div>;
+  }
+
+  if (authError && !unauthorized && !user) {
+    return (
+      <div className="font-body mx-auto max-w-xl bg-bg px-4 py-10 text-center text-sm text-ink">
+        <p>{authError}</p>
+        <button
+          type="button"
+          onClick={() => void checkAuth()}
+          className="edge radius-input mt-4 border-accent bg-accent px-5 py-2 text-sm font-medium text-accent-ink"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   if (unauthorized || !user) {

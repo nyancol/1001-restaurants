@@ -127,6 +127,8 @@ export default function MapView({
   errorRef.current = onError;
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const selected = selectedId ? (places.find((p) => p.id === selectedId) ?? null) : null;
 
@@ -183,7 +185,7 @@ export default function MapView({
         if (opts?.auto) autoLocateDoneRef.current = true;
       }
     },
-    [centerOnUser, syncUserSource, onGeoNote],
+    [centerOnUser, syncUserSource, onGeoNote, t],
   );
 
   // Init map once. Sticky viewport lives here — only explicit locate/cluster moves it.
@@ -205,7 +207,7 @@ export default function MapView({
         zoom: PARIS.zoom,
       });
     } catch (err: any) {
-      errorRef.current(t["map.failedToStart"](String(err?.message ?? err)));
+      errorRef.current(tRef.current["map.failedToStart"](String(err?.message ?? err)));
       return;
     }
     map.addControl(new NavigationControl(), "top-right");
@@ -218,7 +220,7 @@ export default function MapView({
     });
     map.on("error", (e: any) => {
       const msg = e?.error?.message ?? "map error";
-      errorRef.current(t["map.error"](msg));
+      errorRef.current(tRef.current["map.error"](msg));
     });
     mapRef.current = map;
 
@@ -341,7 +343,7 @@ export default function MapView({
           mapReadyRef.current = true;
           setMapReady(true);
         } catch (err: any) {
-          errorRef.current(t["map.setupFailed"](String(err?.message ?? err)));
+          errorRef.current(tRef.current["map.setupFailed"](String(err?.message ?? err)));
         }
       })();
     });

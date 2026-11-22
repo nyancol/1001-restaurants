@@ -16,6 +16,7 @@ export const en = {
   "language.groupAria": "language",
 
   "scope.me": "Me",
+  "scope.friends": "Friends",
   "scope.everyone": "Everyone",
   "scope.userFallback": "User",
   "scope.viewingList": (scope: string) => `List · Viewing ${scope}`,

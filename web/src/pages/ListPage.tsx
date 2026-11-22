@@ -11,13 +11,15 @@ import { usePlaceFilters } from "../lib/usePlaceFilters";
 import { usePlaces } from "../lib/usePlaces";
 
 function priceTiersFor(level: unknown): string[] {
-  const v = String(level ?? "").toUpperCase();
-  if (v.includes("INEXPENSIVE")) return ["$"];
-  if (v.includes("MODERATE")) return ["$$"];
-  if (v.includes("EXPENSIVE") && v.includes("VERY")) return ["$$$$"];
-  if (v.includes("EXPENSIVE")) return ["$$$"];
-  const m = String(level ?? "").match(/\$+/);
-  return m ? [m[0]] : [];
+  if (typeof level !== "string" || !level) return [];
+  const v = level.trim().toUpperCase();
+  if (v === "PRICE_LEVEL_INEXPENSIVE" || v === "INEXPENSIVE" || v === "€") return ["$"];
+  if (v === "PRICE_LEVEL_MODERATE" || v === "MODERATE" || v === "€€") return ["$$"];
+  if (v === "PRICE_LEVEL_EXPENSIVE" || v === "EXPENSIVE" || v === "€€€") return ["$$$"];
+  if (v === "PRICE_LEVEL_VERY_EXPENSIVE" || v === "VERY_EXPENSIVE" || v === "€€€€") return ["$$$$"];
+  const trimmed = level.trim();
+  if (/^\$+$/.test(trimmed) && trimmed.length >= 1 && trimmed.length <= 4) return [trimmed];
+  return [];
 }
 
 export default function ListPage({ onUnauthorized }: { onUnauthorized: () => void }) {
@@ -32,6 +34,8 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
   const [notesPlace, setNotesPlace] = useState<(typeof places)[number] | null>(null);
   const [editingPlace, setEditingPlace] = useState<(typeof places)[number] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // Derive the open sheet from live `places` so refresh/status flips stay current.
+  const notesPlaceLive = notesPlace ? (places.find((p) => p.id === notesPlace.id) ?? notesPlace) : null;
 
   useEffect(() => {
     const onOpenAdd = () => setAddOpen(true);
@@ -107,7 +111,9 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
                   if (!readOnly) setEditingPlace(pl);
                 }}
                 onOpen={(pl) => setNotesPlace(pl)}
-                onRefresh={(pl) => refreshOne(pl)}
+                onRefresh={(pl) => {
+                  void refreshOne(pl).catch((e: unknown) => setError(e instanceof Error ? e.message : "Refresh failed"));
+                }}
                 refreshing={refreshingIds.includes(p.id)}
                 readOnly={readOnly}
               />
@@ -134,7 +140,7 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
       />
 
       <TastingNotesSheet
-        place={notesPlace}
+        place={notesPlaceLive}
         onClose={() => setNotesPlace(null)}
         onEdit={(p) => {
           if (readOnly) return;
@@ -144,8 +150,10 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         onToggleStatus={(p) => {
           if (!readOnly) void flipStatus(p);
         }}
-        onRefresh={(p) => refreshOne(p)}
-        refreshing={notesPlace ? refreshingIds.includes(notesPlace.id) : false}
+        onRefresh={(p) => {
+          void refreshOne(p).catch((e: unknown) => setError(e instanceof Error ? e.message : "Refresh failed"));
+        }}
+        refreshing={notesPlaceLive ? refreshingIds.includes(notesPlaceLive.id) : false}
         readOnly={readOnly}
       />
 

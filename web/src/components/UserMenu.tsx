@@ -15,7 +15,7 @@ interface Props {
 export default function UserMenu({ displayName }: Props) {
   const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { me, users, loading } = useUsers();
+  const { me, users, loading, error } = useUsers();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -69,6 +69,12 @@ export default function UserMenu({ displayName }: Props) {
   const meName = me?.displayName ?? displayName ?? t["scope.me"];
   const entries = [
     { id: "me", name: meName, count: meCount, active: isMeActive },
+    {
+      id: "all",
+      name: t["scope.everyone"],
+      count: users.reduce((n, u) => n + (u.placeCount ?? 0), 0),
+      active: owner === "all",
+    },
     ...users
       .filter((u) => (me ? u.id !== me.id : true))
       .map((u) => ({
@@ -111,7 +117,9 @@ export default function UserMenu({ displayName }: Props) {
                   <span className="h-3 w-24 bg-line/40" style={{ borderRadius: 999 }} />
                 </div>
               ))
-            : entries.map((e) => (
+            : error
+              ? <div role="alert" className="px-2 py-2 text-[11px] text-danger">{error}</div>
+              : entries.map((e) => (
                 <button
                   key={e.id}
                   type="button"

@@ -11,13 +11,15 @@ import { usePlaceFilters } from "../lib/usePlaceFilters";
 import { usePlaces } from "../lib/usePlaces";
 
 function priceTiersFor(level: unknown): string[] {
-  const v = String(level ?? "").toUpperCase();
-  if (v.includes("INEXPENSIVE")) return ["$"];
-  if (v.includes("MODERATE")) return ["$$"];
-  if (v.includes("EXPENSIVE") && v.includes("VERY")) return ["$$$$"];
-  if (v.includes("EXPENSIVE")) return ["$$$"];
-  const m = String(level ?? "").match(/\$+/);
-  return m ? [m[0]] : [];
+  if (typeof level !== "string" || !level) return [];
+  const v = level.trim().toUpperCase();
+  if (v === "PRICE_LEVEL_INEXPENSIVE" || v === "INEXPENSIVE" || v === "€") return ["$"];
+  if (v === "PRICE_LEVEL_MODERATE" || v === "MODERATE" || v === "€€") return ["$$"];
+  if (v === "PRICE_LEVEL_EXPENSIVE" || v === "EXPENSIVE" || v === "€€€") return ["$$$"];
+  if (v === "PRICE_LEVEL_VERY_EXPENSIVE" || v === "VERY_EXPENSIVE" || v === "€€€€") return ["$$$$"];
+  const trimmed = level.trim();
+  if (/^\$+$/.test(trimmed) && trimmed.length >= 1 && trimmed.length <= 4) return [trimmed];
+  return [];
 }
 
 export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void }) {
@@ -94,7 +96,9 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
           onFlipStatus={(p) => void flipStatus(p)}
           onSaveEdit={saveEdit}
           onDelete={deleteOne}
-          onRefresh={(p) => refreshOne(p)}
+          onRefresh={(p) => {
+            void refreshOne(p).catch((e: unknown) => setError(e instanceof Error ? e.message : "Refresh failed"));
+          }}
           refreshingIds={refreshingIds}
           selectedId={selectedId}
           onSelect={handleSelect}
@@ -137,7 +141,9 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
         onToggleStatus={(p) => {
           if (!readOnly) void flipStatus(p);
         }}
-        onRefresh={(p) => refreshOne(p)}
+        onRefresh={(p) => {
+          void refreshOne(p).catch((e: unknown) => setError(e instanceof Error ? e.message : "Refresh failed"));
+        }}
         refreshing={notesPlace ? refreshingIds.includes(notesPlace.id) : false}
         readOnly={readOnly}
       />

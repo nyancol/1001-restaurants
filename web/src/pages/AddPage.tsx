@@ -106,17 +106,21 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
             navigate("/");
             return;
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           if (e instanceof UnauthorizedError) throw e;
+          // Best-effort pre-check failed; fall through to create (409 guards duplicates).
+          console.warn("Duplicate pre-check failed; falling back to create", e);
         }
       }
       try {
         await createPlace(payload);
-      } catch (e: any) {
-        if (e?.status === 409 && e?.body?.existingId) {
+      } catch (e: unknown) {
+        const status = (e as { status?: unknown })?.status;
+        const body = (e as { body?: { existingId?: string } })?.body;
+        if (status === 409 && body?.existingId) {
           const ok = window.confirm(t["add.duplicateGeneric"]);
           if (ok) {
-            await patchPlace(e.body.existingId, payload);
+            await patchPlace(body.existingId, payload);
             navigate("/");
             return;
           }
@@ -126,12 +130,12 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
         throw e;
       }
       navigate("/");
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof UnauthorizedError) {
         onUnauthorized();
         return;
       }
-      setError(err?.message ?? t["add.saveFailed"]);
+      setError(err instanceof Error ? err.message : t["add.saveFailed"]);
     } finally {
       setSaving(false);
     }
@@ -149,7 +153,15 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
           <input
             id="name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setName(v);
+            // Manual edits detach the picked Google place to avoid mis-attribution.
+            if (googlePlaceId && v !== lookupText) {
+              setGooglePlaceId(null);
+              setEnrichment(null);
+            }
+          }}
             className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
             placeholder={t["add.namePlaceholder"]}
           />
@@ -159,7 +171,15 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
           <input
             id="address"
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setAddress(v);
+              // Manual address edits detach the picked Google place to avoid mis-location.
+              if (googlePlaceId && enrichment && v !== (enrichment.address ?? "")) {
+                setGooglePlaceId(null);
+                setEnrichment(null);
+              }
+            }}
             className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
             placeholder={t["add.addressPlaceholder"]}
           />

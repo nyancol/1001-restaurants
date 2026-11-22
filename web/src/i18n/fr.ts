@@ -18,6 +18,7 @@ export const fr: typeof en = {
   "language.groupAria": "langue",
 
   "scope.me": "Moi",
+  "scope.friends": "Amis",
   "scope.everyone": "Tout le monde",
   "scope.userFallback": "Utilisateur",
   "scope.viewingList": (scope: string) => `Liste · ${scope}`,
