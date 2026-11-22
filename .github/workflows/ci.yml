@@ -1,0 +1,88 @@
+# CI: fast merge gate for every PR to main + push to main.
+# SAST lives in sast.yml, preview deploys in preprod-preview.yml — this file
+# covers: typecheck, tests, production build, npm audit, secret scan, Dockerfile build.
+# Keep jobs read-only: no secrets, no deploys, no writes except PR comments via GITHUB_TOKEN.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck / test / build
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "26.13.1" # must match mise.toml [tools] node
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Production build (server + web)
+        run: npm run build
+
+  audit:
+    name: npm audit (high+)
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "26.13.1"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Audit production deps (fail on high/critical)
+        run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout (full history for leak scan)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks detect
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Dockerfile builds
+    runs-on: [self-hosted]
+    needs: [verify]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Build image (no push)
+        run: docker build -t places:ci-${{ github.sha }} -f Dockerfile .
