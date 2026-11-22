@@ -1,5 +1,12 @@
 # In my Belly
 
+[![CI](https://github.com/nyancol/1001-restaurants/actions/workflows/ci.yml/badge.svg)](https://github.com/nyancol/1001-restaurants/actions/workflows/ci.yml)
+[![SAST](https://github.com/nyancol/1001-restaurants/actions/workflows/sast.yml/badge.svg)](https://github.com/nyancol/1001-restaurants/actions/workflows/sast.yml)
+[![Release](https://github.com/nyancol/1001-restaurants/actions/workflows/release.yml/badge.svg)](https://github.com/nyancol/1001-restaurants/releases)
+[![License: MIT](https://img.shields.io/github/license/nyancol/1001-restaurants)](LICENSE)
+[![Node](https://img.shields.io/badge/node-26.13.1-43853d?logo=node.js&logoColor=white)](mise.toml)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org)
+
 Foundation service for the In my Belly restaurant memory app: Fastify + TypeScript API
 serving a static placeholder page, SQLite persistence (Drizzle + better-sqlite3),
 PocketID OIDC login, and the v1 places/tags API.
