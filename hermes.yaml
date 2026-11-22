@@ -74,6 +74,17 @@ watch:
   alert_policy: one_alert_per_red_transition_plus_one_recovery_notice_no_repeat_while_red
   drill_prefix: "[DRILL]"
 
+lgtm:
+  compose: ~/Documents/selfhosted-deployments/lgtm/compose.yaml
+  container: lgtm # grafana/otel-lgtm; homelab-owned, agents never restart/reconfigure it
+  grafana: http://localhost:3001 # host 3001 -> container 3000
+  otlp: http://localhost:4318 # app export target (host port); not a query path
+  access: grafana_datasource_proxy_only # Mimir :9090 / Loki :3100 / Tempo :3200 are container-loopback; never docker exec for reads
+  datasources: { prometheus_uid: prometheus, loki_uid: loki, tempo_uid: tempo }
+  auth: service_account places-ops (Viewer role), bearer token via GRAFANA_TOKEN env var (assumed set, never printed)
+  query_script: .agents/skills/ops-observe/scripts/lgtm-query.sh # health|prom|loki|tempo; exit 0 query-ok, 2 check-errored-not-a-red
+  overrides: GRAFANA_URL (default http://localhost:3001)
+
 rollback:
   method: git-revert-on-main-only # git revert <sha> on main + push; Arcane redeploys. No direct prod rebuild.
   on_order_only: true

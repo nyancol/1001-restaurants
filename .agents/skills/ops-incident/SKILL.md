@@ -21,7 +21,9 @@ family conventions in the `ops` router skill — load
   (Caddy `:8093 -> places:5173`), no host publication. The Arcane-managed
   prod `.env` MUST NOT set `HOST_PORT`.
 * Telemetry: prod `places` exports OTLP/HTTP to `http://lgtm:4318`.
-  Every signal carries `service.name="places"`,
+  Query LGTM per the `ops-observe` skill access section (Grafana
+  `http://localhost:3001` + `lgtm-query.sh`, service-account token) —
+  never `docker exec` for reads. Every signal carries `service.name="places"`,
   `deployment.environment="production"`. A signal gap with steady 200s =
   exporter break, not zero users (see `ops-observe` skill for the RED lens).
 * Thresholds live in `hermes.yaml`: alert after 3 consecutive failures, 10m
