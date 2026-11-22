@@ -14,7 +14,7 @@ Sources of truth mirrored by this family: `compose.yaml`, `compose.preprod.yaml`
 
 | Need | Skill |
 |---|---|
-| Observability (RED signals via LGTM + Google quota spend guard) | `.agents/skills/ops-observe/SKILL.md` (`scripts/quota-check.sh`) |
+| Observability (RED signals via LGTM + Google quota spend guard) | `.agents/skills/ops-observe/SKILL.md` (`scripts/lgtm-query.sh`, `scripts/quota-check.sh`) |
 | Preprod preview deploy (single slot) + green verification | `.agents/skills/ops-preview/SKILL.md` (`scripts/preprod-deploy.sh`, `preprod-verify.sh`, `lib-docker.sh`) |
 | Hermes prod watch + git-revert rollback | `.agents/skills/ops-incident/SKILL.md` |
 | Ad-hoc Google refresh sweep + backup & restore | `.agents/skills/ops-data/SKILL.md` |

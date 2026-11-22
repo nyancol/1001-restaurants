@@ -14,6 +14,41 @@ config in the homelab.
 Secrets and exit codes follow the family conventions in the `ops` router
 skill — load `.agents/skills/ops/SKILL.md` if not already loaded.
 
+## Access (no `docker exec`)
+
+Query LGTM over HTTP from the host. Never `docker exec` into `lgtm` (or
+into `places`) for observability — the backends are reachable without it.
+
+* Stack: compose at `~/Documents/selfhosted-deployments/lgtm`
+  (`grafana/otel-lgtm`, container `lgtm`). Up-keep (restart/version bump)
+  is the homelab owner's job, not this skill's.
+* Host endpoints: Grafana `http://localhost:3001` (host `3001` → container
+  `3000`); OTLP ingest `http://localhost:4318` (app export target, not a
+  query path). Mimir `:9090`, Loki `:3100`, Tempo `:3200` are loopback-only
+  inside the `lgtm` container — reach them through the Grafana datasource
+  proxy (`/api/datasources/proxy/uid/<prometheus|loki|tempo>/...`), never
+  by entering the container.
+* Auth: Grafana service account `places-ops` (Viewer role). The Bearer
+  token MUST come from the `GRAFANA_TOKEN` env var — never a file flag,
+  never the admin password. Load it from the 0600 store without printing
+  it: `export GRAFANA_TOKEN="$(cat ~/.secrets/grafana-places-ops.token)"`.
+  Presence/shape only — never print the token.
+  Overrides: `GRAFANA_URL` (default `http://localhost:3001`).
+* Helper (host-side, needs `curl` + `jq`; exit `0` = query ok, `2` =
+  check-errored: unreachable Grafana, missing/revoked token — fix access,
+  NOT a red):
+
+```bash
+export GRAFANA_TOKEN="$(cat ~/.secrets/grafana-places-ops.token)" # 0600 store, never print
+.agents/skills/ops-observe/scripts/lgtm-query.sh health   # Grafana reachability + token auth check
+.agents/skills/ops-observe/scripts/lgtm-query.sh prom --query '<PromQL>' --since 1h [--step 60s]
+.agents/skills/ops-observe/scripts/lgtm-query.sh loki --query '<LogQL>' --since 1h [--limit 50]
+.agents/skills/ops-observe/scripts/lgtm-query.sh tempo --query '<TraceQL>' [--limit 10]
+```
+
+`health` failing means the stack (or the token) needs attention before any
+signal below is trustworthy — report it as check-errored, not as app-red.
+
 ## What lives where
 
 * Telemetry: prod `places` exports OTLP/HTTP to `http://lgtm:4318`
@@ -32,7 +67,8 @@ skill — load `.agents/skills/ops/SKILL.md` if not already loaded.
 
 ## Metrics (Mimir)
 
-Histogram: `http_server_request_duration_seconds_{count,sum,bucket}`.
+Run via `lgtm-query.sh prom --query '<PromQL>' --since <window>` (Grafana
+proxy → uid `prometheus`). Histogram: `http_server_request_duration_seconds_{count,sum,bucket}`.
 Kept labels (low-cardinality allowlist in `buildMetricViews()`):
 `http_request_method`, `http_response_status_code`, `url_scheme`,
 `server.address` (+ legacy aliases). There is NO `http_route` label — the
@@ -80,6 +116,10 @@ histogram_quantile(0.95,
 
 ## Traces (Tempo)
 
+Run via `lgtm-query.sh tempo --query '<TraceQL>'` (Grafana proxy → uid
+`tempo`). Note Tempo `api/search` returns recent trace IDs only — full
+span detail comes from Grafana Explore on `http://localhost:3001`.
+
 * Span names are bare methods (`GET`) — group by `span.url.path`, never by
   span name. TraceQL resource/span scope prefixes are required:
   `resource.service.name`, `span.url.path`,
@@ -121,7 +161,8 @@ Quota counting (one client span per billable call — see below):
 
 ## Logs (Loki)
 
-Log level is the Loki **label** `level` with pino numeric values as
+Run via `lgtm-query.sh loki --query '<LogQL>' --since <window>` (Grafana
+proxy → uid `loki`). Log level is the Loki **label** `level` with pino numeric values as
 strings (`30`=info). Log bodies are plain `msg` text, not JSON — do not
 use `| json`. Correlate via the `trace_id` / `span_id` attributes.
 
