@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "26.13.1" # must match mise.toml [tools] node
           cache: npm
@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "26.13.1"
           cache: npm
@@ -63,7 +63,7 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
   secrets:
-    name: Secret scan (gitleaks)
+    name: Secret scan (betterleaks)
     runs-on: [self-hosted]
     steps:
       - name: Checkout (full history for leak scan)
@@ -71,10 +71,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Gitleaks detect
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Same scanner as the pre-commit hook (.githooks/pre-commit), so CI and
+      # local enforce the same rules + .betterleaksignore. Version has a single
+      # source of truth (mise.toml) — the step below reads it, so `mise up
+      # betterleaks` needs no workflow edit. (gitleaks-action@v2 was removed:
+      # it crashes artifact upload on self-hosted runners running as root.)
+      - name: Install betterleaks
+        run: |
+          BETTERLEAKS_VERSION="$(sed -n 's/^betterleaks *= *"\([^"]*\)".*/\1/p' mise.toml)"
+          [ -n "$BETTERLEAKS_VERSION" ] || { echo "::error::could not parse betterleaks version from mise.toml"; exit 1; }
+          echo "betterleaks $BETTERLEAKS_VERSION (from mise.toml)"
+          curl -sSL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/betterleaks.tar.gz
+          curl -sSL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/checksums.txt" -o /tmp/betterleaks-checksums.txt
+          (cd /tmp && grep "betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz" betterleaks-checksums.txt | sha256sum -c -)
+          tar -xzf /tmp/betterleaks.tar.gz -C /tmp betterleaks
+          install -m 0755 /tmp/betterleaks "${HOME}/.local/bin/betterleaks" 2>/dev/null || install -m 0755 /tmp/betterleaks /usr/local/bin/betterleaks
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+          betterleaks version
+
+      - name: Betterleaks scan (full history)
+        run: betterleaks git --redact -v --exit-code=2
 
   docker:
     name: Dockerfile builds
