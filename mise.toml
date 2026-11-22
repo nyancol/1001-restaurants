@@ -59,12 +59,12 @@ run = """
 ARGS="--branch ${usage_branch:?--branch is required}"
 [ "${usage_fresh_db:-}" = "true" ] && ARGS="$ARGS --fresh-db"
 [ "${usage_evict:-}" = "true" ] && ARGS="$ARGS --evict"
-./skills/ops/scripts/preprod-deploy.sh $ARGS
+./skills/ops-preview/scripts/preprod-deploy.sh $ARGS
 """
 
 [tasks.preprod-verify]
 description = "Verify preprod green (read-only: health, OIDC, logs, version, fixture)"
-run = "./skills/ops/scripts/preprod-verify.sh"
+run = "./skills/ops-preview/scripts/preprod-verify.sh"
 
 [tasks.preprod-down]
 description = "Stop the preprod app instance (keeps its data volume)"
