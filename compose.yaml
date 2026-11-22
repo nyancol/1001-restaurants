@@ -22,6 +22,9 @@ services:
     image: places:latest
     container_name: places
     restart: unless-stopped
+    # Must exceed SHUTDOWN_TIMEOUT_MS (default 9s): SIGTERM -> drain
+    # in-flight via app.close() -> OTEL flush -> exit.
+    stop_grace_period: 20s
     expose:
       - "${PORT:-3000}"
     environment:
