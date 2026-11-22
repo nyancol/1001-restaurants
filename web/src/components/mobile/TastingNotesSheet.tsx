@@ -5,8 +5,8 @@ import PlaceActionBar from "../PlaceActionBar";
 function displayRating(p: Place): string | null {
   const r = p.googleRating ?? p.rating ?? null;
   if (r == null) return null;
-  const v = r <= 5.5 ? r * 2 : r;
-  return v.toFixed(1);
+  // Both user ratings and Google ratings are on a 0-5 scale; never rescale by magnitude.
+  return r.toFixed(1);
 }
 
 function priceLabel(p: Place): string | null {
@@ -23,7 +23,7 @@ function priceLabel(p: Place): string | null {
     VERY_EXPENSIVE: "$$$$",
   };
   if (level && map[level]) return map[level];
-  if (level && /^\$+$/.test(level.trim())) return level.trim();
+  if (level && /^\${1,4}$/.test(level.trim())) return level.trim();
   return null;
 }
 

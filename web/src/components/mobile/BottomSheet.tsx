@@ -20,10 +20,15 @@ export default function BottomSheet({ open, onClose, ariaLabel, children }: Prop
 
   useEffect(() => {
     if (open) {
+      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
       setMounted(true);
       setDragY(0);
+      let openCancelled = false;
       const raf = requestAnimationFrame(() => {
-        requestAnimationFrame(() => setShown(true));
+        requestAnimationFrame(() => {
+          if (!openCancelled) setShown(true);
+        });
       });
       document.body.style.overflow = "hidden";
       const onKey = (e: KeyboardEvent) => {
@@ -31,6 +36,7 @@ export default function BottomSheet({ open, onClose, ariaLabel, children }: Prop
       };
       document.addEventListener("keydown", onKey);
       return () => {
+        openCancelled = true;
         cancelAnimationFrame(raf);
         document.removeEventListener("keydown", onKey);
       };
@@ -117,9 +123,6 @@ export default function BottomSheet({ open, onClose, ariaLabel, children }: Prop
           role="button"
           tabIndex={0}
           aria-label="Drag down to close"
-          onKeyDown={(e) => {
-            if (e.key === "Escape" || e.key === "Enter") onClose();
-          }}
         >
           <div className="mx-auto h-1.5 w-12 rounded-full bg-ink/25" aria-hidden />
         </div>

@@ -84,12 +84,14 @@ export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTag
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Delete failed");
+      setConfirmOpen(false); // reveal the inline error instead of leaving the dialog covering it
     } finally {
       setDeleting(false);
     }
   }
 
-  const price = place?.priceLevel && /^\$+$/.test(String(place.priceLevel).trim()) ? String(place.priceLevel).trim() : "$$$";
+  const priceLevelRaw = place?.priceLevel != null ? String(place.priceLevel).trim() : "";
+  const price = priceLevelRaw !== "" ? priceLevelRaw : "–";
 
   return (
     <BottomSheet open={place != null} onClose={onClose} ariaLabel="Edit place">

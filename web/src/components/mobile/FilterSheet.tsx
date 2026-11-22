@@ -24,6 +24,13 @@ function parsePriceMulti(price: string): string[] {
   return price.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+function priceSummary(prices: string[]): string {
+  if (prices.length === 0) return "Any";
+  const labels: Record<string, string> = { $: "Budget", $$: "Moderate", $$$: "Upscale", $$$$: "Luxury" };
+  if (prices.length === 1) return labels[prices[0]] ?? "Filtered";
+  return "Filtered";
+}
+
 function tonightISO(): string {
   const d = new Date();
   const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -67,11 +74,16 @@ export default function FilterSheet({
 
   useEffect(() => {
     if (open) {
+      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
       setMounted(true);
       setDragY(0);
       setOpenTab(!openEnabled ? "now" : openAt ? "ahead" : "now");
+      let openCancelled = false;
       const raf = requestAnimationFrame(() => {
-        requestAnimationFrame(() => setShown(true));
+        requestAnimationFrame(() => {
+          if (!openCancelled) setShown(true);
+        });
       });
       document.body.style.overflow = "hidden";
       const onKey = (e: KeyboardEvent) => {
@@ -79,6 +91,7 @@ export default function FilterSheet({
       };
       document.addEventListener("keydown", onKey);
       return () => {
+        openCancelled = true;
         cancelAnimationFrame(raf);
         document.removeEventListener("keydown", onKey);
       };
@@ -186,9 +199,6 @@ export default function FilterSheet({
           aria-label="Drag down to close filters"
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Escape" || e.key === "Enter") onClose();
-          }}
         >
           <div className="mx-auto h-1.5 w-12 rounded-full bg-ink/25" aria-hidden />
           <div className="py-1 text-center text-[11px] font-medium text-muted/70" aria-hidden>
@@ -300,7 +310,9 @@ export default function FilterSheet({
               >
                 <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted">Date</span>
                 <span className="mt-0.5 flex items-center justify-between text-sm font-bold text-ink">
-                  Tonight, Oct 24 <span aria-hidden>📅</span>
+                  Tonight,{" "}
+                  {new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}{" "}
+                  <span aria-hidden>📅</span>
                 </span>
               </button>
               <button
@@ -315,7 +327,7 @@ export default function FilterSheet({
               >
                 <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted">Service</span>
                 <span className="mt-0.5 flex items-center justify-between text-sm font-bold text-ink">
-                  Dinner (8:00 PM) <span aria-hidden>🕐</span>
+                  Dinner ({openAt ? new Date(openAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "8:00 PM"}) <span aria-hidden>🕐</span>
                 </span>
               </button>
             </div>
@@ -325,7 +337,7 @@ export default function FilterSheet({
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-ink">Price level</h3>
-              <span className="text-xs text-muted">{prices.length ? "Moderate to Upscale" : "Any"}</span>
+              <span className="text-xs text-muted">{priceSummary(prices)}</span>
             </div>
             <div className="edge grid grid-cols-4 gap-1 border-line bg-surface-2/60 p-1" style={{ borderRadius: 12 }} role="group" aria-label="Price level">
               {PRICE_TIERS.map((tier) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   apiFetch,
   createPlace,
@@ -47,6 +47,8 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
   const [enrichment, setEnrichment] = useState<PlaceDetails | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchSeq = useRef(0);
+  const pickSeq = useRef(0);
 
   useEffect(() => {
     if (open) {
@@ -76,32 +78,42 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
       setLookupError(t["lookup.minChars"]);
       return;
     }
+    const my = ++searchSeq.current;
     setLookupError(null);
     setSearching(true);
     try {
       const body = await apiFetch(`/api/google/autocomplete?q=${encodeURIComponent(q)}`);
+      if (my !== searchSeq.current) return; // a newer search superseded this one
       const parsed = parseAutocomplete(body);
       setSuggestions(parsed);
       setSuggestOpen(true);
       if (!parsed.length) setLookupError(t["lookup.noMatches"]);
     } catch (err: any) {
+      if (my !== searchSeq.current) return;
       if (err?.status !== 503) setLookupError(t["lookup.failed"]);
       else setLookupError(t["lookup.unavailable"]);
     } finally {
-      setSearching(false);
+      if (my === searchSeq.current) setSearching(false);
     }
   }
 
   async function pick(placeId: string, label: string) {
+    const my = ++pickSeq.current;
     setSuggestOpen(false);
     setLookupError(null);
     try {
       const body = await apiFetch(`/api/google/details?placeId=${encodeURIComponent(placeId)}`);
+      if (my !== pickSeq.current) return;
       const d = parseDetails(body, placeId, label);
       handlePick(d);
     } catch {
+      if (my !== pickSeq.current) return;
       setLookupError(t["lookup.detailsFailed"]);
-      handlePick({ googlePlaceId: placeId, name: label, address: null, lat: null, lng: null });
+      // Details failed: keep the place ID for dedupe but do NOT present the
+      // venue as matched/verified (enrichment stays null).
+      setGooglePlaceId(placeId);
+      setName(label);
+      setLookupText(label);
     }
   }
 
@@ -114,6 +126,62 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
     setLng(d.lng);
     if (d.icon) setIcon(d.icon);
     setEnrichment(d);
+  }
+
+  /** Abandon the matched venue entirely: identity (place ID + coords) must not linger. */
+  function clearPick() {
+    setGooglePlaceId(null);
+    setLat(null);
+    setLng(null);
+    setEnrichment(null);
+  }
+
+  /**
+   * Lenient variant for the 409 path where the existing record could not be
+   * fetched: omit (rather than null) every field that would wipe stored data,
+   * so the PATCH only touches values the user/form actually provided.
+   */
+  function duplicatePatchLenient(payload: any) {
+    const p: any = { ...payload };
+    delete p.rating; // this form has no rating input; never wipe it on duplicates
+    if (!tags.length) delete p.tags;
+    if (!note) delete p.note;
+    if (!address) delete p.address;
+    if (lat == null) delete p.lat;
+    if (lng == null) delete p.lng;
+    if (!enrichment) {
+      for (const k of ["hours", "businessStatus", "priceLevel", "priceRange", "googleRating", "googleRatingCount", "websiteUri", "mapsLinks", "utcOffsetMinutes"]) {
+        if (p[k] == null) delete p[k];
+      }
+    }
+    return p;
+  }
+
+  /**
+   * Build a duplicate-update patch that never wipes stored data the user was
+   * not asked about: keep the existing rating/tags/note/address/coords unless
+   * the form provides a new value, and keep stored Google snapshot fields
+   * unless fresh enrichment was fetched.
+   */
+  function duplicatePatch(existing: Place, payload: any) {
+    return {
+      ...payload,
+      rating: existing.rating,
+      tags: tags.length ? tags : (existing.tags ?? []),
+      note: note ? note : (existing.note ?? null),
+      address: address ? address : (existing.address ?? null),
+      lat: lat ?? existing.lat,
+      lng: lng ?? existing.lng,
+      hours: enrichment?.hours ?? existing.hours,
+      businessStatus: enrichment?.businessStatus ?? existing.businessStatus,
+      priceLevel: enrichment?.priceLevel ?? existing.priceLevel,
+      priceRange: enrichment?.priceRange ?? existing.priceRange,
+      googleRating: enrichment?.googleRating ?? existing.googleRating,
+      googleRatingCount: enrichment?.googleRatingCount ?? existing.googleRatingCount,
+      websiteUri: enrichment?.websiteUri ?? existing.websiteUri,
+      mapsLinks: enrichment?.mapsLinks ?? (enrichment?.googleMapsUri ? { placeUri: enrichment.googleMapsUri } : (existing.mapsLinks ?? null)),
+      utcOffsetMinutes: enrichment?.utcOffsetMinutes ?? existing.utcOffsetMinutes,
+    };
   }
 
   async function handleSave() {
@@ -157,13 +225,16 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
               setSaving(false);
               return;
             }
-            const updated = await patchPlace(existing.id, payload);
+            const updated = await patchPlace(existing.id, duplicatePatch(existing, payload));
             onSaved?.(updated);
             onClose();
             return;
           }
         } catch (e: any) {
           if (e instanceof UnauthorizedError) throw e;
+          // Pre-check is best-effort: log so failures are observable.
+          // The server-side 409 path below still catches real duplicates.
+          console.warn("duplicate pre-check failed", e);
         }
       }
       try {
@@ -173,7 +244,17 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
         if (e?.status === 409 && e?.body?.existingId) {
           const ok = window.confirm(t["add.duplicateGeneric"]);
           if (ok) {
-            const updated = await patchPlace(e.body.existingId, payload);
+            let dupExisting: Place | undefined;
+            try {
+              const mine = await listPlaces({ owner: "me" });
+              dupExisting = mine.find((p) => p.id === e.body.existingId);
+            } catch {
+              dupExisting = undefined;
+            }
+            const updated = await patchPlace(
+              e.body.existingId,
+              dupExisting ? duplicatePatch(dupExisting, payload) : duplicatePatchLenient(payload),
+            );
             onSaved?.(updated);
             onClose();
             return;
@@ -189,7 +270,7 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
         onUnauthorized();
         return;
       }
-      setError(err?.message ?? t["add.saveFailed"]);
+      setError(t["add.saveFailed"]);
     } finally {
       setSaving(false);
     }
@@ -246,6 +327,7 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
                     setLookupText("");
                     setSuggestions([]);
                     setSuggestOpen(false);
+                    clearPick();
                   }}
                   className="absolute right-3 text-lg text-muted"
                 >
@@ -287,7 +369,7 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
                   <span aria-hidden>✓</span>
                   <span className="truncate">Venue matched: <strong>{name}{address ? `, ${address.split(",").slice(-1)[0]?.trim()}` : ""}</strong></span>
                 </span>
-                <button type="button" className="ml-2 shrink-0 font-bold underline" onClick={() => setEnrichment(null)}>
+                <button type="button" className="ml-2 shrink-0 font-bold underline" onClick={clearPick}>
                   Change
                 </button>
               </div>
