@@ -1,7 +1,14 @@
 import type { Place } from "./api";
 
-export interface DayTime { day: number; hour: number; minute: number }
-export interface HoursPeriod { open?: DayTime | null; close?: DayTime | null }
+export interface DayTime {
+  day: number;
+  hour: number;
+  minute: number;
+}
+export interface HoursPeriod {
+  open?: DayTime | null;
+  close?: DayTime | null;
+}
 
 const DAY_NAMES: string[][] = [
   ["sunday", "sun", "dimanche", "dim"],
@@ -13,7 +20,15 @@ const DAY_NAMES: string[][] = [
   ["saturday", "sat", "samedi", "sam"],
 ];
 
-const DAY_LABELS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_LABELS_EN = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 const DAY_LABELS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
 function toMinutes(d: DayTime): number {
@@ -89,7 +104,9 @@ export function weekRowsFor(p: Place, locale?: string): WeekRow[] {
   const descs = h?.weekdayDescriptions;
   if (!Array.isArray(descs) || !descs.length) return [];
   const today = new Date().getDay();
-  const fr = (locale ?? (typeof document !== "undefined" ? document.documentElement.lang : ""))?.toLowerCase().startsWith("fr");
+  const fr = (locale ?? (typeof document !== "undefined" ? document.documentElement.lang : ""))
+    ?.toLowerCase()
+    .startsWith("fr");
   const labels = fr ? DAY_LABELS_FR : DAY_LABELS_EN;
   const rows: WeekRow[] = descs.map((d) => {
     const text = String(d ?? "");
@@ -97,7 +114,12 @@ export function weekRowsFor(p: Place, locale?: string): WeekRow[] {
     const name = colon >= 0 ? text.slice(0, colon).trim() : text.trim();
     const hoursText = colon >= 0 ? text.slice(colon + 1).trim() : "";
     const idx = dayIndexFor(name);
-    return { dayIndex: idx, dayLabel: idx >= 0 ? labels[idx] : name, hoursText, isToday: idx === today };
+    return {
+      dayIndex: idx,
+      dayLabel: idx >= 0 ? labels[idx] : name,
+      hoursText,
+      isToday: idx === today,
+    };
   });
   rows.sort((a, b) => {
     const order = (i: number) => (i <= 0 ? i + 7 : i); // Monday first

@@ -5,7 +5,7 @@
 # SAST notes: actions pinned by SHA (see sast.yml); no workflow-level secrets
 # (GH_TOKEN is step-level); no `${{ github.* }}` interpolation inside `run:`
 # scripts — values cross via `env:` (semgrep run-shell-injection).
-# See skill capability 3 (skills/ops/SKILL.md) and hermes.yaml for the contract.
+# See skills/ops-preview/SKILL.md and hermes.yaml for the contract.
 name: Preprod preview
 
 on:
@@ -107,7 +107,7 @@ jobs:
             FRESH=true
           fi
           echo "fresh=$FRESH" >> "$GITHUB_OUTPUT"
-          ./skills/ops/scripts/preprod-deploy.sh $ARGS
+          ./skills/ops-preview/scripts/preprod-deploy.sh $ARGS
 
       - name: Verify green
         id: verify
@@ -116,7 +116,7 @@ jobs:
         run: |
           if [ "$FRESH" = "true" ]; then export EXPECT_FIXTURE=1; fi
           set +e
-          OUT="$(./skills/ops/scripts/preprod-verify.sh 2>&1)"; RC=$?
+          OUT="$(./skills/ops-preview/scripts/preprod-verify.sh 2>&1)"; RC=$?
           set -e
           printf '%s\n' "$OUT"
           {
@@ -141,7 +141,7 @@ jobs:
           if [ "$VERIFY_RC" = "0" ]; then
             STATUS="GREEN"
           elif [ "$VERIFY_RC" = "2" ]; then
-            STATUS="UNKNOWN (check errored, not a red — see skill capability 3)"
+            STATUS="UNKNOWN (check errored, not a red — see skills/ops-preview/SKILL.md)"
           elif [ -z "$VERIFY_RC" ]; then
             STATUS="FAILED before verify (deploy step $DEPLOY_OUTCOME)"
           else

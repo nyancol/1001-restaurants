@@ -14,7 +14,11 @@ export default function IconPicker({ value, onChange }: Props) {
   return (
     <div>
       <span className="mb-1 block text-sm font-medium text-ink">{t["icon.label"] ?? "Icon"}</span>
-      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t["icon.aria"] ?? "place icon"}>
+      <div
+        className="flex flex-wrap gap-2"
+        role="radiogroup"
+        aria-label={t["icon.aria"] ?? "place icon"}
+      >
         {ICONS.map((id) => (
           <button
             key={id}

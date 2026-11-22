@@ -17,7 +17,16 @@ interface Props {
  * only the outer container uses the Stitch mobile styling.
  * Tapping the card body opens the expanded tasting-notes sheet.
  */
-export default function PhonePlaceCard({ place: p, selected, onToggleStatus, onEdit, onOpen, readOnly, onRefresh, refreshing }: Props) {
+export default function PhonePlaceCard({
+  place: p,
+  selected,
+  onToggleStatus,
+  onEdit,
+  onOpen,
+  readOnly,
+  onRefresh,
+  refreshing,
+}: Props) {
   return (
     <article
       data-place-id={p.id}

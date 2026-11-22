@@ -6,7 +6,11 @@ import TagCombobox, { invalidateTagCache } from "./TagCombobox";
 import { LanguageProvider } from "../i18n/LanguageContext";
 
 function renderEn(ui: React.ReactElement) {
-  try { localStorage.setItem("oyster-lang", "en"); } catch { /* ignore */ }
+  try {
+    localStorage.setItem("oyster-lang", "en");
+  } catch {
+    /* ignore */
+  }
   document.documentElement.lang = "en";
   return render(<LanguageProvider>{ui}</LanguageProvider>);
 }
@@ -24,14 +28,27 @@ const TAGS = [
 ];
 
 describe("TagCombobox filter-list variant", () => {
-  beforeEach(() => { vi.resetAllMocks(); invalidateTagCache(); });
+  beforeEach(() => {
+    vi.resetAllMocks();
+    invalidateTagCache();
+  });
   afterEach(() => cleanup());
 
   it("renders ranked tags with total counts without typing", async () => {
     (api.getTags as any).mockResolvedValue(TAGS);
-    renderEn(<TagCombobox value={[]} onChange={() => {}} allowCreate={false} showSelected={false} variant="filter-list" />);
-    await waitFor(() => expect(screen.getByRole("option", { name: "add filter japonais (8 places)" })).toBeTruthy());
-    expect((api.getTags as any)).toHaveBeenCalledWith("");
+    renderEn(
+      <TagCombobox
+        value={[]}
+        onChange={() => {}}
+        allowCreate={false}
+        showSelected={false}
+        variant="filter-list"
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "add filter japonais (8 places)" })).toBeTruthy(),
+    );
+    expect(api.getTags as any).toHaveBeenCalledWith("");
     expect(screen.getByText("8")).toBeTruthy();
     expect(screen.getByText("5")).toBeTruthy();
     const options = screen.getAllByRole("option");
@@ -41,7 +58,15 @@ describe("TagCombobox filter-list variant", () => {
   it("toggles a tag on click", async () => {
     (api.getTags as any).mockResolvedValue(TAGS);
     const onChange = vi.fn();
-    renderEn(<TagCombobox value={[]} onChange={onChange} allowCreate={false} showSelected={false} variant="filter-list" />);
+    renderEn(
+      <TagCombobox
+        value={[]}
+        onChange={onChange}
+        allowCreate={false}
+        showSelected={false}
+        variant="filter-list"
+      />,
+    );
     const option = await screen.findByRole("option", { name: "add filter italien (5 places)" });
     fireEvent.click(option);
     expect(onChange).toHaveBeenCalledWith(["italien"]);
@@ -50,7 +75,15 @@ describe("TagCombobox filter-list variant", () => {
   it("narrows the list on search with no create affordance", async () => {
     (api.getTags as any).mockResolvedValue(TAGS);
     const onChange = vi.fn();
-    renderEn(<TagCombobox value={[]} onChange={onChange} allowCreate={false} showSelected={false} variant="filter-list" />);
+    renderEn(
+      <TagCombobox
+        value={[]}
+        onChange={onChange}
+        allowCreate={false}
+        showSelected={false}
+        variant="filter-list"
+      />,
+    );
     await screen.findByRole("option", { name: "add filter japonais (8 places)" });
     fireEvent.change(screen.getByLabelText("search tags"), { target: { value: "ita" } });
     expect(screen.queryByRole("option", { name: "add filter japonais (8 places)" })).toBeNull();
@@ -62,7 +95,10 @@ describe("TagCombobox filter-list variant", () => {
 });
 
 describe("TagCombobox edit variant", () => {
-  beforeEach(() => { vi.resetAllMocks(); invalidateTagCache(); });
+  beforeEach(() => {
+    vi.resetAllMocks();
+    invalidateTagCache();
+  });
   afterEach(() => cleanup());
 
   it("renders selected tags with working remove buttons (regression: no black screen)", async () => {
@@ -89,8 +125,18 @@ describe("TagCombobox edit variant", () => {
 
   it("supports legacy payloads without color via fallback", async () => {
     (api.getTags as any).mockResolvedValue([{ tag: "legacy", count: 1 }]);
-    renderEn(<TagCombobox value={[]} onChange={() => {}} allowCreate={false} showSelected={false} variant="filter-list" />);
-    await waitFor(() => expect(screen.getByRole("option", { name: "add filter legacy (1 place)" })).toBeTruthy());
+    renderEn(
+      <TagCombobox
+        value={[]}
+        onChange={() => {}}
+        allowCreate={false}
+        showSelected={false}
+        variant="filter-list"
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "add filter legacy (1 place)" })).toBeTruthy(),
+    );
   });
 
   it("keeps zero-count tags selectable", async () => {
@@ -98,13 +144,31 @@ describe("TagCombobox edit variant", () => {
       { tag: "solo", color: "#D64545", count: 0 },
       { tag: "cozy", color: "#0090FF", count: 2 },
     ]);
-    renderEn(<TagCombobox value={[]} onChange={() => {}} allowCreate={false} showSelected={false} variant="filter-list" />);
-    await waitFor(() => expect(screen.getByRole("option", { name: "add filter solo (0 places)" })).toBeTruthy());
+    renderEn(
+      <TagCombobox
+        value={[]}
+        onChange={() => {}}
+        allowCreate={false}
+        showSelected={false}
+        variant="filter-list"
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "add filter solo (0 places)" })).toBeTruthy(),
+    );
   });
 
   it("has no management affordance in filter list", async () => {
     (api.getTags as any).mockResolvedValue(TAGS);
-    renderEn(<TagCombobox value={[]} onChange={() => {}} allowCreate={false} showSelected={false} variant="filter-list" />);
+    renderEn(
+      <TagCombobox
+        value={[]}
+        onChange={() => {}}
+        allowCreate={false}
+        showSelected={false}
+        variant="filter-list"
+      />,
+    );
     await screen.findByRole("option", { name: "add filter japonais (8 places)" });
     expect(screen.queryByRole("button", { name: /manage tag/ })).toBeNull();
   });
@@ -114,13 +178,21 @@ describe("TagCombobox edit variant", () => {
     (api.patchTag as any).mockResolvedValue({ tag: "cosy", color: "#D64545" });
     const onChange = vi.fn();
     const onMutated = vi.fn();
-    renderEn(<TagCombobox value={["japonais"]} onChange={onChange} onTagDefinitionsChanged={onMutated} />);
+    renderEn(
+      <TagCombobox value={["japonais"]} onChange={onChange} onTagDefinitionsChanged={onMutated} />,
+    );
     fireEvent.click(await screen.findByRole("button", { name: "manage tag japonais" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
     fireEvent.change(screen.getByLabelText("rename tag japonais"), { target: { value: "cosy" } });
     fireEvent.click(screen.getByText("Rename", { selector: "button" }));
     await waitFor(() => expect(api.patchTag).toHaveBeenCalledWith("japonais", { newName: "cosy" }));
-    await waitFor(() => expect(onMutated).toHaveBeenCalledWith({ type: "rename", oldName: "japonais", newName: "cosy" }));
+    await waitFor(() =>
+      expect(onMutated).toHaveBeenCalledWith({
+        type: "rename",
+        oldName: "japonais",
+        newName: "cosy",
+      }),
+    );
     expect(onChange).toHaveBeenCalledWith(["cosy"]);
   });
 
@@ -132,12 +204,20 @@ describe("TagCombobox edit variant", () => {
     try {
       const onChange = vi.fn();
       const onMutated = vi.fn();
-      renderEn(<TagCombobox value={["japonais"]} onChange={onChange} onTagDefinitionsChanged={onMutated} />);
+      renderEn(
+        <TagCombobox
+          value={["japonais"]}
+          onChange={onChange}
+          onTagDefinitionsChanged={onMutated}
+        />,
+      );
       fireEvent.click(await screen.findByRole("button", { name: "manage tag japonais" }));
       fireEvent.click(screen.getByRole("menuitem", { name: "delete tag japonais" }));
       fireEvent.click(screen.getByRole("button", { name: "delete tag japonais" }));
       await waitFor(() => expect(api.deleteTag).toHaveBeenCalledWith("japonais"));
-      await waitFor(() => expect(onMutated).toHaveBeenCalledWith({ type: "delete", name: "japonais" }));
+      await waitFor(() =>
+        expect(onMutated).toHaveBeenCalledWith({ type: "delete", name: "japonais" }),
+      );
     } finally {
       (window as any).confirm = origConfirm;
     }
@@ -149,16 +229,28 @@ describe("TagCombobox edit variant", () => {
       (api.getTags as any).mockResolvedValue([{ tag: "cosy", color: "#111111", count: 2 }]);
       return { tag: "cosy", color: "#111111" };
     });
-    renderEn(<>
-      <TagCombobox value={["cozy"]} onChange={() => {}} onTagDefinitionsChanged={() => {}} />
-      <TagCombobox value={[]} onChange={() => {}} allowCreate={false} showSelected={false} variant="filter-list" />
-    </>);
+    renderEn(
+      <>
+        <TagCombobox value={["cozy"]} onChange={() => {}} onTagDefinitionsChanged={() => {}} />
+        <TagCombobox
+          value={[]}
+          onChange={() => {}}
+          allowCreate={false}
+          showSelected={false}
+          variant="filter-list"
+        />
+      </>,
+    );
     await screen.findByRole("option", { name: "add filter cozy (2 places)" });
     fireEvent.click(await screen.findByRole("button", { name: "manage tag cozy" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
     fireEvent.change(screen.getByLabelText("rename tag cozy"), { target: { value: "cosy" } });
     fireEvent.click(screen.getByText("Rename", { selector: "button" }));
-    await waitFor(() => expect(screen.queryByRole("option", { name: "add filter cosy (2 places)" })).toBeTruthy(), { timeout: 2000 });
+    await waitFor(
+      () =>
+        expect(screen.queryByRole("option", { name: "add filter cosy (2 places)" })).toBeTruthy(),
+      { timeout: 2000 },
+    );
     expect(screen.queryByRole("option", { name: "add filter cozy (2 places)" })).toBeNull();
   });
 
@@ -174,15 +266,27 @@ describe("TagCombobox edit variant", () => {
     const origConfirm = window.confirm;
     (window as any).confirm = vi.fn(() => true);
     try {
-      renderEn(<>
-        <TagCombobox value={["cozy"]} onChange={() => {}} onTagDefinitionsChanged={() => {}} />
-        <TagCombobox value={[]} onChange={() => {}} allowCreate={false} showSelected={false} variant="filter-list" />
-      </>);
+      renderEn(
+        <>
+          <TagCombobox value={["cozy"]} onChange={() => {}} onTagDefinitionsChanged={() => {}} />
+          <TagCombobox
+            value={[]}
+            onChange={() => {}}
+            allowCreate={false}
+            showSelected={false}
+            variant="filter-list"
+          />
+        </>,
+      );
       await screen.findByRole("option", { name: "add filter cozy (2 places)" });
       fireEvent.click(await screen.findByRole("button", { name: "manage tag cozy" }));
       fireEvent.click(screen.getByRole("menuitem", { name: "delete tag cozy" }));
       fireEvent.click(screen.getByRole("button", { name: "delete tag cozy" }));
-      await waitFor(() => expect(screen.queryByRole("option", { name: "add filter cozy (2 places)" })).toBeNull(), { timeout: 2000 });
+      await waitFor(
+        () =>
+          expect(screen.queryByRole("option", { name: "add filter cozy (2 places)" })).toBeNull(),
+        { timeout: 2000 },
+      );
       expect(screen.getByRole("option", { name: "add filter solo (1 place)" })).toBeTruthy();
     } finally {
       (window as any).confirm = origConfirm;

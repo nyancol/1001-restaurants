@@ -24,7 +24,7 @@ export const ICON_EMOJI: Record<string, string> = {
 // Back-compat shims for removed type vocabulary.
 export const TYPE_COLORS: Record<string, string> = {
   restaurant: PIN_FILL,
-  "café": PIN_FILL,
+  café: PIN_FILL,
   cafe: PIN_FILL,
   bar: PIN_FILL,
   bakery: PIN_FILL,
@@ -104,7 +104,12 @@ async function addImage(map: any, name: string, url: string): Promise<void> {
 }
 
 export async function ensurePinImages(map: any, extraTypes: string[] = []): Promise<void> {
-  const all = [...new Set([...knownIcons(), ...extraTypes.map((t) => (t ?? "").trim().toLowerCase()).filter(Boolean)])];
+  const all = [
+    ...new Set([
+      ...knownIcons(),
+      ...extraTypes.map((t) => (t ?? "").trim().toLowerCase()).filter(Boolean),
+    ]),
+  ];
   const defs: [string, string][] = all.map((t) => [`drop-${t}`, dropSvg(PIN_FILL, glyphFor(t))]);
   defs.push(["drop-generic", dropSvg(PIN_FILL, "🍴")]);
   // Legacy aliases: old type/status pin names resolve to new icons.

@@ -11,12 +11,19 @@ const SECRET = "test-secret-12345678901234567890";
 async function makeApp() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "oyster-enrich-"));
   const config: any = {
-    port: 0, host: "127.0.0.1", nodeEnv: "test",
+    port: 0,
+    host: "127.0.0.1",
+    nodeEnv: "test",
     databasePath: path.join(dir, "app.db"),
-    sessionSecret: SECRET, cookieSecure: false,
-    oidcIssuer: "", oidcClientId: "", oidcClientSecret: "",
+    sessionSecret: SECRET,
+    cookieSecure: false,
+    oidcIssuer: "",
+    oidcClientId: "",
+    oidcClientSecret: "",
     oidcRedirectUri: "http://localhost:3000/api/auth/callback",
-    oidcEnabled: false, googlePlacesKey: "test-key", trustProxy: false,
+    oidcEnabled: false,
+    googlePlacesKey: "test-key",
+    trustProxy: false,
   };
   const { app } = await buildApp({ config, skipOidcDiscovery: true });
   const cookie = `oyster_session=${await signSession(SECRET, "u1")}`;
@@ -24,51 +31,136 @@ async function makeApp() {
 }
 
 describe("enrich-place-details", () => {
-  let app: any; let dir: string; let cookie: string;
+  let app: any;
+  let dir: string;
+  let cookie: string;
   beforeEach(async () => ({ app, dir, cookie } = await makeApp()));
-  afterEach(async () => { await app?.close(); fs.rmSync(dir, { recursive: true, force: true }); });
+  afterEach(async () => {
+    await app?.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 
   it("defaults icon to fork, normalizes, rejects placeType", async () => {
-    const missing = await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "No icon" } });
+    const missing = await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: { name: "No icon" },
+    });
     expect(missing.statusCode).toBe(201);
     expect(missing.json().icon).toBe("fork");
-    const ok = await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "Typed", icon: "  Pizza  " } });
+    const ok = await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: { name: "Typed", icon: "  Pizza  " },
+    });
     expect(ok.statusCode).toBe(201);
     expect(ok.json().icon).toBe("pizza");
-    const legacy = await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "Old", placeType: "bar" } });
+    const legacy = await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: { name: "Old", placeType: "bar" },
+    });
     expect(legacy.statusCode).toBe(400);
-    const bad = await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "Bad", icon: "sushi" } });
+    const bad = await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: { name: "Bad", icon: "sushi" },
+    });
     expect(bad.statusCode).toBe(400);
   });
 
   it("place-types route is removed", async () => {
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "A", icon: "fork" } });
-    const res = await app.inject({ method: "GET", url: "/api/place-types?q=caf", headers: { cookie } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: { name: "A", icon: "fork" },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/place-types?q=caf",
+      headers: { cookie },
+    });
     expect(res.statusCode).toBe(404);
   });
 
   it("round-trips enrichment snapshot and ignores legacy placeType filter", async () => {
-    const hours = { periods: [{ open: { day: 2, hour: 12, minute: 0 }, close: { day: 2, hour: 14, minute: 0 } }], weekdayDescriptions: ["Tue: 12-14"] };
+    const hours = {
+      periods: [{ open: { day: 2, hour: 12, minute: 0 }, close: { day: 2, hour: 14, minute: 0 } }],
+      weekdayDescriptions: ["Tue: 12-14"],
+    };
     const created = await app.inject({
-      method: "POST", url: "/api/v1/places", headers: { cookie },
-      payload: { name: "Enriched", icon: "fork", hours, businessStatus: "OPERATIONAL", priceLevel: "MODERATE", priceRange: { min: 10, max: 20 }, googleRating: 4.3, googleRatingCount: 1200, websiteUri: "https://ex.example", mapsLinks: { placeUri: "https://maps.example/p" } },
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: {
+        name: "Enriched",
+        icon: "fork",
+        hours,
+        businessStatus: "OPERATIONAL",
+        priceLevel: "MODERATE",
+        priceRange: { min: 10, max: 20 },
+        googleRating: 4.3,
+        googleRatingCount: 1200,
+        websiteUri: "https://ex.example",
+        mapsLinks: { placeUri: "https://maps.example/p" },
+      },
     });
     expect(created.statusCode).toBe(201);
     expect(created.json().googleRating).toBe(4.3);
-    const filtered = await app.inject({ method: "GET", url: "/api/v1/places?placeType=restaurant", headers: { cookie } });
+    const filtered = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?placeType=restaurant",
+      headers: { cookie },
+    });
     expect(filtered.json().data.length).toBe(1);
-    const other = await app.inject({ method: "GET", url: "/api/v1/places?placeType=cocktail", headers: { cookie } });
+    const other = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?placeType=cocktail",
+      headers: { cookie },
+    });
     expect(other.json().data.length).toBe(1);
   });
 
   it("open filter hides unknown hours and closed statuses", async () => {
     // Tuesday 13:00 local (periods are evaluated in server-local time)
     const openAt = new Date(2026, 4, 5, 13, 0, 0).toISOString();
-    const hours = { periods: [{ open: { day: 2, hour: 12, minute: 0 }, close: { day: 2, hour: 14, minute: 0 } }], weekdayDescriptions: ["Tue"] };
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "Open", icon: "cocktail", hours } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "NoHours", icon: "cocktail" } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "PermClosed", icon: "cocktail", hours, businessStatus: "CLOSED_PERMANENTLY" } });
-    const res = await app.inject({ method: "GET", url: `/api/v1/places?openAt=${encodeURIComponent(openAt)}`, headers: { cookie } });
+    const hours = {
+      periods: [{ open: { day: 2, hour: 12, minute: 0 }, close: { day: 2, hour: 14, minute: 0 } }],
+      weekdayDescriptions: ["Tue"],
+    };
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: { name: "Open", icon: "cocktail", hours },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: { name: "NoHours", icon: "cocktail" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: {
+        name: "PermClosed",
+        icon: "cocktail",
+        hours,
+        businessStatus: "CLOSED_PERMANENTLY",
+      },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/v1/places?openAt=${encodeURIComponent(openAt)}`,
+      headers: { cookie },
+    });
     const names = res.json().data.map((p: any) => p.name);
     expect(names).toContain("Open");
     expect(names).not.toContain("NoHours");
@@ -76,7 +168,9 @@ describe("enrich-place-details", () => {
   });
 
   it("isOpenAt handles overnight spans", async () => {
-    const periods = [{ open: { day: 2, hour: 18, minute: 0 }, close: { day: 3, hour: 2, minute: 0 } }];
+    const periods = [
+      { open: { day: 2, hour: 18, minute: 0 }, close: { day: 3, hour: 2, minute: 0 } },
+    ];
     // Tuesday 20:00 local
     const tue = new Date(2026, 4, 5, 20, 0, 0);
     expect(isOpenAt(periods, tue)).toBe(true);

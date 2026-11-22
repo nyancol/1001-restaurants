@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { AppConfig } from "../config.js";
 import { withSpan } from "../observability/trace.js";
+import { rateLimitPresets } from "../security.js";
 
 export type GoogleFetch = typeof fetch;
 
@@ -16,7 +17,7 @@ export type GoogleFetch = typeof fetch;
  */
 export function registerGoogleRoutes(
   app: FastifyInstance,
-  deps: { config: AppConfig; googleFetch?: GoogleFetch }
+  deps: { config: AppConfig; googleFetch?: GoogleFetch },
 ) {
   const { config } = deps;
   const gfetch: GoogleFetch = deps.googleFetch ?? fetch;
@@ -71,60 +72,71 @@ export function registerGoogleRoutes(
     }
   }
 
-  app.get("/api/v1/google/autocomplete", async (req, reply) => {
-    if (!requireKey(reply)) return;
-    const query = req.query as any;
-    const q = query?.q ?? query?.input;
-    if (!q) return reply.code(400).send({ error: "q is required" });
-    const body: Record<string, unknown> = { input: q };
-    if (query.sessionToken) body.sessionToken = query.sessionToken;
-    try {
-      const res = await withSpan(
-        "google.autocomplete",
-        { "peer.service": "places.googleapis.com", endpoint: "places:autocomplete" },
-        async (span: any) =>
-          gfetch("https://places.googleapis.com/v1/places:autocomplete", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": config.googlePlacesKey,
-              "X-Goog-FieldMask": autocompleteMask,
-            },
-            body: JSON.stringify(body),
-          }).then((r: Response) => {
-            span.setAttribute("http.status_code", r.status);
-            return r;
-          })
-      );
-      return relay(res, reply);
-    } catch (err) {
-      req.log.error({ err }, "google autocomplete failed");
-      return reply.code(502).send({ error: "google_unavailable" });
-    }
-  });
+  app.get(
+    "/api/v1/google/autocomplete",
+    { config: rateLimitPresets.google },
+    async (req, reply) => {
+      if (!requireKey(reply)) return;
+      const query = req.query as any;
+      const q = query?.q ?? query?.input;
+      if (!q) return reply.code(400).send({ error: "q is required" });
+      if (typeof q !== "string" || q.length > 200)
+        return reply.code(400).send({ error: "invalid_q" });
+      const body: Record<string, unknown> = { input: q };
+      if (query.sessionToken) {
+        if (typeof query.sessionToken !== "string" || query.sessionToken.length > 128) {
+          return reply.code(400).send({ error: "invalid_session_token" });
+        }
+        body.sessionToken = query.sessionToken;
+      }
+      try {
+        const res = await withSpan(
+          "google.autocomplete",
+          { "peer.service": "places.googleapis.com", endpoint: "places:autocomplete" },
+          async (span: any) =>
+            gfetch("https://places.googleapis.com/v1/places:autocomplete", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": config.googlePlacesKey,
+                "X-Goog-FieldMask": autocompleteMask,
+              },
+              body: JSON.stringify(body),
+            }).then((r: Response) => {
+              span.setAttribute("http.status_code", r.status);
+              return r;
+            }),
+        );
+        return relay(res, reply);
+      } catch (err) {
+        req.log.error({ err }, "google autocomplete failed");
+        return reply.code(502).send({ error: "google_unavailable" });
+      }
+    },
+  );
 
-  app.get("/api/v1/google/details", async (req, reply) => {
+  app.get("/api/v1/google/details", { config: rateLimitPresets.google }, async (req, reply) => {
     if (!requireKey(reply)) return;
     const query = req.query as any;
     const placeId = query?.placeId ?? query?.place_id;
     if (!placeId) return reply.code(400).send({ error: "placeId is required" });
+    if (typeof placeId !== "string" || placeId.length > 256 || !/^[A-Za-z0-9_-]+$/.test(placeId)) {
+      return reply.code(400).send({ error: "invalid_place_id" });
+    }
     try {
       const res = await withSpan(
         "google.details",
         { "peer.service": "places.googleapis.com", endpoint: "places.get" },
         async (span: any) =>
-          gfetch(
-            `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
-            {
-              headers: {
-                "X-Goog-Api-Key": config.googlePlacesKey,
-                "X-Goog-FieldMask": detailsMask,
-              },
-            }
-          ).then((r: Response) => {
+          gfetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+            headers: {
+              "X-Goog-Api-Key": config.googlePlacesKey,
+              "X-Goog-FieldMask": detailsMask,
+            },
+          }).then((r: Response) => {
             span.setAttribute("http.status_code", r.status);
             return r;
-          })
+          }),
       );
       return relay(res, reply);
     } catch (err) {
@@ -133,11 +145,14 @@ export function registerGoogleRoutes(
     }
   });
 
-  app.get("/api/v1/google/geocode", async (req, reply) => {
+  app.get("/api/v1/google/geocode", { config: rateLimitPresets.google }, async (req, reply) => {
     if (!requireKey(reply)) return;
     const query = req.query as any;
     const address = query?.address ?? query?.latlng;
     if (!address) return reply.code(400).send({ error: "address is required" });
+    if (typeof address !== "string" || address.length > 500) {
+      return reply.code(400).send({ error: "invalid_address" });
+    }
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${config.googlePlacesKey}`;
     try {
       const res = await withSpan(
@@ -147,7 +162,7 @@ export function registerGoogleRoutes(
           gfetch(url).then((r: Response) => {
             span.setAttribute("http.status_code", r.status);
             return r;
-          })
+          }),
       );
       return relay(res, reply);
     } catch (err) {

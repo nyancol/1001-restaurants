@@ -1,5 +1,11 @@
 import { useRef, useState } from "react";
-import { apiFetch, parseAutocomplete, parseDetails, UnauthorizedError, type PlaceDetails } from "../lib/api";
+import {
+  apiFetch,
+  parseAutocomplete,
+  parseDetails,
+  UnauthorizedError,
+  type PlaceDetails,
+} from "../lib/api";
 import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
@@ -14,7 +20,9 @@ const cache = new Map<string, { placeId: string; text: string; secondary?: strin
 
 export default function LookupField({ text, onTextChange, onPick }: Props) {
   const { t } = useLanguage();
-  const [suggestions, setSuggestions] = useState<{ placeId: string; text: string; secondary?: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<
+    { placeId: string; text: string; secondary?: string }[]
+  >([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,9 +119,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
         </button>
       </div>
       {loading && <div className="mt-1 text-sm text-muted">{t["lookup.searching"]}</div>}
-      {unavailable && (
-        <div className="mt-1 text-sm text-want-ink">{t["lookup.unavailable"]}</div>
-      )}
+      {unavailable && <div className="mt-1 text-sm text-want-ink">{t["lookup.unavailable"]}</div>}
       {error && <div className="mt-1 text-sm text-want-ink">{error}</div>}
       {open && searched && suggestions.length > 0 && (
         <ul className="edge radius-card absolute z-10 mt-1 max-h-60 w-full overflow-auto border-line bg-surface shadow-theme">

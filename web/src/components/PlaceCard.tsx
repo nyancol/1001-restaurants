@@ -65,23 +65,46 @@ function priceLabel(p: Place): string | null {
   if (typeof range === "string" && range) rangeText = range;
   else if (range && typeof range === "object") {
     // Google Places priceRange snapshot: { startPrice: { units: "10", currencyCode }, endPrice: {...} }
-    const fmtMoney = (v: { units?: string | number; currencyCode?: string } | null | undefined): string | null => {
+    const fmtMoney = (
+      v: { units?: string | number; currencyCode?: string } | null | undefined,
+    ): string | null => {
       if (!v || v.units === undefined || v.units === null) return null;
       const n = Number(v.units);
       if (Number.isNaN(n)) return null;
       return v.currencyCode ? `${v.units} ${v.currencyCode}` : `€${n}`;
     };
-    const legacyFmt = (v: any) => (typeof v === "number" ? `€${v}` : v?.currencyCode && v?.units ? `${v.units} ${v.currencyCode}` : null);
-    const start = fmtMoney((range as any).startPrice) ?? legacyFmt((range as any).start ?? (range as any).min ?? (range as any).low);
-    const end = fmtMoney((range as any).endPrice) ?? legacyFmt((range as any).end ?? (range as any).max ?? (range as any).high);
+    const legacyFmt = (v: any) =>
+      typeof v === "number"
+        ? `€${v}`
+        : v?.currencyCode && v?.units
+          ? `${v.units} ${v.currencyCode}`
+          : null;
+    const start =
+      fmtMoney((range as any).startPrice) ??
+      legacyFmt((range as any).start ?? (range as any).min ?? (range as any).low);
+    const end =
+      fmtMoney((range as any).endPrice) ??
+      legacyFmt((range as any).end ?? (range as any).max ?? (range as any).high);
     if (start || end) rangeText = [start, end].filter(Boolean).join(" – ");
   }
   if (!level && !rangeText) return null;
   if (level && rangeText) {
-    const sym = levelSymbols[level] ?? level.replace(/PRICE_LEVEL_/g, "").replace(/_/g, " ").toLowerCase();
+    const sym =
+      levelSymbols[level] ??
+      level
+        .replace(/PRICE_LEVEL_/g, "")
+        .replace(/_/g, " ")
+        .toLowerCase();
     return `${sym} · ${rangeText}`;
   }
-  if (level) return levelSymbols[level] ?? level.replace(/PRICE_LEVEL_/g, "").replace(/_/g, " ").toLowerCase();
+  if (level)
+    return (
+      levelSymbols[level] ??
+      level
+        .replace(/PRICE_LEVEL_/g, "")
+        .replace(/_/g, " ")
+        .toLowerCase()
+    );
   return rangeText;
 }
 
@@ -98,7 +121,14 @@ function ratingLabel(r: number | null): string {
   return "Noted";
 }
 
-export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, onRefresh, refreshing }: Props) {
+export default function PlaceCard({
+  place: p,
+  onToggleStatus,
+  onEdit,
+  readOnly,
+  onRefresh,
+  refreshing,
+}: Props) {
   const { t } = useLanguage();
   const tagColors = useTagColors();
   const closed = p.businessStatus === "CLOSED_PERMANENTLY";
@@ -111,32 +141,52 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
 
   return (
     <div className={closed ? "opacity-80" : ""}>
-      {closed && <div className="edge radius-pill mb-2 inline-block border-danger-line bg-danger-bg px-2.5 py-1 text-xs font-semibold text-danger-ink">{t["card.closed"]}</div>}
+      {closed && (
+        <div className="edge radius-pill mb-2 inline-block border-danger-line bg-danger-bg px-2.5 py-1 text-xs font-semibold text-danger-ink">
+          {t["card.closed"]}
+        </div>
+      )}
       {tempClosed && (
-        <div
-          className="edge radius-pill mb-2 inline-block border-want bg-want px-2.5 py-1 text-xs font-semibold text-want-ink"
-        >
+        <div className="edge radius-pill mb-2 inline-block border-want bg-want px-2.5 py-1 text-xs font-semibold text-want-ink">
           {t["card.tempClosed"]}
         </div>
       )}
       {/* Title row */}
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-display min-w-0 flex-1 text-[22px] font-semibold leading-tight tracking-tight text-ink">{p.name}</h3>
+        <h3 className="font-display min-w-0 flex-1 text-[22px] font-semibold leading-tight tracking-tight text-ink">
+          {p.name}
+        </h3>
         {google != null && (
-          <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2.5 py-1 text-[13px] font-bold text-ink" style={{ borderRadius: 999 }}>
-            <span aria-hidden className="text-star">★</span> {typeof google === "number" ? google.toFixed(1) : google}
+          <span
+            className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2.5 py-1 text-[13px] font-bold text-ink"
+            style={{ borderRadius: 999 }}
+          >
+            <span aria-hidden className="text-star">
+              ★
+            </span>{" "}
+            {typeof google === "number" ? google.toFixed(1) : google}
             {p.googleRatingCount != null && (
               <span className="font-normal text-muted">({p.googleRatingCount})</span>
             )}
           </span>
         )}
         {google == null && personal != null && (
-          <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2.5 py-1 text-[13px] font-bold text-ink" style={{ borderRadius: 999 }} title={t["card.googleRatingTitle"]}>
-            <span aria-hidden className="text-star">★</span> {personal.toFixed(1)}
+          <span
+            className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2.5 py-1 text-[13px] font-bold text-ink"
+            style={{ borderRadius: 999 }}
+            title={t["card.googleRatingTitle"]}
+          >
+            <span aria-hidden className="text-star">
+              ★
+            </span>{" "}
+            {personal.toFixed(1)}
           </span>
         )}
         {readOnly ? (
-          <span className={`edge inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold ${been ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`} style={{ borderRadius: 999 }}>
+          <span
+            className={`edge inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold ${been ? "border-been bg-been text-been-ink" : "border-want bg-want text-want-ink"}`}
+            style={{ borderRadius: 999 }}
+          >
             {been ? t["card.beenTo"] : t["card.wantToGo"]}
           </span>
         ) : (
@@ -163,7 +213,10 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
 
       {/* Journal quote */}
       {p.note && (
-        <blockquote className="mt-3 border-l-0 bg-surface-2/70 px-4 py-3 text-[15px] italic leading-relaxed text-ink/90" style={{ borderRadius: 12 }}>
+        <blockquote
+          className="mt-3 border-l-0 bg-surface-2/70 px-4 py-3 text-[15px] italic leading-relaxed text-ink/90"
+          style={{ borderRadius: 12 }}
+        >
           “{p.note}”
         </blockquote>
       )}
@@ -172,9 +225,12 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
       {(p.tags ?? []).length > 0 && (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {(p.tags ?? []).map((tag) => (
-            <span key={tag} className="edge inline-flex items-center gap-1.5 border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink" style={{ borderRadius: 999 }}>
-              <TagDot color={colorForDisplay(tag, tagColors)} />
-              #{tag}
+            <span
+              key={tag}
+              className="edge inline-flex items-center gap-1.5 border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink"
+              style={{ borderRadius: 999 }}
+            >
+              <TagDot color={colorForDisplay(tag, tagColors)} />#{tag}
             </span>
           ))}
         </div>
@@ -193,10 +249,16 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
           {openLabel(p.hours, p.utcOffsetMinutes) ? (
             <HoursSection
               place={p}
-              fallback={<span className="truncate">🕒 {openLabel(p.hours, p.utcOffsetMinutes)}</span>}
+              fallback={
+                <span className="truncate">🕒 {openLabel(p.hours, p.utcOffsetMinutes)}</span>
+              }
             />
           ) : (
-            <span>{google != null && personal != null ? `🅖 ${google}${p.googleRatingCount != null ? ` (${p.googleRatingCount})` : ""}` : ratingLabel(personal)}</span>
+            <span>
+              {google != null && personal != null
+                ? `🅖 ${google}${p.googleRatingCount != null ? ` (${p.googleRatingCount})` : ""}`
+                : ratingLabel(personal)}
+            </span>
           )}
           {!readOnly && isHttpUrl(p.websiteUri) && (
             <a
@@ -212,7 +274,13 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
           )}
         </span>
         <span className="inline-flex w-full items-center gap-1.5 pt-1">
-          <PlaceActionBar place={p} onEdit={onEdit} onRefresh={onRefresh} refreshing={refreshing} readOnly={readOnly} />
+          <PlaceActionBar
+            place={p}
+            onEdit={onEdit}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            readOnly={readOnly}
+          />
         </span>
       </div>
     </div>

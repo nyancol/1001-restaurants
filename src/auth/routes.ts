@@ -6,6 +6,7 @@ import { users } from "../db/schema.js";
 import { signSession, sessionCookieName } from "./session.js";
 import { eq } from "drizzle-orm";
 import { withSpan } from "../observability/trace.js";
+import { rateLimitPresets } from "../security.js";
 
 interface OidcDeps {
   config: AppConfig;
@@ -32,28 +33,61 @@ export async function discoverOidc(config: AppConfig): Promise<client.Configurat
         client.discovery(
           new URL(config.oidcIssuer),
           config.oidcClientId,
-          config.oidcClientSecret || undefined
-        )
+          config.oidcClientSecret || undefined,
+        ),
     );
   } catch (err: any) {
     throw new Error(
-      `Invalid OIDC config: discovery failed for issuer "${config.oidcIssuer}" — ${err?.message ?? err}. Check OIDC_ISSUER/OIDC_CLIENT_ID/OIDC_REDIRECT_URI.`
+      `Invalid OIDC config: discovery failed for issuer "${config.oidcIssuer}" — ${err?.message ?? err}. Check OIDC_ISSUER/OIDC_CLIENT_ID/OIDC_REDIRECT_URI.`,
     );
   }
 }
 
-const pkceStore = new Map<string, { verifier: string; state: string }>();
+const pkceStore = new Map<string, { verifier: string; state: string; exp: number }>();
+const PKCE_TTL_MS = 10 * 60 * 1000;
+const PKCE_MAX_ENTRIES = 1000;
 
-export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc: () => client.Configuration | null) {
+function pkceSet(state: string, verifier: string): void {
+  const now = Date.now();
+  // Opportunistic prune: drop expired + enforce cap (oldest first, Map is insertion-ordered).
+  if (pkceStore.size >= PKCE_MAX_ENTRIES) {
+    for (const [k, v] of pkceStore) {
+      if (v.exp <= now) pkceStore.delete(k);
+      if (pkceStore.size < PKCE_MAX_ENTRIES) break;
+    }
+  }
+  while (pkceStore.size >= PKCE_MAX_ENTRIES) {
+    const oldest = pkceStore.keys().next().value as string | undefined;
+    if (!oldest) break;
+    pkceStore.delete(oldest);
+  }
+  pkceStore.set(state, { verifier, state, exp: now + PKCE_TTL_MS });
+}
+
+function pkceTake(state: string): { verifier: string; state: string } | undefined {
+  const v = pkceStore.get(state);
+  if (!v) return undefined;
+  if (v.exp <= Date.now()) {
+    pkceStore.delete(state);
+    return undefined;
+  }
+  return v;
+}
+
+export function registerAuthRoutes(
+  app: FastifyInstance,
+  deps: OidcDeps,
+  getOidc: () => client.Configuration | null,
+) {
   const { config, db } = deps;
 
-  app.get("/api/auth/login", async (req, reply) => {
+  app.get("/api/auth/login", { config: rateLimitPresets.auth }, async (req, reply) => {
     const oidc = getOidc();
     if (!oidc) return reply.code(503).send({ error: "auth_not_configured" });
     const verifier = client.randomPKCECodeVerifier();
     const challenge = await client.calculatePKCECodeChallenge(verifier);
     const state = randomUUID();
-    pkceStore.set(state, { verifier, state });
+    pkceSet(state, verifier);
     const url = client.buildAuthorizationUrl(oidc, {
       redirect_uri: config.oidcRedirectUri,
       scope: "openid profile email",
@@ -64,14 +98,14 @@ export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc
     return reply.redirect(url.href);
   });
 
-  app.get("/api/auth/callback", async (req, reply) => {
+  app.get("/api/auth/callback", { config: rateLimitPresets.auth }, async (req, reply) => {
     const oidc = getOidc();
     if (!oidc) return reply.code(503).send({ error: "auth_not_configured" });
     const url = new URL(req.url, "http://localhost");
     const fullUrl = new URL(`${req.protocol}://${req.host}${req.url}`);
     void url;
     const state = (req.query as any)?.state as string | undefined;
-    const stored = state ? pkceStore.get(state) : undefined;
+    const stored = state ? pkceTake(state) : undefined;
     try {
       const issuerHost = (() => {
         try {
@@ -87,7 +121,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc
           client.authorizationCodeGrant(oidc, fullUrl, {
             pkceCodeVerifier: stored?.verifier,
             expectedState: stored ? state : undefined,
-          })
+          }),
       );
       const claims = tokens.claims();
       if (!claims?.sub) return reply.code(401).send({ error: "invalid_token" });
@@ -99,7 +133,9 @@ export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc
       let userId: string;
       if (existing.length === 0) {
         userId = randomUUID();
-        await db.insert(users).values({ id: userId, sub, displayName, createdAt: now, updatedAt: now });
+        await db
+          .insert(users)
+          .values({ id: userId, sub, displayName, createdAt: now, updatedAt: now });
       } else {
         userId = existing[0].id;
         await db.update(users).set({ displayName, updatedAt: now }).where(eq(users.id, userId));
@@ -121,7 +157,12 @@ export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc
   });
 
   app.post("/api/auth/logout", async (req, reply) => {
-    reply.clearCookie(sessionCookieName(), { path: "/" });
+    reply.clearCookie(sessionCookieName(), {
+      path: "/",
+      httpOnly: true,
+      secure: config.cookieSecure,
+      sameSite: "lax",
+    });
     return { ok: true };
   });
 

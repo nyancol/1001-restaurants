@@ -52,15 +52,21 @@ export function hasScope(scopes: string[], required: string): boolean {
 function parseScopes(payload: JWTPayload): string[] {
   const raw = (payload as any).scope;
   if (typeof raw !== "string") return [];
-  return raw.split(/\s+/).map((s) => s.trim()).filter(Boolean);
+  return raw
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function principalFromPayload(payload: JWTPayload): PlacesPrincipal {
   const sub = typeof payload.sub === "string" ? payload.sub : "";
   const claimed = (payload as any).client_id ?? (payload as any).azp;
-  const clientId = typeof claimed === "string" && claimed
-    ? claimed
-    : sub.startsWith("client-") ? sub.slice("client-".length) : sub;
+  const clientId =
+    typeof claimed === "string" && claimed
+      ? claimed
+      : sub.startsWith("client-")
+        ? sub.slice("client-".length)
+        : sub;
   return { clientId, scopes: parseScopes(payload), subject: sub };
 }
 

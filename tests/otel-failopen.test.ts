@@ -25,15 +25,24 @@ describe("otel fail-open", () => {
 
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "oyster-otel-failopen-"));
     const config: any = {
-      port: 0, host: "127.0.0.1", nodeEnv: "test",
+      port: 0,
+      host: "127.0.0.1",
+      nodeEnv: "test",
       databasePath: path.join(dir, "app.db"),
       sessionSecret: "test-secret-12345678901234567890",
       cookieSecure: false,
-      oidcIssuer: "", oidcClientId: "", oidcClientSecret: "",
+      oidcIssuer: "",
+      oidcClientId: "",
+      oidcClientSecret: "",
       oidcRedirectUri: "http://localhost:3000/api/auth/callback",
-      oidcEnabled: false, googlePlacesKey: "", trustProxy: false,
-      otelEndpoint: "http://127.0.0.1:9", otelEnabled: true,
-      otelServiceName: "places", otelEnvironment: "test", otelServiceVersion: "test",
+      oidcEnabled: false,
+      googlePlacesKey: "",
+      trustProxy: false,
+      otelEndpoint: "http://127.0.0.1:9",
+      otelEnabled: true,
+      otelServiceName: "places",
+      otelEnvironment: "test",
+      otelServiceVersion: "test",
     };
     const { app } = await buildApp({ config, skipOidcDiscovery: true });
     try {

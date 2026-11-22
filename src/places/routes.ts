@@ -17,7 +17,11 @@ const CLOSED = new Set(["CLOSED_PERMANENTLY", "CLOSED_TEMPORARILY"]);
 function parseJson(raw: unknown): any {
   if (raw == null) return null;
   if (typeof raw !== "string") return raw;
-  try { return JSON.parse(raw); } catch { return null; }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 /** Normalize a stored priceLevel to a 1–4 tier ($–$$$$); null when unknown. */
@@ -71,7 +75,7 @@ function toPlace(row: typeof places.$inferSelect, displayName?: string | null) {
     lng: row.lng,
     status: row.status,
     icon: (row as any).icon ?? "fork",
-    tags: JSON.parse(row.tagsJson ?? "[]" ) as string[],
+    tags: JSON.parse(row.tagsJson ?? "[]") as string[],
     rating: row.rating,
     note: row.note,
     hours: parseJson((row as any).hoursJson),
@@ -82,7 +86,10 @@ function toPlace(row: typeof places.$inferSelect, displayName?: string | null) {
     googleRatingCount: (row as any).googleRatingCount ?? null,
     websiteUri: (row as any).websiteUri ?? null,
     mapsLinks: parseJson((row as any).mapsLinksJson),
-    googleMapsUri: parseJson((row as any).mapsLinksJson)?.placeUri ?? parseJson((row as any).mapsLinksJson)?.place_uri ?? null,
+    googleMapsUri:
+      parseJson((row as any).mapsLinksJson)?.placeUri ??
+      parseJson((row as any).mapsLinksJson)?.place_uri ??
+      null,
     utcOffsetMinutes: (row as any).utcOffsetMinutes ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -103,7 +110,11 @@ function validatePlaceInput(body: any, isPatch: boolean): { error?: string; valu
       if (!isPatch) v.icon = "fork";
     } else {
       const t = normalizeIcon(body.icon);
-      if (!t || !isValidIcon(t)) return { error: "icon must be one of fork, burger, pizza, soup, hotdog, bagel, croissant, ice-cream, cocktail, wine, beer, coffee" };
+      if (!t || !isValidIcon(t))
+        return {
+          error:
+            "icon must be one of fork, burger, pizza, soup, hotdog, bagel, croissant, ice-cream, cocktail, wine, beer, coffee",
+        };
       v.icon = t;
     }
   }
@@ -112,7 +123,10 @@ function validatePlaceInput(body: any, isPatch: boolean): { error?: string; valu
     v.status = body.status;
   } else if (!isPatch) v.status = "WANT_TO_GO";
   if (body.rating !== undefined) {
-    if (body.rating !== null && (typeof body.rating !== "number" || body.rating < 0 || body.rating > 5)) {
+    if (
+      body.rating !== null &&
+      (typeof body.rating !== "number" || body.rating < 0 || body.rating > 5)
+    ) {
       return { error: "rating must be 0-5 or null" };
     }
     v.rating = body.rating;
@@ -124,7 +138,8 @@ function validatePlaceInput(body: any, isPatch: boolean): { error?: string; valu
     v.tags = normalizeTags(body.tags);
   } else if (!isPatch) v.tags = [];
   if (body.note !== undefined) {
-    if (body.note !== null && typeof body.note !== "string") return { error: "note must be a string or null" };
+    if (body.note !== null && typeof body.note !== "string")
+      return { error: "note must be a string or null" };
     v.note = body.note;
   }
   if (body.googlePlaceId !== undefined) v.googlePlaceId = body.googlePlaceId ?? null;
@@ -144,8 +159,15 @@ function validatePlaceInput(body: any, isPatch: boolean): { error?: string; valu
   if (body.googleRating !== undefined) v.googleRating = body.googleRating ?? null;
   if (body.googleRatingCount !== undefined) v.googleRatingCount = body.googleRatingCount ?? null;
   if (body.websiteUri !== undefined) v.websiteUri = body.websiteUri ?? null;
-  if (body.mapsLinks !== undefined || body.mapsLinksJson !== undefined || body.googleMapsUri !== undefined) {
-    const m = body.mapsLinks ?? body.mapsLinksJson ?? (body.googleMapsUri ? { placeUri: body.googleMapsUri } : undefined);
+  if (
+    body.mapsLinks !== undefined ||
+    body.mapsLinksJson !== undefined ||
+    body.googleMapsUri !== undefined
+  ) {
+    const m =
+      body.mapsLinks ??
+      body.mapsLinksJson ??
+      (body.googleMapsUri ? { placeUri: body.googleMapsUri } : undefined);
     v.mapsLinksJson = m == null ? null : typeof m === "string" ? m : JSON.stringify(m);
   }
   if (body.utcOffsetMinutes !== undefined) v.utcOffsetMinutes = body.utcOffsetMinutes ?? null;
@@ -187,10 +209,12 @@ export function mapGoogleDetailsToSnapshot(body: any): Record<string, any> {
   const mapsLinks = body?.googleMapsLinks ?? null;
   const priceRange = body?.priceRange ?? null;
   return {
-    hoursJson: hours ? JSON.stringify({
-      periods: hours.periods ?? [],
-      weekdayDescriptions: hours.weekdayDescriptions ?? [],
-    }) : null,
+    hoursJson: hours
+      ? JSON.stringify({
+          periods: hours.periods ?? [],
+          weekdayDescriptions: hours.weekdayDescriptions ?? [],
+        })
+      : null,
     businessStatus: body?.businessStatus ?? null,
     priceLevel: body?.priceLevel ?? null,
     priceRangeJson: priceRange ? JSON.stringify(priceRange) : null,
@@ -210,191 +234,288 @@ export function registerPlaceRoutes(
   const gfetch: GoogleFetch = googleFetch ?? fetch;
   const getSqlite = (): any => (deps as any).sqlite ?? (app as any).sqlite;
 
-  app.post("/api/v1/places", {
-    schema: {
-      body: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          icon: { type: "string" },
-          status: { type: "string", enum: ["WANT_TO_GO", "BEEN_TO"] },
-          tags: { type: "array", items: { type: "string" } },
-          rating: { type: ["number", "null"] },
-          note: { type: ["string", "null"] },
-          googlePlaceId: { type: ["string", "null"] },
-          address: { type: ["string", "null"] },
-          lat: { type: ["number", "null"] },
-          lng: { type: ["number", "null"] },
+  app.post(
+    "/api/v1/places",
+    {
+      schema: {
+        body: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            icon: { type: "string" },
+            status: { type: "string", enum: ["WANT_TO_GO", "BEEN_TO"] },
+            tags: { type: "array", items: { type: "string" } },
+            rating: { type: ["number", "null"] },
+            note: { type: ["string", "null"] },
+            googlePlaceId: { type: ["string", "null"] },
+            address: { type: ["string", "null"] },
+            lat: { type: ["number", "null"] },
+            lng: { type: ["number", "null"] },
+          },
+          required: ["name"],
         },
-        required: ["name"],
       },
     },
-  }, async (req, reply) => {
-    if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
-    const userId = (req as any).userId as string;
-    const { error, value } = validatePlaceInput(req.body ?? {}, false);
-    if (error) return reply.code(400).send({ error });
-        if (value.googlePlaceId) {
-      const dup = await db
-        .select()
-        .from(places)
-        .where(and(eq(places.ownerId, userId), eq(places.googlePlaceId, value.googlePlaceId)))
-        .limit(1);
-      if (dup.length) {
-        const patch: any = { updatedAt: Date.now() };
-        for (const k of ["name", "icon", "status", "rating", "note", "address", "lat", "lng", "hoursJson", "businessStatus", "priceLevel", "priceRangeJson", "googleRating", "googleRatingCount", "websiteUri", "mapsLinksJson", "utcOffsetMinutes"] as const) {
-          if (value[k] !== undefined) patch[k] = value[k];
+    async (req, reply) => {
+      if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
+      const userId = (req as any).userId as string;
+      const { error, value } = validatePlaceInput(req.body ?? {}, false);
+      if (error) return reply.code(400).send({ error });
+      if (value.googlePlaceId) {
+        const dup = await db
+          .select()
+          .from(places)
+          .where(and(eq(places.ownerId, userId), eq(places.googlePlaceId, value.googlePlaceId)))
+          .limit(1);
+        if (dup.length) {
+          const patch: any = { updatedAt: Date.now() };
+          for (const k of [
+            "name",
+            "icon",
+            "status",
+            "rating",
+            "note",
+            "address",
+            "lat",
+            "lng",
+            "hoursJson",
+            "businessStatus",
+            "priceLevel",
+            "priceRangeJson",
+            "googleRating",
+            "googleRatingCount",
+            "websiteUri",
+            "mapsLinksJson",
+            "utcOffsetMinutes",
+          ] as const) {
+            if (value[k] !== undefined) patch[k] = value[k];
+          }
+          if (value.tags !== undefined) patch.tagsJson = JSON.stringify(value.tags);
+          await db.update(places).set(patch).where(eq(places.id, dup[0].id));
+          if (value.tags !== undefined) {
+            try {
+              await ensureTagDefinitions(db, userId, value.tags);
+            } catch {
+              /* ignore */
+            }
+            try {
+              syncPlaceTags(getSqlite(), userId, dup[0].id, value.tags);
+            } catch {
+              /* ignore */
+            }
+          }
+          const updated = await db.select().from(places).where(eq(places.id, dup[0].id)).limit(1);
+          const names = await ownerNameMap(db);
+          return reply.code(200).send(toPlace(updated[0], names.get(updated[0].ownerId) ?? null));
         }
-        if (value.tags !== undefined) patch.tagsJson = JSON.stringify(value.tags);
-        await db.update(places).set(patch).where(eq(places.id, dup[0].id));
-        if (value.tags !== undefined) {
-          try { await ensureTagDefinitions(db, userId, value.tags); } catch { /* ignore */ }
-          try { syncPlaceTags(getSqlite(), userId, dup[0].id, value.tags); } catch { /* ignore */ }
-        }
-        const updated = await db.select().from(places).where(eq(places.id, dup[0].id)).limit(1);
-        const names = await ownerNameMap(db);
-        return reply.code(200).send(toPlace(updated[0], names.get(updated[0].ownerId) ?? null));
       }
-    }
-    const now = Date.now();
-    const id = randomUUID();
-    await db.insert(places).values({
-      id,
-      ownerId: userId,
-      googlePlaceId: value.googlePlaceId ?? null,
-      name: value.name,
-      address: value.address ?? null,
-      lat: value.lat ?? null,
-      lng: value.lng ?? null,
-      status: value.status ?? "WANT_TO_GO",
-      icon: value.icon ?? "fork",
-      tagsJson: JSON.stringify(value.tags ?? []),
-      rating: value.rating ?? null,
-      note: value.note ?? null,
-      hoursJson: value.hoursJson ?? null,
-      businessStatus: value.businessStatus ?? null,
-      priceLevel: value.priceLevel ?? null,
-      priceRangeJson: value.priceRangeJson ?? null,
-      googleRating: value.googleRating ?? null,
-      googleRatingCount: value.googleRatingCount ?? null,
-      websiteUri: value.websiteUri ?? null,
-      mapsLinksJson: value.mapsLinksJson ?? null,
-      utcOffsetMinutes: value.utcOffsetMinutes ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const rows = await db.select().from(places).where(eq(places.id, id)).limit(1);
-    const names = await ownerNameMap(db);
-    try { await ensureTagDefinitions(db, userId, value.tags ?? []); } catch { /* ignore */ }
-    try { syncPlaceTags(getSqlite(), userId, id, value.tags ?? []); } catch { /* ignore */ }
-    return reply.code(201).send(toPlace(rows[0], names.get(rows[0].ownerId) ?? null));
-  });
+      const now = Date.now();
+      const id = randomUUID();
+      await db.insert(places).values({
+        id,
+        ownerId: userId,
+        googlePlaceId: value.googlePlaceId ?? null,
+        name: value.name,
+        address: value.address ?? null,
+        lat: value.lat ?? null,
+        lng: value.lng ?? null,
+        status: value.status ?? "WANT_TO_GO",
+        icon: value.icon ?? "fork",
+        tagsJson: JSON.stringify(value.tags ?? []),
+        rating: value.rating ?? null,
+        note: value.note ?? null,
+        hoursJson: value.hoursJson ?? null,
+        businessStatus: value.businessStatus ?? null,
+        priceLevel: value.priceLevel ?? null,
+        priceRangeJson: value.priceRangeJson ?? null,
+        googleRating: value.googleRating ?? null,
+        googleRatingCount: value.googleRatingCount ?? null,
+        websiteUri: value.websiteUri ?? null,
+        mapsLinksJson: value.mapsLinksJson ?? null,
+        utcOffsetMinutes: value.utcOffsetMinutes ?? null,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const rows = await db.select().from(places).where(eq(places.id, id)).limit(1);
+      const names = await ownerNameMap(db);
+      try {
+        await ensureTagDefinitions(db, userId, value.tags ?? []);
+      } catch {
+        /* ignore */
+      }
+      try {
+        syncPlaceTags(getSqlite(), userId, id, value.tags ?? []);
+      } catch {
+        /* ignore */
+      }
+      return reply.code(201).send(toPlace(rows[0], names.get(rows[0].ownerId) ?? null));
+    },
+  );
 
-  app.get("/api/v1/places", {
-    schema: {
-      querystring: {
-        type: "object",
-        properties: {
-          owner: { type: "string" },
-          status: { type: "string" },
-          placeType: { type: "string" },
-          tags: { type: "string" },
-          q: { type: "string" },
-          openAt: { type: "string" },
-          openNow: { type: "string" },
-          price: { type: "string" },
-          limit: { type: "string" },
-          cursor: { type: "string" },
+  app.get(
+    "/api/v1/places",
+    {
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            owner: { type: "string" },
+            status: { type: "string" },
+            placeType: { type: "string" },
+            tags: { type: "string" },
+            q: { type: "string" },
+            openAt: { type: "string" },
+            openNow: { type: "string" },
+            price: { type: "string" },
+            limit: { type: "string" },
+            cursor: { type: "string" },
+          },
         },
       },
     },
-  }, async (req, reply) => {
-    const userId = (req as any).userId as string | undefined;
-    const servicePrincipal = (req as any).servicePrincipal as { scopes: string[] } | undefined;
-    const q = req.query as any;
-    if (q.cursor !== undefined) {
-      const c = decodeCursor(q.cursor);
-      if (!c) return reply.code(400).send({ error: "invalid_cursor" });
-    }
-    const owner: string = q.owner ?? "me";
-    const limit = parseLimit(q.limit);
-    const cursor = q.cursor ? decodeCursor(q.cursor)! : null;
-    const wantedTags = q.tags ? normalizeTags(String(q.tags).split(",")) : [];
-    const status = typeof q.status === "string" && q.status ? q.status : null;
-    const needle = typeof q.q === "string" && q.q ? String(q.q).toLowerCase() : null;
-    const priceTier = parsePriceFilter(q.price);
+    async (req, reply) => {
+      const userId = (req as any).userId as string | undefined;
+      const servicePrincipal = (req as any).servicePrincipal as { scopes: string[] } | undefined;
+      const q = req.query as any;
+      if (q.cursor !== undefined) {
+        const c = decodeCursor(q.cursor);
+        if (!c) return reply.code(400).send({ error: "invalid_cursor" });
+      }
+      const owner: string = q.owner ?? "me";
+      const limit = parseLimit(q.limit);
+      const cursor = q.cursor ? decodeCursor(q.cursor)! : null;
+      const wantedTags = q.tags ? normalizeTags(String(q.tags).split(",")) : [];
+      const status = typeof q.status === "string" && q.status ? q.status : null;
+      const needle = typeof q.q === "string" && q.q ? String(q.q).toLowerCase() : null;
+      const priceTier = parsePriceFilter(q.price);
 
-    const sqlite = getSqlite();
-    const where: string[] = [];
-    const params: any[] = [];
-    if (servicePrincipal) {
-      if (owner !== "all" && owner !== "me") { where.push(`owner_id = ?`); params.push(owner); }
-    } else if (owner === "me") { where.push(`owner_id = ?`); params.push(userId); }
-    else if (owner !== "all") { where.push(`owner_id = ?`); params.push(owner); }
-    if (status) { where.push(`status = ?`); params.push(status); }
-    if (needle) { where.push(`(lower(name) LIKE ? OR lower(coalesce(address,'')) LIKE ? OR lower(coalesce(note,'')) LIKE ?)`); params.push(`%${needle}%`, `%${needle}%`, `%${needle}%`); }
-    if (priceTier != null) {
-      const vals = PRICE_TIER_VALUES[priceTier] ?? [];
-      if (vals.length) { where.push(`price_level IN (${vals.map(() => "?").join(",")})`); params.push(...vals); }
-      else { where.push(`1 = 0`); }
-    }
-    for (const t of wantedTags) {
-      where.push(`EXISTS (SELECT 1 FROM place_tags pt WHERE pt.place_id = places.id AND pt.tag_name = ?)`);
-      params.push(t);
-    }
-    if (cursor) {
-      where.push(`(updated_at < ? OR (updated_at = ? AND id < ?))`);
-      params.push(cursor.updatedAt, cursor.updatedAt, cursor.id);
-    }
-    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
-    let total = 0;
-    try {
-      // total excludes cursor slice but includes all filters
-      const totalWhereParts = where.filter((w) => !w.startsWith("(updated_at < ?"));
-      const totalSql = `SELECT COUNT(*) AS c FROM places ${totalWhereParts.length ? `WHERE ${totalWhereParts.join(" AND ")}` : ""}`;
-      const totalParams = params.slice(0, params.length - (cursor ? 3 : 0));
-      const row: any = sqlite.prepare(totalSql).get(...totalParams);
-      total = Number(row?.c ?? 0);
-    } catch { total = 0; }
-    let rows: any[] = [];
-    try {
-      rows = sqlite.prepare(
-        `SELECT * FROM places ${whereSql} ORDER BY updated_at DESC, id DESC LIMIT ?`
-      ).all(...params, limit + 1);
-    } catch {
-      rows = [];
-    }
-    const hasMore = rows.length > limit;
-    const pageRows = hasMore ? rows.slice(0, limit) : rows;
-    const names = await ownerNameMap(db);
-    let items = pageRows.map((r: any) => toPlace({
-      id: r.id, ownerId: r.owner_id, googlePlaceId: r.google_place_id, name: r.name,
-      address: r.address, lat: r.lat, lng: r.lng, status: r.status, icon: r.icon,
-      tagsJson: r.tags_json, rating: r.rating, note: r.note, hoursJson: r.hours_json,
-      businessStatus: r.business_status, priceLevel: r.price_level, priceRangeJson: r.price_range_json,
-      googleRating: r.google_rating, googleRatingCount: r.google_rating_count, websiteUri: r.website_uri,
-      mapsLinksJson: r.maps_links_json, utcOffsetMinutes: r.utc_offset_minutes,
-      createdAt: r.created_at, updatedAt: r.updated_at,
-    } as any, names.get(r.owner_id) ?? null));
-    const openFilter = q.openAt || q.openNow === "1" || q.openNow === "true";
-    if (openFilter) {
-      const at = q.openAt ? new Date(q.openAt) : new Date();
-      const atValid = !Number.isNaN(at.getTime());
-      items = items.filter((p) => {
-        if ((p as any).businessStatus && CLOSED.has((p as any).businessStatus)) return false;
-        const parsed = typeof (p as any).hours === "string" ? parseHoursJson((p as any).hours) : (p as any).hours?.periods ? (p as any).hours : parseHoursJson(JSON.stringify((p as any).hours));
-        const periods = (parsed as any)?.periods ?? (Array.isArray((p as any).hours) ? (p as any).hours : null);
-        if (!periods || !periods.length) return false;
-        return atValid ? isOpenAt(periods, at) : false;
-      });
-    }
-    const last = pageRows[pageRows.length - 1];
-    const nextCursor = hasMore && last ? encodeCursor(last.updated_at, last.id) : null;
-    return envelope(items, limit, nextCursor, total);
-  });
+      const sqlite = getSqlite();
+      const where: string[] = [];
+      const params: any[] = [];
+      if (servicePrincipal) {
+        if (owner !== "all" && owner !== "me") {
+          where.push(`owner_id = ?`);
+          params.push(owner);
+        }
+      } else if (owner === "me") {
+        where.push(`owner_id = ?`);
+        params.push(userId);
+      } else if (owner !== "all") {
+        where.push(`owner_id = ?`);
+        params.push(owner);
+      }
+      if (status) {
+        where.push(`status = ?`);
+        params.push(status);
+      }
+      if (needle) {
+        where.push(
+          `(lower(name) LIKE ? OR lower(coalesce(address,'')) LIKE ? OR lower(coalesce(note,'')) LIKE ?)`,
+        );
+        params.push(`%${needle}%`, `%${needle}%`, `%${needle}%`);
+      }
+      if (priceTier != null) {
+        const vals = PRICE_TIER_VALUES[priceTier] ?? [];
+        if (vals.length) {
+          where.push(`price_level IN (${vals.map(() => "?").join(",")})`);
+          params.push(...vals);
+        } else {
+          where.push(`1 = 0`);
+        }
+      }
+      for (const t of wantedTags) {
+        where.push(
+          `EXISTS (SELECT 1 FROM place_tags pt WHERE pt.place_id = places.id AND pt.tag_name = ?)`,
+        );
+        params.push(t);
+      }
+      if (cursor) {
+        where.push(`(updated_at < ? OR (updated_at = ? AND id < ?))`);
+        params.push(cursor.updatedAt, cursor.updatedAt, cursor.id);
+      }
+      const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+      let total = 0;
+      try {
+        // total excludes cursor slice but includes all filters
+        const totalWhereParts = where.filter((w) => !w.startsWith("(updated_at < ?"));
+        const totalSql = `SELECT COUNT(*) AS c FROM places ${totalWhereParts.length ? `WHERE ${totalWhereParts.join(" AND ")}` : ""}`;
+        const totalParams = params.slice(0, params.length - (cursor ? 3 : 0));
+        const row: any = sqlite.prepare(totalSql).get(...totalParams);
+        total = Number(row?.c ?? 0);
+      } catch {
+        total = 0;
+      }
+      let rows: any[] = [];
+      try {
+        rows = sqlite
+          .prepare(`SELECT * FROM places ${whereSql} ORDER BY updated_at DESC, id DESC LIMIT ?`)
+          .all(...params, limit + 1);
+      } catch {
+        rows = [];
+      }
+      const hasMore = rows.length > limit;
+      const pageRows = hasMore ? rows.slice(0, limit) : rows;
+      const names = await ownerNameMap(db);
+      let items = pageRows.map((r: any) =>
+        toPlace(
+          {
+            id: r.id,
+            ownerId: r.owner_id,
+            googlePlaceId: r.google_place_id,
+            name: r.name,
+            address: r.address,
+            lat: r.lat,
+            lng: r.lng,
+            status: r.status,
+            icon: r.icon,
+            tagsJson: r.tags_json,
+            rating: r.rating,
+            note: r.note,
+            hoursJson: r.hours_json,
+            businessStatus: r.business_status,
+            priceLevel: r.price_level,
+            priceRangeJson: r.price_range_json,
+            googleRating: r.google_rating,
+            googleRatingCount: r.google_rating_count,
+            websiteUri: r.website_uri,
+            mapsLinksJson: r.maps_links_json,
+            utcOffsetMinutes: r.utc_offset_minutes,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          } as any,
+          names.get(r.owner_id) ?? null,
+        ),
+      );
+      const openFilter = q.openAt || q.openNow === "1" || q.openNow === "true";
+      if (openFilter) {
+        const at = q.openAt ? new Date(q.openAt) : new Date();
+        const atValid = !Number.isNaN(at.getTime());
+        items = items.filter((p) => {
+          if ((p as any).businessStatus && CLOSED.has((p as any).businessStatus)) return false;
+          const parsed =
+            typeof (p as any).hours === "string"
+              ? parseHoursJson((p as any).hours)
+              : (p as any).hours?.periods
+                ? (p as any).hours
+                : parseHoursJson(JSON.stringify((p as any).hours));
+          const periods =
+            (parsed as any)?.periods ?? (Array.isArray((p as any).hours) ? (p as any).hours : null);
+          if (!periods || !periods.length) return false;
+          return atValid ? isOpenAt(periods, at) : false;
+        });
+      }
+      const last = pageRows[pageRows.length - 1];
+      const nextCursor = hasMore && last ? encodeCursor(last.updated_at, last.id) : null;
+      return envelope(items, limit, nextCursor, total);
+    },
+  );
 
   app.get("/api/v1/places/:id", async (req, reply) => {
-    const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
+    const rows = await db
+      .select()
+      .from(places)
+      .where(eq(places.id, (req.params as any).id))
+      .limit(1);
     if (!rows.length) return reply.code(404).send({ error: "not_found" });
     const names = await ownerNameMap(db);
     return toPlace(rows[0], names.get(rows[0].ownerId) ?? null);
@@ -403,14 +524,19 @@ export function registerPlaceRoutes(
   app.post("/api/v1/places/:id/refresh", async (req, reply) => {
     const servicePrincipal = (req as any).servicePrincipal as { scopes: string[] } | undefined;
     const userId = (req as any).userId as string | undefined;
-    const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
+    const rows = await db
+      .select()
+      .from(places)
+      .where(eq(places.id, (req.params as any).id))
+      .limit(1);
     if (!rows.length) return reply.code(404).send({ error: "not_found" });
     if (servicePrincipal) {
       if (!servicePrincipal.scopes.includes("refresh:places")) {
         return reply.code(403).send({ error: "forbidden" });
       }
     } else {
-      if (!userId || rows[0].ownerId !== userId) return reply.code(403).send({ error: "forbidden" });
+      if (!userId || rows[0].ownerId !== userId)
+        return reply.code(403).send({ error: "forbidden" });
     }
     const googlePlaceId = (rows[0] as any).googlePlaceId as string | null;
     if (!googlePlaceId) return reply.code(422).send({ error: "missing_google_id" });
@@ -421,19 +547,16 @@ export function registerPlaceRoutes(
         "google.place-refresh",
         { "peer.service": "places.googleapis.com", endpoint: "places.get" },
         async (span: any) =>
-          gfetch(
-            `https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}`,
-            {
-              headers: {
-                "X-Goog-Api-Key": config.googlePlacesKey,
-                "X-Goog-FieldMask": REFRESH_DETAILS_MASK,
-              },
-              signal: AbortSignal.timeout(10_000),
+          gfetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}`, {
+            headers: {
+              "X-Goog-Api-Key": config.googlePlacesKey,
+              "X-Goog-FieldMask": REFRESH_DETAILS_MASK,
             },
-          ).then((r: Response) => {
+            signal: AbortSignal.timeout(10_000),
+          }).then((r: Response) => {
             span.setAttribute("http.status_code", r.status);
             return r;
-          })
+          }),
       );
       if (res.status === 429) return reply.code(429).send({ error: "google_rate_limited" });
       if (!res.ok) return reply.code(502).send({ error: "google_unavailable" });
@@ -453,20 +576,51 @@ export function registerPlaceRoutes(
   app.patch("/api/v1/places/:id", async (req, reply) => {
     if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
     const userId = (req as any).userId as string;
-    const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
+    const rows = await db
+      .select()
+      .from(places)
+      .where(eq(places.id, (req.params as any).id))
+      .limit(1);
     if (!rows.length) return reply.code(404).send({ error: "not_found" });
     if (rows[0].ownerId !== userId) return reply.code(403).send({ error: "forbidden" });
     const { error, value } = validatePlaceInput(req.body ?? {}, true);
     if (error) return reply.code(400).send({ error });
     const patch: any = { updatedAt: Date.now() };
-    for (const k of ["name", "icon", "status", "rating", "note", "googlePlaceId", "address", "lat", "lng", "hoursJson", "businessStatus", "priceLevel", "priceRangeJson", "googleRating", "googleRatingCount", "websiteUri", "mapsLinksJson", "utcOffsetMinutes"] as const) {
+    for (const k of [
+      "name",
+      "icon",
+      "status",
+      "rating",
+      "note",
+      "googlePlaceId",
+      "address",
+      "lat",
+      "lng",
+      "hoursJson",
+      "businessStatus",
+      "priceLevel",
+      "priceRangeJson",
+      "googleRating",
+      "googleRatingCount",
+      "websiteUri",
+      "mapsLinksJson",
+      "utcOffsetMinutes",
+    ] as const) {
       if (value[k] !== undefined) patch[k] = value[k];
     }
     if (value.tags !== undefined) patch.tagsJson = JSON.stringify(value.tags);
     await db.update(places).set(patch).where(eq(places.id, rows[0].id));
     if (value.tags !== undefined) {
-      try { await ensureTagDefinitions(db, userId, value.tags); } catch { /* ignore */ }
-      try { syncPlaceTags(getSqlite(), userId, rows[0].id, value.tags); } catch { /* ignore */ }
+      try {
+        await ensureTagDefinitions(db, userId, value.tags);
+      } catch {
+        /* ignore */
+      }
+      try {
+        syncPlaceTags(getSqlite(), userId, rows[0].id, value.tags);
+      } catch {
+        /* ignore */
+      }
     }
     const updated = await db.select().from(places).where(eq(places.id, rows[0].id)).limit(1);
     const names = await ownerNameMap(db);
@@ -476,11 +630,19 @@ export function registerPlaceRoutes(
   app.delete("/api/v1/places/:id", async (req, reply) => {
     if ((req as any).servicePrincipal) return reply.code(403).send({ error: "forbidden" });
     const userId = (req as any).userId as string;
-    const rows = await db.select().from(places).where(eq(places.id, (req.params as any).id)).limit(1);
+    const rows = await db
+      .select()
+      .from(places)
+      .where(eq(places.id, (req.params as any).id))
+      .limit(1);
     if (!rows.length) return reply.code(404).send({ error: "not_found" });
     if (rows[0].ownerId !== userId) return reply.code(403).send({ error: "forbidden" });
     await db.delete(places).where(eq(places.id, rows[0].id));
-    try { deletePlaceTags(getSqlite(), userId, rows[0].id); } catch { /* ignore */ }
+    try {
+      deletePlaceTags(getSqlite(), userId, rows[0].id);
+    } catch {
+      /* ignore */
+    }
     return { ok: true };
   });
 }

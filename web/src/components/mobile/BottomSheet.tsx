@@ -50,7 +50,7 @@ export default function BottomSheet({ open, onClose, ariaLabel, children }: Prop
     }
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open ]);
+  }, [open]);
 
   useEffect(
     () => () => {
@@ -91,7 +91,12 @@ export default function BottomSheet({ open, onClose, ariaLabel, children }: Prop
   const sheetTransform = shown ? `translateY(${dragY}px)` : `translateY(100%)`;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={ariaLabel}>
+    <div
+      className="fixed inset-0 z-50 lg:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label={ariaLabel}
+    >
       <button
         type="button"
         aria-label="Close"

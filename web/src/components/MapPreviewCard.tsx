@@ -9,7 +9,16 @@ interface Props {
   onViewNotes: (p: Place) => void;
   onClose?: () => void;
   onToggleStatus: (p: Place) => void;
-  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) => Promise<void>;
+  onSaveEdit: (
+    p: Place,
+    patch: {
+      tags: string[];
+      rating: number | null;
+      note: string | null;
+      icon: string;
+      status?: string;
+    },
+  ) => Promise<void>;
   onDelete?: (p: Place) => Promise<void> | void;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshing?: boolean;
@@ -95,7 +104,13 @@ export default function MapPreviewCard({
     }
   }
 
-  async function handleSave(patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) {
+  async function handleSave(patch: {
+    tags: string[];
+    rating: number | null;
+    note: string | null;
+    icon: string;
+    status?: string;
+  }) {
     setSaveError(null);
     try {
       await onSaveEdit(p, patch);
@@ -114,7 +129,9 @@ export default function MapPreviewCard({
         borderRadius: 16,
         transform: `translateY(${dragY}px)`,
         opacity: dismissing ? 0 : dragging ? Math.max(0.35, 1 - dragY / 500) : 1,
-        transition: dragging ? "none" : "transform 220ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms",
+        transition: dragging
+          ? "none"
+          : "transform 220ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms",
       }}
     >
       <div
@@ -162,7 +179,10 @@ export default function MapPreviewCard({
       {!readOnly && editing && (
         <>
           {saveError && (
-            <div className="edge radius-input mt-2 border-danger-line bg-danger-bg px-2 py-1 text-xs text-danger-ink" role="alert">
+            <div
+              className="edge radius-input mt-2 border-danger-line bg-danger-bg px-2 py-1 text-xs text-danger-ink"
+              role="alert"
+            >
               {saveError}
             </div>
           )}

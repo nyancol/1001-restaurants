@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { normalizeTags } from "../src/tags/normalize.js";
-import { TAG_PALETTE, isPaletteColor, stableHash, colorForTag, randomPaletteColor } from "../src/tags/palette.js";
+import {
+  TAG_PALETTE,
+  isPaletteColor,
+  stableHash,
+  colorForTag,
+  randomPaletteColor,
+} from "../src/tags/palette.js";
 
 describe("normalizeTags", () => {
   it("trims, lowercases and dedupes", () => {
-    expect(normalizeTags([" Japonais ", "JAPONAIS", "cozy", "cozy", " ", ""])).toEqual(["japonais", "cozy"]);
+    expect(normalizeTags([" Japonais ", "JAPONAIS", "cozy", "cozy", " ", ""])).toEqual([
+      "japonais",
+      "cozy",
+    ]);
   });
   it("returns [] for non-array", () => {
     expect(normalizeTags(undefined)).toEqual([]);

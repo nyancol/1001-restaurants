@@ -58,7 +58,13 @@ export interface Place {
   tags: string[];
   rating: number | null;
   note: string | null;
-  hours?: { periods?: { open?: { day: number; hour: number; minute: number }; close?: { day: number; hour: number; minute: number } }[]; weekdayDescriptions?: string[] } | null;
+  hours?: {
+    periods?: {
+      open?: { day: number; hour: number; minute: number };
+      close?: { day: number; hour: number; minute: number };
+    }[];
+    weekdayDescriptions?: string[];
+  } | null;
   businessStatus?: string | null;
   priceLevel?: string | null;
   priceRange?: any | null;
@@ -138,7 +144,10 @@ export async function createPlace(input: {
   return apiFetch("/api/v1/places", { method: "POST", body: JSON.stringify(input) });
 }
 
-export async function patchPlace(id: string, patch: Partial<Place> & Record<string, unknown>): Promise<Place> {
+export async function patchPlace(
+  id: string,
+  patch: Partial<Place> & Record<string, unknown>,
+): Promise<Place> {
   return apiFetch(`/api/v1/places/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
@@ -216,8 +225,7 @@ export function parseAutocomplete(body: any): AutocompleteSuggestion[] {
       const placeId = pp.placeId ?? pp.place_id ?? pp.id ?? "";
       const text =
         pp.text?.text ?? pp.description ?? pp.structuredFormat?.mainText?.text ?? pp.mainText ?? "";
-      const secondary =
-        pp.structuredFormat?.secondaryText?.text ?? pp.secondary_text ?? undefined;
+      const secondary = pp.structuredFormat?.secondaryText?.text ?? pp.secondary_text ?? undefined;
       return placeId && text ? { placeId, text, secondary } : null;
     })
     .filter(Boolean) as AutocompleteSuggestion[];
@@ -279,12 +287,19 @@ export function inferIcon(primaryType: unknown, types: unknown): string {
     if (typeof v !== "string" || !v) return null;
     return PRIMARY_TYPE_TO_ICON[v.trim().toLowerCase()] ?? null;
   };
-  return pick(primaryType) ?? (Array.isArray(types) ? (types.map(pick).find(Boolean) as string | undefined) : undefined) ?? "fork";
+  return (
+    pick(primaryType) ??
+    (Array.isArray(types) ? (types.map(pick).find(Boolean) as string | undefined) : undefined) ??
+    "fork"
+  );
 }
 
-export function parseDetails(body: any, fallbackPlaceId: string, fallbackText: string): PlaceDetails {
-  const name =
-    body?.displayName?.text ?? body?.name ?? body?.result?.name ?? fallbackText;
+export function parseDetails(
+  body: any,
+  fallbackPlaceId: string,
+  fallbackText: string,
+): PlaceDetails {
+  const name = body?.displayName?.text ?? body?.name ?? body?.result?.name ?? fallbackText;
   const address =
     body?.formattedAddress ?? body?.formatted_address ?? body?.result?.formatted_address ?? null;
   const lat =
@@ -300,7 +315,8 @@ export function parseDetails(body: any, fallbackPlaceId: string, fallbackText: s
   const googlePlaceId = body?.id ?? body?.place_id ?? body?.result?.place_id ?? fallbackPlaceId;
   const rawType = body?.primaryType ?? null;
   const rawTypes = Array.isArray(body?.types) ? body.types : null;
-  const hours = body?.regularOpeningHours ?? body?.currentOpeningHours ?? body?.result?.opening_hours ?? null;
+  const hours =
+    body?.regularOpeningHours ?? body?.currentOpeningHours ?? body?.result?.opening_hours ?? null;
   const mapsLinks = body?.googleMapsLinks ?? null;
   const googleMapsUri = body?.googleMapsUri ?? mapsLinks?.placeUri ?? null;
   return {
@@ -310,7 +326,9 @@ export function parseDetails(body: any, fallbackPlaceId: string, fallbackText: s
     lat: typeof lat === "number" ? lat : null,
     lng: typeof lng === "number" ? lng : null,
     icon: inferIcon(rawType, rawTypes),
-    hours: hours ? { periods: hours.periods ?? [], weekdayDescriptions: hours.weekdayDescriptions ?? [] } : null,
+    hours: hours
+      ? { periods: hours.periods ?? [], weekdayDescriptions: hours.weekdayDescriptions ?? [] }
+      : null,
     businessStatus: body?.businessStatus ?? null,
     priceLevel: body?.priceLevel ?? null,
     priceRange: body?.priceRange ?? null,
@@ -339,7 +357,9 @@ export function mapsUrlFor(p: Place): string | null {
     safeExternalUrl((p.mapsLinks as any)?.placeUri) ??
     safeExternalUrl(p.mapsLinks);
   if (stored) return stored;
-  if (p.googlePlaceId) return `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(p.googlePlaceId)}`;
-  if (p.lat != null && p.lng != null) return `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+  if (p.googlePlaceId)
+    return `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(p.googlePlaceId)}`;
+  if (p.lat != null && p.lng != null)
+    return `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
   return null;
 }

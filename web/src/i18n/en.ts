@@ -43,7 +43,8 @@ export const en = {
 
   "empty.noPlaces": "No places yet",
   "empty.scopeHasNoPlaces": (scope: string) => `${scope} has no places yet`,
-  "empty.scopeHasNoPlacesFilter": (scope: string) => `${scope} has no places matching these filters`,
+  "empty.scopeHasNoPlacesFilter": (scope: string) =>
+    `${scope} has no places matching these filters`,
   "empty.tryClear": "Try clearing filters or viewing another user.",
   "empty.saveFirst": "Save your first spot from the Add page.",
 
@@ -124,7 +125,8 @@ export const en = {
   "add.saving": "Saving…",
   "add.nameRequired": "Name is required.",
   "add.updatedExisting": "Updated your existing entry.",
-  "add.duplicateNamed": (name: string) => `You already saved “${name}”. Update it instead of creating a duplicate?`,
+  "add.duplicateNamed": (name: string) =>
+    `You already saved “${name}”. Update it instead of creating a duplicate?`,
   "add.duplicateGeneric": "You already saved this place. Update it instead?",
   "add.saveFailed": "Save failed.",
   "add.googleSnapshot": "Google snapshot · saved with this place",
@@ -144,7 +146,6 @@ export const en = {
   "lookup.failed": "Lookup failed — you can still save manually below.",
   "lookup.detailsFailed": "Details unavailable — kept your text, you can save without coordinates.",
   "lookup.unavailable": "Google lookup is not configured — manual entry below works fine.",
-
 
   "icon.fork": "Knife and fork",
   "icon.burger": "Burger",
@@ -175,7 +176,8 @@ export const en = {
   "tags.noMatches": "No matches.",
   "tags.noMatchesCreate": "No matches — press Enter to create.",
   "tags.filterOptionsAria": "tag filter options",
-  "tags.filterOption": (action: string, tag: string, count: number) => `${action} filter ${tag} (${count} place${count === 1 ? "" : "s"})`,
+  "tags.filterOption": (action: string, tag: string, count: number) =>
+    `${action} filter ${tag} (${count} place${count === 1 ? "" : "s"})`,
   "tags.addAction": "add",
   "tags.removeAction": "remove",
   "tags.tagInputAria": "tag input",
@@ -190,12 +192,14 @@ export const en = {
   "tags.renameAria": (t: string) => `rename tag ${t}`,
   "tags.renamePrompt": (t: string) => `Rename “${t}” to:`,
   "tags.renameConfirm": "Rename",
-  "tags.mergeConfirm": (from: string, to: string) => `“${to}” already exists. Merge “${from}” into it? Places carrying both will keep one.`,
+  "tags.mergeConfirm": (from: string, to: string) =>
+    `“${to}” already exists. Merge “${from}” into it? Places carrying both will keep one.`,
   "tags.changeColor": "Change color",
   "tags.changeColorAria": (t: string) => `change color for ${t}`,
   "tags.deleteTag": "Delete tag",
   "tags.deleteTagAria": (t: string) => `delete tag ${t}`,
-  "tags.deleteConfirm": (t: string) => `Delete tag “${t}”? It will be removed from all your places carrying it.`,
+  "tags.deleteConfirm": (t: string) =>
+    `Delete tag “${t}”? It will be removed from all your places carrying it.`,
   "tags.deleteConfirmCta": "Delete tag",
   "tags.cancel": "Cancel",
   "tags.manageFailed": "Tag update failed — please try again.",
@@ -261,10 +265,12 @@ export const en = {
   "map.closeDetailsAria": "close details",
   "map.geoFallback": "Location unavailable — showing Paris.",
   "map.geoStay": "Location unavailable — staying put.",
-  "map.failedToStart": (msg: string) => `Map failed to start: ${msg} — this browser may lack WebGL2.`,
+  "map.failedToStart": (msg: string) =>
+    `Map failed to start: ${msg} — this browser may lack WebGL2.`,
   "map.error": (msg: string) => `Map error: ${msg} — check connection/tiles, then reload.`,
   "map.setupFailed": (msg: string) => `Map setup failed: ${msg} — reload to retry.`,
-  "map.unlocatedHidden": (n: number) => `${n} place${n > 1 ? "s" : ""} without location hidden from the map.`,
+  "map.unlocatedHidden": (n: number) =>
+    `${n} place${n > 1 ? "s" : ""} without location hidden from the map.`,
   "error.loadPlaces": "Failed to load places.",
   "error.loadUsers": "Failed to load users.",
 };

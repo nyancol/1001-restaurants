@@ -21,12 +21,20 @@ const PRICE_TIERS = ["$", "$$", "$$$", "$$$$"] as const;
 
 function parsePriceMulti(price: string): string[] {
   if (!price) return [];
-  return price.split(",").map((s) => s.trim()).filter(Boolean);
+  return price
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function priceSummary(prices: string[]): string {
   if (prices.length === 0) return "Any";
-  const labels: Record<string, string> = { $: "Budget", $$: "Moderate", $$$: "Upscale", $$$$: "Luxury" };
+  const labels: Record<string, string> = {
+    $: "Budget",
+    $$: "Moderate",
+    $$$: "Upscale",
+    $$$$: "Luxury",
+  };
   if (prices.length === 1) return labels[prices[0]] ?? "Filtered";
   return "Filtered";
 }
@@ -58,7 +66,9 @@ export default function FilterSheet({
   resultCount,
 }: Props) {
   const [tagDraft, setTagDraft] = useState("");
-  const [openTab, setOpenTab] = useState<"now" | "ahead">(!openEnabled ? "now" : openAt ? "ahead" : "now");
+  const [openTab, setOpenTab] = useState<"now" | "ahead">(
+    !openEnabled ? "now" : openAt ? "ahead" : "now",
+  );
   const prices = parsePriceMulti(price);
 
   // Mount animation state: keep rendered during exit transition.
@@ -66,7 +76,11 @@ export default function FilterSheet({
   const [shown, setShown] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const dragRef = useRef<{ startY: number; curY: number; dragging: boolean }>({ startY: 0, curY: 0, dragging: false });
+  const dragRef = useRef<{ startY: number; curY: number; dragging: boolean }>({
+    startY: 0,
+    curY: 0,
+    dragging: false,
+  });
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const closeTimer = useRef<number | null>(null);
   const onCloseRef = useRef(onClose);
@@ -108,10 +122,13 @@ export default function FilterSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  useEffect(() => () => {
-    document.body.style.overflow = "";
-    if (closeTimer.current) window.clearTimeout(closeTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      document.body.style.overflow = "";
+      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    },
+    [],
+  );
 
   function togglePrice(tier: string) {
     const next = prices.includes(tier) ? prices.filter((x) => x !== tier) : [...prices, tier];
@@ -166,10 +183,19 @@ export default function FilterSheet({
   if (!mounted) return null;
 
   const activeCount = tags.length + (openEnabled ? 1 : 0) + prices.length + (status ? 1 : 0);
-  const sheetTransform = dragging ? `translateY(${dragY}px)` : shown ? `translateY(${dragY}px)` : `translateY(100%)`;
+  const sheetTransform = dragging
+    ? `translateY(${dragY}px)`
+    : shown
+      ? `translateY(${dragY}px)`
+      : `translateY(100%)`;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
+    <div
+      className="fixed inset-0 z-50 lg:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Filters"
+    >
       <button
         type="button"
         aria-label="Close filters"
@@ -206,11 +232,20 @@ export default function FilterSheet({
           </div>
         </div>
         <div className="flex items-center justify-between px-4 pb-1 pt-1">
-          <button type="button" onClick={onClose} aria-label="Close filters" className="inline-flex h-10 w-10 items-center justify-center text-xl text-ink">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close filters"
+            className="inline-flex h-10 w-10 items-center justify-center text-xl text-ink"
+          >
             ×
           </button>
           <h2 className="font-display text-xl font-bold text-ink">Filters</h2>
-          <button type="button" onClick={clearAll} className="min-h-[40px] px-2 text-sm font-semibold text-accent">
+          <button
+            type="button"
+            onClick={clearAll}
+            className="min-h-[40px] px-2 text-sm font-semibold text-accent"
+          >
             Clear all
           </button>
         </div>
@@ -219,14 +254,20 @@ export default function FilterSheet({
           {/* Tags & vibe */}
           <div className="border-t border-line/60 pt-4">
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-ink">Tags &amp; vibe</h3>
-              {activeCount > 0 && <span className="text-xs font-semibold text-accent">{activeCount} active</span>}
+              <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
+                Tags &amp; vibe
+              </h3>
+              {activeCount > 0 && (
+                <span className="text-xs font-semibold text-accent">{activeCount} active</span>
+              )}
             </div>
             <label
               className="edge flex min-h-[48px] items-center gap-2 border-line bg-surface px-3"
               style={{ borderRadius: 12 }}
             >
-              <span aria-hidden className="text-muted">⌕</span>
+              <span aria-hidden className="text-muted">
+                ⌕
+              </span>
               <input
                 value={tagDraft}
                 onChange={(e) => setTagDraft(e.target.value)}
@@ -264,8 +305,15 @@ export default function FilterSheet({
 
           {/* Opening hours */}
           <div className="mt-6">
-            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-ink">Opening hours &amp; timing</h3>
-            <div className="edge grid grid-cols-2 gap-1 border-line bg-surface-2/60 p-1" style={{ borderRadius: 12 }} role="group" aria-label="Opening hours">
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-ink">
+              Opening hours &amp; timing
+            </h3>
+            <div
+              className="edge grid grid-cols-2 gap-1 border-line bg-surface-2/60 p-1"
+              style={{ borderRadius: 12 }}
+              role="group"
+              aria-label="Opening hours"
+            >
               <button
                 type="button"
                 aria-pressed={openTab === "now"}
@@ -275,11 +323,16 @@ export default function FilterSheet({
                   setOpenAt("");
                 }}
                 className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 px-2 text-sm font-semibold ${
-                  openTab === "now" && openEnabled ? "bg-surface text-accent shadow-theme" : "text-muted"
+                  openTab === "now" && openEnabled
+                    ? "bg-surface text-accent shadow-theme"
+                    : "text-muted"
                 }`}
                 style={{ borderRadius: 9 }}
               >
-                <span aria-hidden className="text-accent">●</span> Open Now
+                <span aria-hidden className="text-accent">
+                  ●
+                </span>{" "}
+                Open Now
               </button>
               <button
                 type="button"
@@ -308,7 +361,9 @@ export default function FilterSheet({
                 className="edge border-line bg-surface p-3 text-left"
                 style={{ borderRadius: 12 }}
               >
-                <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted">Date</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  Date
+                </span>
                 <span className="mt-0.5 flex items-center justify-between text-sm font-bold text-ink">
                   Tonight,{" "}
                   {new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}{" "}
@@ -325,9 +380,18 @@ export default function FilterSheet({
                 className="edge border-line bg-surface p-3 text-left"
                 style={{ borderRadius: 12 }}
               >
-                <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted">Service</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  Service
+                </span>
                 <span className="mt-0.5 flex items-center justify-between text-sm font-bold text-ink">
-                  Dinner ({openAt ? new Date(openAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "8:00 PM"}) <span aria-hidden>🕐</span>
+                  Dinner (
+                  {openAt
+                    ? new Date(openAt).toLocaleTimeString(undefined, {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })
+                    : "8:00 PM"}
+                  ) <span aria-hidden>🕐</span>
                 </span>
               </button>
             </div>
@@ -339,7 +403,12 @@ export default function FilterSheet({
               <h3 className="text-xs font-bold uppercase tracking-wider text-ink">Price level</h3>
               <span className="text-xs text-muted">{priceSummary(prices)}</span>
             </div>
-            <div className="edge grid grid-cols-4 gap-1 border-line bg-surface-2/60 p-1" style={{ borderRadius: 12 }} role="group" aria-label="Price level">
+            <div
+              className="edge grid grid-cols-4 gap-1 border-line bg-surface-2/60 p-1"
+              style={{ borderRadius: 12 }}
+              role="group"
+              aria-label="Price level"
+            >
               {PRICE_TIERS.map((tier) => {
                 const active = prices.includes(tier);
                 return (
@@ -362,7 +431,9 @@ export default function FilterSheet({
 
           {/* Lists & status */}
           <div className="mt-6">
-            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-ink">Lists &amp; status</h3>
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-ink">
+              Lists &amp; status
+            </h3>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -380,7 +451,9 @@ export default function FilterSheet({
                 aria-pressed={status === "WANT_TO_GO"}
                 onClick={() => setStatus(status === "WANT_TO_GO" ? "" : "WANT_TO_GO")}
                 className={`edge inline-flex min-h-[48px] items-center gap-2 border-line px-4 text-sm font-semibold ${
-                  status === "WANT_TO_GO" ? "border-accent bg-accent text-accent-ink" : "bg-surface text-ink"
+                  status === "WANT_TO_GO"
+                    ? "border-accent bg-accent text-accent-ink"
+                    : "bg-surface text-ink"
                 }`}
                 style={{ borderRadius: 12 }}
               >
@@ -391,7 +464,9 @@ export default function FilterSheet({
                 aria-pressed={status === "BEEN_TO"}
                 onClick={() => setStatus(status === "BEEN_TO" ? "" : "BEEN_TO")}
                 className={`edge inline-flex min-h-[48px] items-center gap-2 border-line px-4 text-sm font-semibold ${
-                  status === "BEEN_TO" ? "border-accent bg-accent text-accent-ink" : "bg-surface text-ink"
+                  status === "BEEN_TO"
+                    ? "border-accent bg-accent text-accent-ink"
+                    : "bg-surface text-ink"
                 }`}
                 style={{ borderRadius: 12 }}
               >

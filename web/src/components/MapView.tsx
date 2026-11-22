@@ -23,8 +23,9 @@ const DEFAULT_TILES = [
   "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
 ];
 const TILE_URLS =
-  import.meta.env.VITE_MAP_TILE_URL?.split(",").map((s: string) => s.trim()).filter(Boolean) ??
-  DEFAULT_TILES;
+  import.meta.env.VITE_MAP_TILE_URL?.split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean) ?? DEFAULT_TILES;
 const ATTRIBUTION =
   '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
@@ -66,7 +67,16 @@ interface MapViewProps {
   loading: boolean;
   onError: (msg: string) => void;
   onFlipStatus: (p: Place) => void;
-  onSaveEdit: (p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) => Promise<void>;
+  onSaveEdit: (
+    p: Place,
+    patch: {
+      tags: string[];
+      rating: number | null;
+      note: string | null;
+      icon: string;
+      status?: string;
+    },
+  ) => Promise<void>;
   onDelete?: (p: Place) => Promise<void> | void;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshingIds?: string[];
@@ -139,10 +149,20 @@ export default function MapView({
     if (!source) return;
     source.setData({
       type: "FeatureCollection",
-      features: [{ type: "Feature", geometry: { type: "Point", coordinates: [pos.lng, pos.lat] }, properties: {} }],
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [pos.lng, pos.lat] },
+          properties: {},
+        },
+      ],
     });
     if (map.getLayer("user-halo")) {
-      map.setPaintProperty("user-halo", "circle-radius", accuracyToPixels(pos.accuracy, pos.lat, map.getZoom()));
+      map.setPaintProperty(
+        "user-halo",
+        "circle-radius",
+        accuracyToPixels(pos.accuracy, pos.lat, map.getZoom()),
+      );
     }
   }, []);
 
@@ -199,7 +219,13 @@ export default function MapView({
         style: {
           version: 8,
           sources: {
-            osm: { type: "raster", tiles: TILE_URLS, tileSize: 256, attribution: ATTRIBUTION, maxzoom: 19 },
+            osm: {
+              type: "raster",
+              tiles: TILE_URLS,
+              tileSize: 256,
+              attribution: ATTRIBUTION,
+              maxzoom: 19,
+            },
           },
           layers: [{ id: "osm", type: "raster", source: "osm" }],
         },
@@ -292,7 +318,11 @@ export default function MapView({
             source: "places",
             filter: ["!", ["has", "point_count"]],
             layout: {
-              "icon-image": ["coalesce", ["image", ["concat", "drop-", ["get", "icon"]]], ["image", "drop-generic"]],
+              "icon-image": [
+                "coalesce",
+                ["image", ["concat", "drop-", ["get", "icon"]]],
+                ["image", "drop-generic"],
+              ],
               "icon-anchor": "bottom",
               "icon-size": 1,
               "icon-allow-overlap": true,
@@ -303,10 +333,16 @@ export default function MapView({
             const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
             const clusterId = features[0]?.properties?.cluster_id;
             if (clusterId == null) return;
-            (map.getSource("places") as GeoJSONSource).getClusterExpansionZoom(clusterId, (err, zoom) => {
-              if (err || zoom == null) return;
-              map.easeTo({ center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number], zoom });
-            });
+            (map.getSource("places") as GeoJSONSource).getClusterExpansionZoom(
+              clusterId,
+              (err, zoom) => {
+                if (err || zoom == null) return;
+                map.easeTo({
+                  center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number],
+                  zoom,
+                });
+              },
+            );
           });
           map.on("click", "pins", (e) => {
             const id = (e.features?.[0]?.properties as any)?.id as string | undefined;
@@ -337,7 +373,11 @@ export default function MapView({
           map.on("zoom", () => {
             const pos = userPosRef.current;
             if (!pos || !map.getLayer("user-halo")) return;
-            map.setPaintProperty("user-halo", "circle-radius", accuracyToPixels(pos.accuracy, pos.lat, map.getZoom()));
+            map.setPaintProperty(
+              "user-halo",
+              "circle-radius",
+              accuracyToPixels(pos.accuracy, pos.lat, map.getZoom()),
+            );
           });
 
           mapReadyRef.current = true;
@@ -363,7 +403,11 @@ export default function MapView({
     if (!el || !map) return;
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(() => {
-      try { map.resize(); } catch { /* ignore */ }
+      try {
+        map.resize();
+      } catch {
+        /* ignore */
+      }
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -410,10 +454,23 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !mapReady) return;
     if (!map.getLayer("pins-selected")) return;
-    map.setFilter("pins-selected", ["all", ["!", ["has", "point_count"]], ["==", ["get", "id"], selectedId ?? ""]]);
+    map.setFilter("pins-selected", [
+      "all",
+      ["!", ["has", "point_count"]],
+      ["==", ["get", "id"], selectedId ?? ""],
+    ]);
   }, [selectedId, mapReady]);
 
-  async function handleSave(p: Place, patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) {
+  async function handleSave(
+    p: Place,
+    patch: {
+      tags: string[];
+      rating: number | null;
+      note: string | null;
+      icon: string;
+      status?: string;
+    },
+  ) {
     setEditing(false);
     try {
       await onSaveEdit(p, patch);
@@ -437,13 +494,23 @@ export default function MapView({
     onSelect(p.id);
     // Scroll matching feed card into view (desktop split).
     requestAnimationFrame(() => {
-      document.querySelector(`[data-place-id="${CSS.escape(p.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      document
+        .querySelector(`[data-place-id="${CSS.escape(p.id)}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
   }
 
   return (
-    <div className="edge relative overflow-hidden border-line bg-surface-2/40" style={{ borderRadius: 16 }}>
-      <div ref={containerRef} className={`maplibre-themed w-full ${mapHeightClass}`} aria-label={t["map.placesMapAria"]} style={{ borderRadius: 16 }} />
+    <div
+      className="edge relative overflow-hidden border-line bg-surface-2/40"
+      style={{ borderRadius: 16 }}
+    >
+      <div
+        ref={containerRef}
+        className={`maplibre-themed w-full ${mapHeightClass}`}
+        aria-label={t["map.placesMapAria"]}
+        style={{ borderRadius: 16 }}
+      />
       {/* Locate-me action; zoom comes from the built-in NavigationControl (top-right) */}
       <div className="absolute left-3 top-3 flex flex-col gap-2">
         <button
@@ -458,7 +525,9 @@ export default function MapView({
         </button>
       </div>
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm text-muted">{t["map.loading"]}</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-sm text-muted">
+          {t["map.loading"]}
+        </div>
       )}
       {/* Preview card docked above footer (split view only; phone uses bottom sheet) */}
       {selected && !showDetails && showPreview && (
@@ -466,7 +535,10 @@ export default function MapView({
           <MapPreviewCard
             place={selected}
             onViewNotes={viewNotes}
-            onClose={() => { onSelect(null); setEditing(false); }}
+            onClose={() => {
+              onSelect(null);
+              setEditing(false);
+            }}
             onToggleStatus={onFlipStatus}
             onSaveEdit={onSaveEdit}
             onDelete={onDelete}
@@ -492,8 +564,25 @@ export default function MapView({
               {t["map.closeDetails"]}
             </button>
           </div>
-          <PlaceCard place={selected} onToggleStatus={onFlipStatus} onEdit={() => { if (!readOnly) setEditing(true); }} readOnly={readOnly} onRefresh={onRefresh} refreshing={refreshingIds?.includes(selected.id)} />
-          {!readOnly && editing && <PlaceEditor place={selected} onSave={(patch) => handleSave(selected, patch)} onCancel={() => setEditing(false)} onDelete={onDelete ? () => handleDelete(selected) : undefined} onTagDefinitionsChanged={onTagDefinitionsChanged} />}
+          <PlaceCard
+            place={selected}
+            onToggleStatus={onFlipStatus}
+            onEdit={() => {
+              if (!readOnly) setEditing(true);
+            }}
+            readOnly={readOnly}
+            onRefresh={onRefresh}
+            refreshing={refreshingIds?.includes(selected.id)}
+          />
+          {!readOnly && editing && (
+            <PlaceEditor
+              place={selected}
+              onSave={(patch) => handleSave(selected, patch)}
+              onCancel={() => setEditing(false)}
+              onDelete={onDelete ? () => handleDelete(selected) : undefined}
+              onTagDefinitionsChanged={onTagDefinitionsChanged}
+            />
+          )}
         </div>
       )}
     </div>

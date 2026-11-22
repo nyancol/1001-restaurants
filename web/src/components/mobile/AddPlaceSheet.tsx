@@ -27,10 +27,18 @@ interface Props {
 }
 
 /** Phone "Add Place" sheet: slides from bottom over list/map, drag handle to close. */
-export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, onTagDefinitionsChanged }: Props) {
+export default function AddPlaceSheet({
+  open,
+  onClose,
+  onSaved,
+  onUnauthorized,
+  onTagDefinitionsChanged,
+}: Props) {
   const { t } = useLanguage();
   const [lookupText, setLookupText] = useState("");
-  const [suggestions, setSuggestions] = useState<{ placeId: string; text: string; secondary?: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<
+    { placeId: string; text: string; secondary?: string }[]
+  >([]);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
@@ -70,7 +78,7 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
       setSaving(false);
       setError(null);
     }
-  }, [open ]);
+  }, [open]);
 
   async function runSearch() {
     const q = lookupText.trim();
@@ -150,7 +158,17 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
     if (lat == null) delete p.lat;
     if (lng == null) delete p.lng;
     if (!enrichment) {
-      for (const k of ["hours", "businessStatus", "priceLevel", "priceRange", "googleRating", "googleRatingCount", "websiteUri", "mapsLinks", "utcOffsetMinutes"]) {
+      for (const k of [
+        "hours",
+        "businessStatus",
+        "priceLevel",
+        "priceRange",
+        "googleRating",
+        "googleRatingCount",
+        "websiteUri",
+        "mapsLinks",
+        "utcOffsetMinutes",
+      ]) {
         if (p[k] == null) delete p[k];
       }
     }
@@ -179,7 +197,11 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
       googleRating: enrichment?.googleRating ?? existing.googleRating,
       googleRatingCount: enrichment?.googleRatingCount ?? existing.googleRatingCount,
       websiteUri: enrichment?.websiteUri ?? existing.websiteUri,
-      mapsLinks: enrichment?.mapsLinks ?? (enrichment?.googleMapsUri ? { placeUri: enrichment.googleMapsUri } : (existing.mapsLinks ?? null)),
+      mapsLinks:
+        enrichment?.mapsLinks ??
+        (enrichment?.googleMapsUri
+          ? { placeUri: enrichment.googleMapsUri }
+          : (existing.mapsLinks ?? null)),
       utcOffsetMinutes: enrichment?.utcOffsetMinutes ?? existing.utcOffsetMinutes,
     };
   }
@@ -212,7 +234,9 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
         googleRating: enrichment?.googleRating ?? null,
         googleRatingCount: enrichment?.googleRatingCount ?? null,
         websiteUri: enrichment?.websiteUri ?? null,
-        mapsLinks: enrichment?.mapsLinks ?? (enrichment?.googleMapsUri ? { placeUri: enrichment.googleMapsUri } : null),
+        mapsLinks:
+          enrichment?.mapsLinks ??
+          (enrichment?.googleMapsUri ? { placeUri: enrichment.googleMapsUri } : null),
         utcOffsetMinutes: enrichment?.utcOffsetMinutes ?? null,
       };
       if (googlePlaceId) {
@@ -296,7 +320,10 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
         <div className="flex-1 overflow-y-auto px-4 pb-4" style={{ overscrollBehavior: "contain" }}>
           {(name || lookupText) && (
             <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-bg">
-              <span aria-hidden className="inline-block h-2 w-2 animate-pulse rounded-full bg-been" />
+              <span
+                aria-hidden
+                className="inline-block h-2 w-2 animate-pulse rounded-full bg-been"
+              />
               <IconGlyph id={icon} size={15} />
               <span>{(name || lookupText).slice(0, 24)} (Adding)</span>
             </div>
@@ -304,7 +331,12 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
 
           <div className="mb-2 flex flex-col gap-2">
             <div className="relative flex items-center">
-              <span aria-hidden className="pointer-events-none absolute left-3.5 text-lg text-muted">⌕</span>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute left-3.5 text-lg text-muted"
+              >
+                ⌕
+              </span>
               <input
                 value={lookupText}
                 onChange={(e) => setLookupText(e.target.value)}
@@ -367,9 +399,19 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
               <div className="flex items-center justify-between rounded-lg bg-been/50 px-3 py-1.5 text-xs font-semibold text-been-ink">
                 <span className="flex min-w-0 items-center gap-1.5 truncate">
                   <span aria-hidden>✓</span>
-                  <span className="truncate">Venue matched: <strong>{name}{address ? `, ${address.split(",").slice(-1)[0]?.trim()}` : ""}</strong></span>
+                  <span className="truncate">
+                    Venue matched:{" "}
+                    <strong>
+                      {name}
+                      {address ? `, ${address.split(",").slice(-1)[0]?.trim()}` : ""}
+                    </strong>
+                  </span>
                 </span>
-                <button type="button" className="ml-2 shrink-0 font-bold underline" onClick={clearPick}>
+                <button
+                  type="button"
+                  className="ml-2 shrink-0 font-bold underline"
+                  onClick={clearPick}
+                >
                   Change
                 </button>
               </div>
@@ -378,13 +420,28 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
 
           {enrichment && <VenueDataCard enrichment={enrichment} />}
 
-          {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
+          {error && (
+            <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">
+              {error}
+            </div>
+          )}
 
-          <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void handleSave(); }}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleSave();
+            }}
+          >
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="add-place-name" className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-muted">
+              <label
+                htmlFor="add-place-name"
+                className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-muted"
+              >
                 <span>Place name</span>
-                {enrichment && <span className="font-semibold normal-case text-accent">verified</span>}
+                {enrichment && (
+                  <span className="font-semibold normal-case text-accent">verified</span>
+                )}
               </label>
               <input
                 id="add-place-name"
@@ -397,11 +454,16 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="add-place-address" className="text-[11px] font-extrabold uppercase tracking-wider text-muted">
+              <label
+                htmlFor="add-place-address"
+                className="text-[11px] font-extrabold uppercase tracking-wider text-muted"
+              >
                 Address / arrondissement
               </label>
               <div className="relative flex items-center">
-                <span aria-hidden className="absolute left-3 text-lg text-muted">📍</span>
+                <span aria-hidden className="absolute left-3 text-lg text-muted">
+                  📍
+                </span>
                 <input
                   id="add-place-address"
                   value={address}
@@ -414,8 +476,14 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">Visit status</span>
-              <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-2/70 p-1" role="group" aria-label="Visit status">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">
+                Visit status
+              </span>
+              <div
+                className="grid grid-cols-2 gap-2 rounded-xl bg-surface-2/70 p-1"
+                role="group"
+                aria-label="Visit status"
+              >
                 <button
                   type="button"
                   aria-pressed={status === "WANT_TO_GO"}
@@ -439,9 +507,15 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">Icon (shown on map &amp; timeline)</span>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">
+                  Icon (shown on map &amp; timeline)
+                </span>
               </div>
-              <div className="flex items-center gap-2 overflow-x-auto rounded-xl bg-surface-2/50 p-2" role="radiogroup" aria-label="place icon">
+              <div
+                className="flex items-center gap-2 overflow-x-auto rounded-xl bg-surface-2/50 p-2"
+                role="radiogroup"
+                aria-label="place icon"
+              >
                 {ICON_ROW.map((id) => (
                   <button
                     key={id}
@@ -459,15 +533,24 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">Tags</span>
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted">
+                Tags
+              </span>
               <div className="edge border-line/50 bg-bg p-2" style={{ borderRadius: 12 }}>
-                <TagCombobox value={tags} onChange={setTags} onTagDefinitionsChanged={onTagDefinitionsChanged} />
+                <TagCombobox
+                  value={tags}
+                  onChange={setTags}
+                  onTagDefinitionsChanged={onTagDefinitionsChanged}
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="add-place-note" className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-muted">
+                <label
+                  htmlFor="add-place-note"
+                  className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-muted"
+                >
                   <span aria-hidden>📝</span> My personal note
                 </label>
                 <span className="text-[10px] text-muted">Markdown supported</span>

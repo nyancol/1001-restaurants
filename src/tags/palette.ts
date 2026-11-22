@@ -66,9 +66,7 @@ export function colorForTag(name: string): TagColor {
 }
 
 export function randomPaletteColor(exclude?: Set<string>): TagColor {
-  const available = exclude?.size
-    ? TAG_PALETTE.filter((c) => !exclude!.has(c))
-    : [...TAG_PALETTE];
+  const available = exclude?.size ? TAG_PALETTE.filter((c) => !exclude!.has(c)) : [...TAG_PALETTE];
   const pool = available.length ? available : [...TAG_PALETTE];
   return pool[Math.floor(Math.random() * pool.length)];
 }

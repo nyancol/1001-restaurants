@@ -16,7 +16,9 @@ export function invalidateTagColors() {
     if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
       window.dispatchEvent(new CustomEvent(TAG_COLORS_EVENT));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function loadColors(): Promise<Map<string, string>> {

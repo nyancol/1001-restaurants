@@ -31,9 +31,13 @@ describe("DEV_LOGIN gating (config)", () => {
   it("is enabled only with DEV_LOGIN=true AND non-production", () => {
     const base = { SESSION_SECRET: SECRET } as any;
     expect(loadConfig({ ...base, DEV_LOGIN: "true", NODE_ENV: "test" }).devLoginEnabled).toBe(true);
-    expect(loadConfig({ ...base, DEV_LOGIN: "true", NODE_ENV: "production" }).devLoginEnabled).toBe(false);
+    expect(loadConfig({ ...base, DEV_LOGIN: "true", NODE_ENV: "production" }).devLoginEnabled).toBe(
+      false,
+    );
     expect(loadConfig({ ...base, NODE_ENV: "test" }).devLoginEnabled).toBe(false);
-    expect(loadConfig({ ...base, DEV_LOGIN: "false", NODE_ENV: "test" }).devLoginEnabled).toBe(false);
+    expect(loadConfig({ ...base, DEV_LOGIN: "false", NODE_ENV: "test" }).devLoginEnabled).toBe(
+      false,
+    );
   });
 });
 
@@ -58,7 +62,9 @@ describe("POST /api/auth/dev-login", () => {
   it("mints a working session usable for the full places flow", async () => {
     await start(true);
     const login = await app.inject({
-      method: "POST", url: "/api/auth/dev-login", payload: { user: "alice" },
+      method: "POST",
+      url: "/api/auth/dev-login",
+      payload: { user: "alice" },
     });
     expect(login.statusCode).toBe(200);
     const setCookie = login.headers["set-cookie"] as string;
@@ -67,33 +73,71 @@ describe("POST /api/auth/dev-login", () => {
     const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie).split(";")[0];
 
     const create = await app.inject({
-      method: "POST", url: "/api/v1/places", headers: { cookie }, payload: { name: "Dev spot", icon: "fork" },
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie },
+      payload: { name: "Dev spot", icon: "fork" },
     });
     expect(create.statusCode).toBe(201);
     expect(create.json().ownerId).toBe(login.json().id);
 
     // Second dev user can read but gets 403 on edit (same enforcement as OIDC).
     const bobLogin = await app.inject({
-      method: "POST", url: "/api/auth/dev-login", payload: { user: "bob" },
+      method: "POST",
+      url: "/api/auth/dev-login",
+      payload: { user: "bob" },
     });
     const bobCookie = (bobLogin.headers["set-cookie"] as string).split(";")[0];
     const id = create.json().id;
-    expect((await app.inject({ method: "GET", url: `/api/v1/places/${id}`, headers: { cookie: bobCookie } })).statusCode).toBe(200);
-    expect((await app.inject({ method: "PATCH", url: `/api/v1/places/${id}`, headers: { cookie: bobCookie }, payload: { note: "x" } })).statusCode).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: `/api/v1/places/${id}`,
+          headers: { cookie: bobCookie },
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await app.inject({
+          method: "PATCH",
+          url: `/api/v1/places/${id}`,
+          headers: { cookie: bobCookie },
+          payload: { note: "x" },
+        })
+      ).statusCode,
+    ).toBe(403);
   });
 
   it("is stable across logins (same user id) and rejects bad names", async () => {
     await start(true);
-    const first = await app.inject({ method: "POST", url: "/api/auth/dev-login", payload: { user: "alice" } });
-    const second = await app.inject({ method: "POST", url: "/api/auth/dev-login", payload: { user: "alice" } });
+    const first = await app.inject({
+      method: "POST",
+      url: "/api/auth/dev-login",
+      payload: { user: "alice" },
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/api/auth/dev-login",
+      payload: { user: "alice" },
+    });
     expect(second.json().id).toBe(first.json().id);
-    const bad = await app.inject({ method: "POST", url: "/api/auth/dev-login", payload: { user: "../../etc" } });
+    const bad = await app.inject({
+      method: "POST",
+      url: "/api/auth/dev-login",
+      payload: { user: "../../etc" },
+    });
     expect(bad.statusCode).toBe(400);
   });
 
   it("does not exist when disabled (404, not 403)", async () => {
     await start(false);
-    const res = await app.inject({ method: "POST", url: "/api/auth/dev-login", payload: { user: "alice" } });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/dev-login",
+      payload: { user: "alice" },
+    });
     expect(res.statusCode).toBe(404);
   });
 

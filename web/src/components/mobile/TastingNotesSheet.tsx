@@ -47,7 +47,15 @@ interface Props {
 }
 
 /** Phone "Expanded Tasting Notes" sheet from Stitch. */
-export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStatus, onRefresh, refreshing, readOnly }: Props) {
+export default function TastingNotesSheet({
+  place,
+  onClose,
+  onEdit,
+  onToggleStatus,
+  onRefresh,
+  refreshing,
+  readOnly,
+}: Props) {
   const rating = place ? displayRating(place) : null;
   const price = place ? priceLabel(place) : null;
   const been = place?.status === "BEEN_TO";
@@ -75,7 +83,10 @@ export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStat
               </button>
             )}
             {rating && (
-              <span className="edge inline-flex items-center gap-1 border-transparent bg-want px-2.5 py-2 text-sm font-bold text-want-ink" style={{ borderRadius: 12 }}>
+              <span
+                className="edge inline-flex items-center gap-1 border-transparent bg-want px-2.5 py-2 text-sm font-bold text-want-ink"
+                style={{ borderRadius: 12 }}
+              >
                 <span aria-hidden>★</span> {rating}
               </span>
             )}
@@ -90,15 +101,23 @@ export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStat
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{ overscrollBehavior: "contain" }}>
-            <h2 className="font-display text-[28px] font-bold leading-tight text-ink">{place.name}</h2>
+          <div
+            className="flex-1 overflow-y-auto px-4 pb-4"
+            style={{ overscrollBehavior: "contain" }}
+          >
+            <h2 className="font-display text-[28px] font-bold leading-tight text-ink">
+              {place.name}
+            </h2>
             <p className="mt-0.5 text-sm text-muted">
               {place.address ?? "Paris"}
               {price ? ` • ${price}` : ""}
             </p>
 
             {place.note && (
-              <div className="edge mt-3 border-line/60 bg-surface-2/40 p-3.5" style={{ borderRadius: 12 }}>
+              <div
+                className="edge mt-3 border-line/60 bg-surface-2/40 p-3.5"
+                style={{ borderRadius: 12 }}
+              >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-1.5 text-sm font-bold text-ink">
                     <span aria-hidden>📝</span> My Personal Note
@@ -130,7 +149,13 @@ export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStat
           </div>
 
           <div className="border-t border-line/60 bg-[#fff8e8] p-4">
-            <PlaceActionBar place={place} onEdit={onEdit} onRefresh={onRefresh} refreshing={refreshing} readOnly={readOnly} />
+            <PlaceActionBar
+              place={place}
+              onEdit={onEdit}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+              readOnly={readOnly}
+            />
           </div>
         </>
       )}

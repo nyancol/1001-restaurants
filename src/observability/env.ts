@@ -49,7 +49,7 @@ export function parseOtelEnv(env: NodeJS.ProcessEnv = process.env): OtelEnv {
       endpoint = raw;
     } catch {
       console.warn(
-        `Invalid OTEL config: OTEL_EXPORTER_OTLP_ENDPOINT is not a valid URL ("${raw}"). Telemetry disabled.`
+        `Invalid OTEL config: OTEL_EXPORTER_OTLP_ENDPOINT is not a valid URL ("${raw}"). Telemetry disabled.`,
       );
     }
   }

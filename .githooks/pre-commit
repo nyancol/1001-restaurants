@@ -40,4 +40,22 @@ if [ $status -ne 0 ]; then
   exit $status
 fi
 
+# Prettier check on staged files (fast, no auto-fix — run `npm run format`).
+# Bypass: FORMAT_DISABLE=1 git commit ...
+if [ "${FORMAT_DISABLE:-}" != "1" ]; then
+  STAGED="$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|mjs|cjs|json|md|yml|yaml)$' || true)"
+  if [ -n "$STAGED" ]; then
+    if command -v npx >/dev/null 2>&1; then
+      # shellcheck disable=SC2086
+      npx --no-install prettier --check $STAGED >/dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "[prettier] commit blocked: run \`npm run format\` then re-stage." >&2
+        # shellcheck disable=SC2086
+        npx --no-install prettier --check $STAGED >&2
+        exit 1
+      fi
+    fi
+  fi
+fi
+
 exit 0

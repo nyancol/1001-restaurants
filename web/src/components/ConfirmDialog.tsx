@@ -99,7 +99,10 @@ export default function ConfirmDialog({
             🗑️
           </span>
           <div className="min-w-0">
-            <h2 id="confirm-delete-title" className="font-display text-lg font-semibold leading-tight text-ink">
+            <h2
+              id="confirm-delete-title"
+              className="font-display text-lg font-semibold leading-tight text-ink"
+            >
               {title}
             </h2>
             <p className="mt-0.5 truncate text-sm font-medium text-ink" title={placeName}>
@@ -133,7 +136,10 @@ export default function ConfirmDialog({
           >
             {pending ? (
               <>
-                <span aria-hidden className="dialog-spinner inline-block h-4 w-4 rounded-full border-2 border-current border-t-transparent" />
+                <span
+                  aria-hidden
+                  className="dialog-spinner inline-block h-4 w-4 rounded-full border-2 border-current border-t-transparent"
+                />
                 {pendingLabel}
               </>
             ) : (

@@ -26,6 +26,19 @@ trap 'kill $BACKEND_PID 2>/dev/null' EXIT INT TERM
 npm run dev:web
 """
 
+# ── Quality gates (mirror CI verify job) ────────────────────────────────────
+[tasks.check]
+description = "Typecheck + lint + format:check + tests (coverage gate)"
+run = "npm run typecheck && npm run lint && npm run format:check && npm test"
+
+[tasks.lint]
+description = "ESLint (JS core rules; types via tsc)"
+run = "npm run lint"
+
+[tasks.format]
+description = "Prettier write"
+run = "npm run format"
+
 # ── Preprod environment ─────────────────────────────────────────────────────
 # Isolated app instance for testing (host port 5174, container port 5173 to
 # match the Caddy target, own container + data volume). Production is never
@@ -46,12 +59,12 @@ run = """
 ARGS="--branch ${usage_branch:?--branch is required}"
 [ "${usage_fresh_db:-}" = "true" ] && ARGS="$ARGS --fresh-db"
 [ "${usage_evict:-}" = "true" ] && ARGS="$ARGS --evict"
-./skills/ops/scripts/preprod-deploy.sh $ARGS
+./skills/ops-preview/scripts/preprod-deploy.sh $ARGS
 """
 
 [tasks.preprod-verify]
 description = "Verify preprod green (read-only: health, OIDC, logs, version, fixture)"
-run = "./skills/ops/scripts/preprod-verify.sh"
+run = "./skills/ops-preview/scripts/preprod-verify.sh"
 
 [tasks.preprod-down]
 description = "Stop the preprod app instance (keeps its data volume)"

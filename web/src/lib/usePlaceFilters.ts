@@ -104,5 +104,28 @@ export function usePlaceFilters(): PlaceFilters {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owner, status, tags, debouncedQ, openEnabled, openAt, price]);
 
-  return { ownerParam, statusParam, tagsParam, qParam, openAtParam, openNowParam, priceParam, owner, setOwner, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, price, setPrice, debouncedQ };
+  return {
+    ownerParam,
+    statusParam,
+    tagsParam,
+    qParam,
+    openAtParam,
+    openNowParam,
+    priceParam,
+    owner,
+    setOwner,
+    status,
+    setStatus,
+    tags,
+    setTags,
+    q,
+    setQ,
+    openEnabled,
+    setOpenEnabled,
+    openAt,
+    setOpenAt,
+    price,
+    setPrice,
+    debouncedQ,
+  };
 }

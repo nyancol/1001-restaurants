@@ -10,7 +10,11 @@ export default function LanguageSwitcher() {
   const { lang, setLanguage, t } = useLanguage();
   return (
     <div className="flex shrink-0 items-center gap-1 text-xs">
-      <div className="edge radius-pill flex overflow-hidden border-line" role="group" aria-label={t["language.groupAria"]}>
+      <div
+        className="edge radius-pill flex overflow-hidden border-line"
+        role="group"
+        aria-label={t["language.groupAria"]}
+      >
         {LANGS.map((l) => (
           <button
             key={l.id}

@@ -9,7 +9,11 @@ export default function ViewToggle() {
   // button should be marked as the current page.
   const onList = pathname === "/";
   return (
-    <nav aria-label={t["view.aria"]} className="edge flex gap-0.5 border-line bg-surface-2/60 p-0.5 lg:hidden" style={{ borderRadius: 999 }}>
+    <nav
+      aria-label={t["view.aria"]}
+      className="edge flex gap-0.5 border-line bg-surface-2/60 p-0.5 lg:hidden"
+      style={{ borderRadius: 999 }}
+    >
       <Link
         to="/"
         aria-current={onList ? "page" : undefined}

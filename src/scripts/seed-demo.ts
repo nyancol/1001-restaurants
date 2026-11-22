@@ -23,12 +23,72 @@ export const FIXTURE_USERS = [
 ] as const;
 
 export const FIXTURE_PLACES = [
-  { owner: "demo-alice", name: "Chez Janou", address: "2 Rue Roger Verlomme, Paris", lat: 48.8546, lng: 2.3665, status: "WANT_TO_GO", icon: "fork", tags: ["francais", "bistrot"], rating: 4.5 },
-  { owner: "demo-alice", name: "Breizh Cafe", address: "109 Rue Vieille du Temple, Paris", lat: 48.863, lng: 2.3632, status: "DONE", icon: "coffee", tags: ["cafe", "brunch"], rating: 4 },
-  { owner: "demo-alice", name: "Le Baratin", address: "3 Rue Jouye-Rouve, Paris", lat: 48.8645, lng: 2.3798, status: "WANT_TO_GO", icon: "cocktail", tags: ["bar", "nature"], rating: null },
-  { owner: "demo-bob", name: "Du Pain et des Idees", address: "34 Rue Yves Toudic, Paris", lat: 48.8707, lng: 2.3625, status: "DONE", icon: "croissant", tags: ["bakery"], rating: 5 },
-  { owner: "demo-bob", name: "Septime", address: "80 Rue de Charonne, Paris", lat: 48.8533, lng: 2.3839, status: "WANT_TO_GO", icon: "fork", tags: ["gastronomique"], rating: null },
-  { owner: "demo-bob", name: "Candelaria", address: "52 Rue de Saintonge, Paris", lat: 48.8628, lng: 2.3642, status: "DONE", icon: "cocktail", tags: ["bar", "mexicain"], rating: 4 },
+  {
+    owner: "demo-alice",
+    name: "Chez Janou",
+    address: "2 Rue Roger Verlomme, Paris",
+    lat: 48.8546,
+    lng: 2.3665,
+    status: "WANT_TO_GO",
+    icon: "fork",
+    tags: ["francais", "bistrot"],
+    rating: 4.5,
+  },
+  {
+    owner: "demo-alice",
+    name: "Breizh Cafe",
+    address: "109 Rue Vieille du Temple, Paris",
+    lat: 48.863,
+    lng: 2.3632,
+    status: "DONE",
+    icon: "coffee",
+    tags: ["cafe", "brunch"],
+    rating: 4,
+  },
+  {
+    owner: "demo-alice",
+    name: "Le Baratin",
+    address: "3 Rue Jouye-Rouve, Paris",
+    lat: 48.8645,
+    lng: 2.3798,
+    status: "WANT_TO_GO",
+    icon: "cocktail",
+    tags: ["bar", "nature"],
+    rating: null,
+  },
+  {
+    owner: "demo-bob",
+    name: "Du Pain et des Idees",
+    address: "34 Rue Yves Toudic, Paris",
+    lat: 48.8707,
+    lng: 2.3625,
+    status: "DONE",
+    icon: "croissant",
+    tags: ["bakery"],
+    rating: 5,
+  },
+  {
+    owner: "demo-bob",
+    name: "Septime",
+    address: "80 Rue de Charonne, Paris",
+    lat: 48.8533,
+    lng: 2.3839,
+    status: "WANT_TO_GO",
+    icon: "fork",
+    tags: ["gastronomique"],
+    rating: null,
+  },
+  {
+    owner: "demo-bob",
+    name: "Candelaria",
+    address: "52 Rue de Saintonge, Paris",
+    lat: 48.8628,
+    lng: 2.3642,
+    status: "DONE",
+    icon: "cocktail",
+    tags: ["bar", "mexicain"],
+    rating: 4,
+  },
 ] as const;
 
 const PROD_DB_PATH = path.resolve("/data/app.db");
@@ -40,7 +100,9 @@ export function targetPath(env: NodeJS.ProcessEnv = process.env): string {
 
 export function guardTarget(resolved: string, env: NodeJS.ProcessEnv = process.env): void {
   if (resolved === PROD_DB_PATH && env.PREPROD_RESEED !== "1" && env.ALLOW_PROD_SEED !== "1") {
-    throw new Error("Refusing to reseed /data/app.db without PREPROD_RESEED=1 or ALLOW_PROD_SEED=1.");
+    throw new Error(
+      "Refusing to reseed /data/app.db without PREPROD_RESEED=1 or ALLOW_PROD_SEED=1.",
+    );
   }
 }
 
@@ -71,8 +133,20 @@ function main(): void {
     );
     const seen = new Map<string, Set<string>>();
     for (const p of FIXTURE_PLACES) {
-      insPlace.run(randomUUID(), p.owner, p.name, p.address, p.lat, p.lng, p.status, p.icon,
-        JSON.stringify(p.tags), p.rating, now, now);
+      insPlace.run(
+        randomUUID(),
+        p.owner,
+        p.name,
+        p.address,
+        p.lat,
+        p.lng,
+        p.status,
+        p.icon,
+        JSON.stringify(p.tags),
+        p.rating,
+        now,
+        now,
+      );
       if (!seen.has(p.owner)) seen.set(p.owner, new Set());
       for (const t of p.tags) seen.get(p.owner)!.add(t);
     }
@@ -82,7 +156,8 @@ function main(): void {
     const palette = ["#D64545", "#8B5E34", "#7C5CBF", "#D9932B", "#2FA84F", "#0090FF"];
     let i = 0;
     for (const [owner, tags] of seen) {
-      for (const name of [...tags].sort()) insTag.run(owner, name, palette[i++ % palette.length], now, now);
+      for (const name of [...tags].sort())
+        insTag.run(owner, name, palette[i++ % palette.length], now, now);
     }
   });
   txn();

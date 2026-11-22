@@ -9,8 +9,13 @@ interface Props {
 export default function SearchBar({ q, setQ, onOpenFilters, activeFilterCount }: Props) {
   return (
     <div className="flex gap-2">
-      <label className="edge flex min-h-[48px] flex-1 items-center gap-2 border-line bg-surface-2/60 px-4" style={{ borderRadius: 16 }}>
-        <span aria-hidden className="text-lg text-muted">⌕</span>
+      <label
+        className="edge flex min-h-[48px] flex-1 items-center gap-2 border-line bg-surface-2/60 px-4"
+        style={{ borderRadius: 16 }}
+      >
+        <span aria-hidden className="text-lg text-muted">
+          ⌕
+        </span>
         <span className="sr-only">Search dishes, spots, arrondissements</span>
         <input
           value={q}
@@ -33,11 +38,22 @@ export default function SearchBar({ q, setQ, onOpenFilters, activeFilterCount }:
       <button
         type="button"
         onClick={onOpenFilters}
-        aria-label={activeFilterCount > 0 ? `Open filters, ${activeFilterCount} active` : "Open filters"}
+        aria-label={
+          activeFilterCount > 0 ? `Open filters, ${activeFilterCount} active` : "Open filters"
+        }
         className="edge relative inline-flex min-h-[48px] min-w-[48px] items-center justify-center border-line bg-surface-2/60 text-ink"
         style={{ borderRadius: 16 }}
       >
-        <svg aria-hidden width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+        <svg
+          aria-hidden
+          width={22}
+          height={22}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+        >
           <line x1="4" y1="7" x2="20" y2="7" />
           <circle cx="9" cy="7" r="2.2" fill="var(--surface)" />
           <line x1="4" y1="12" x2="20" y2="12" />

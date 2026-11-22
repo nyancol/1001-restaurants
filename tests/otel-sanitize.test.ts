@@ -27,7 +27,14 @@ describe("sanitizeAttributes", () => {
   });
 
   it("flags token/secret variants", () => {
-    for (const k of ["Authorization", "COOKIE", "access_token", "refreshToken", "clientSecret", "API_KEY"]) {
+    for (const k of [
+      "Authorization",
+      "COOKIE",
+      "access_token",
+      "refreshToken",
+      "clientSecret",
+      "API_KEY",
+    ]) {
       expect(isRedactedKey(k)).toBe(true);
     }
     expect(isRedactedKey("http.route")).toBe(false);

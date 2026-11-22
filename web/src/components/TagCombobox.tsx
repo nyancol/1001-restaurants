@@ -41,18 +41,39 @@ async function fetchFreshTags(q: string): Promise<TagCount[]> {
   return tags;
 }
 
-export default function TagCombobox({ value, onChange, allowCreate = true, showSelected = true, variant = "combobox", onTagDefinitionsChanged }: Props) {
+export default function TagCombobox({
+  value,
+  onChange,
+  allowCreate = true,
+  showSelected = true,
+  variant = "combobox",
+  onTagDefinitionsChanged,
+}: Props) {
   if (variant === "filter-list") {
     return <FilterTagList value={value} onChange={onChange} />;
   }
-  return <Combobox value={value} onChange={onChange} allowCreate={allowCreate} showSelected={showSelected} onTagDefinitionsChanged={onTagDefinitionsChanged} />;
+  return (
+    <Combobox
+      value={value}
+      onChange={onChange}
+      allowCreate={allowCreate}
+      showSelected={showSelected}
+      onTagDefinitionsChanged={onTagDefinitionsChanged}
+    />
+  );
 }
 
 function colorMap(list: TagCount[]): Map<string, string> {
   return new Map(list.map((t) => [t.tag, t.color]));
 }
 
-function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: string[]) => void }) {
+function FilterTagList({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (tags: string[]) => void;
+}) {
   const { t } = useLanguage();
   const [all, setAll] = useState<TagCount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,9 +86,15 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
       const my = ++seq;
       setLoading(true);
       const p = opts?.force ? fetchFreshTags("") : cachedTags("");
-      p.then((tags) => { if (!cancelled && my === seq) setAll(tags); })
-        .catch(() => { if (!cancelled && my === seq) setAll([]); })
-        .finally(() => { if (!cancelled && my === seq) setLoading(false); });
+      p.then((tags) => {
+        if (!cancelled && my === seq) setAll(tags);
+      })
+        .catch(() => {
+          if (!cancelled && my === seq) setAll([]);
+        })
+        .finally(() => {
+          if (!cancelled && my === seq) setLoading(false);
+        });
     }
     load();
     // Option A: live refresh without page reload when definitions change elsewhere.
@@ -75,7 +102,10 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
     // can never overwrite newer counts.
     const onEvent = () => load({ force: true });
     window.addEventListener(TAG_COLORS_EVENT, onEvent);
-    return () => { cancelled = true; window.removeEventListener(TAG_COLORS_EVENT, onEvent); };
+    return () => {
+      cancelled = true;
+      window.removeEventListener(TAG_COLORS_EVENT, onEvent);
+    };
   }, []);
 
   const visible = useMemo(() => {
@@ -100,10 +130,17 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
       />
       {loading && <div className="px-1 py-2 text-sm text-muted">{t["tags.loadingTags"]}</div>}
       {!loading && visible.length === 0 && (
-        <div className="px-1 py-2 text-sm text-muted">{all.length === 0 ? t["tags.noTags"] : t["tags.noMatches"]}</div>
+        <div className="px-1 py-2 text-sm text-muted">
+          {all.length === 0 ? t["tags.noTags"] : t["tags.noMatches"]}
+        </div>
       )}
       {!loading && visible.length > 0 && (
-        <ul className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto" role="listbox" aria-label={t["tags.filterOptionsAria"]} aria-multiselectable="true">
+        <ul
+          className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto"
+          role="listbox"
+          aria-label={t["tags.filterOptionsAria"]}
+          aria-multiselectable="true"
+        >
           {visible.map((s) => {
             const active = value.includes(s.tag);
             return (
@@ -112,10 +149,16 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
                   type="button"
                   role="option"
                   aria-selected={active}
-                  aria-label={t["tags.filterOption"](active ? t["tags.removeAction"] : t["tags.addAction"], s.tag, s.count)}
+                  aria-label={t["tags.filterOption"](
+                    active ? t["tags.removeAction"] : t["tags.addAction"],
+                    s.tag,
+                    s.count,
+                  )}
                   onClick={() => toggle(s.tag)}
                   className={`edge radius-input flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-sm lg:min-h-9 ${
-                    active ? "border-accent bg-accent font-medium text-accent-ink" : "border-line bg-surface text-ink hover:bg-surface-2"
+                    active
+                      ? "border-accent bg-accent font-medium text-accent-ink"
+                      : "border-line bg-surface text-ink hover:bg-surface-2"
                   }`}
                 >
                   <span className="flex min-w-0 items-center gap-1.5">
@@ -123,7 +166,11 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
                     <TagDot color={s.color ?? colorForTag(s.tag)} />
                     <span className="truncate">#{s.tag}</span>
                   </span>
-                  <span className={`font-telemetry shrink-0 ${active ? "text-accent-ink opacity-80" : "text-muted"}`}>{s.count}</span>
+                  <span
+                    className={`font-telemetry shrink-0 ${active ? "text-accent-ink opacity-80" : "text-muted"}`}
+                  >
+                    {s.count}
+                  </span>
                 </button>
               </li>
             );
@@ -135,9 +182,15 @@ function FilterTagList({ value, onChange }: { value: string[]; onChange: (tags: 
 }
 
 function ManageMenu({
-  tag, color, onClose, onRename, onRecolor, onDelete,
+  tag,
+  color,
+  onClose,
+  onRename,
+  onRecolor,
+  onDelete,
 }: {
-  tag: string; color: string;
+  tag: string;
+  color: string;
   onClose: () => void;
   onRename: (next: string) => void;
   onRecolor: (next: string) => void;
@@ -155,10 +208,38 @@ function ManageMenu({
     >
       {mode === "menu" && (
         <>
-          <button type="button" role="menuitem" onClick={() => setMode("rename")} className="flex w-full px-3 py-2 text-left text-sm hover:bg-surface-2">{t["tags.rename"]}</button>
-          <button type="button" role="menuitem" onClick={() => setMode("color")} className="flex w-full px-3 py-2 text-left text-sm hover:bg-surface-2">{t["tags.changeColor"]}</button>
-          <button type="button" role="menuitem" aria-label={t["tags.deleteTagAria"](tag)} onClick={() => setMode("delete")} className="flex w-full px-3 py-2 text-left text-sm text-danger-ink hover:bg-surface-2">{t["tags.deleteTag"]}</button>
-          <button type="button" onClick={onClose} className="flex w-full px-3 py-2 text-left text-xs text-muted hover:bg-surface-2">{t["tags.cancel"]}</button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => setMode("rename")}
+            className="flex w-full px-3 py-2 text-left text-sm hover:bg-surface-2"
+          >
+            {t["tags.rename"]}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => setMode("color")}
+            className="flex w-full px-3 py-2 text-left text-sm hover:bg-surface-2"
+          >
+            {t["tags.changeColor"]}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            aria-label={t["tags.deleteTagAria"](tag)}
+            onClick={() => setMode("delete")}
+            className="flex w-full px-3 py-2 text-left text-sm text-danger-ink hover:bg-surface-2"
+          >
+            {t["tags.deleteTag"]}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex w-full px-3 py-2 text-left text-xs text-muted hover:bg-surface-2"
+          >
+            {t["tags.cancel"]}
+          </button>
         </>
       )}
       {mode === "rename" && (
@@ -172,15 +253,33 @@ function ManageMenu({
             aria-label={t["tags.renameAria"](tag)}
           />
           <div className="mt-2 flex gap-1.5">
-            <button type="button" onClick={() => { if (draft.trim()) onRename(draft); }} className="radius-input bg-accent px-3 py-1.5 text-sm text-accent-ink">{t["tags.renameConfirm"]}</button>
-            <button type="button" onClick={() => setMode("menu")} className="radius-input px-3 py-1.5 text-sm text-muted">{t["tags.cancel"]}</button>
+            <button
+              type="button"
+              onClick={() => {
+                if (draft.trim()) onRename(draft);
+              }}
+              className="radius-input bg-accent px-3 py-1.5 text-sm text-accent-ink"
+            >
+              {t["tags.renameConfirm"]}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("menu")}
+              className="radius-input px-3 py-1.5 text-sm text-muted"
+            >
+              {t["tags.cancel"]}
+            </button>
           </div>
         </div>
       )}
       {mode === "color" && (
         <div className="p-2">
           <p className="mb-2 text-xs text-muted">{t["tags.changeColorAria"](tag)}</p>
-          <div className="grid grid-cols-8 gap-1.5" role="group" aria-label={t["tags.changeColorAria"](tag)}>
+          <div
+            className="grid grid-cols-8 gap-1.5"
+            role="group"
+            aria-label={t["tags.changeColorAria"](tag)}
+          >
             {TAG_PALETTE.map((c) => (
               <button
                 key={c}
@@ -190,22 +289,40 @@ function ManageMenu({
                 aria-pressed={c === color}
                 title={c}
                 style={{
-                  width: 24, height: 24, borderRadius: 9999, backgroundColor: c,
+                  width: 24,
+                  height: 24,
+                  borderRadius: 9999,
+                  backgroundColor: c,
                   outline: c === color ? "2px solid currentColor" : "1px solid rgba(0,0,0,0.25)",
                   outlineOffset: 1,
                 }}
               />
             ))}
           </div>
-          <button type="button" onClick={() => setMode("menu")} className="mt-2 text-xs text-muted">{t["tags.cancel"]}</button>
+          <button type="button" onClick={() => setMode("menu")} className="mt-2 text-xs text-muted">
+            {t["tags.cancel"]}
+          </button>
         </div>
       )}
       {mode === "delete" && (
         <div className="p-2">
           <p className="text-sm">{t["tags.deleteConfirm"](tag)}</p>
           <div className="mt-2 flex gap-1.5">
-            <button type="button" aria-label={t["tags.deleteTagAria"](tag)} onClick={onDelete} className="radius-input bg-danger-bg px-3 py-1.5 text-sm text-danger-ink">{t["tags.deleteConfirmCta"]}</button>
-            <button type="button" onClick={() => setMode("menu")} className="radius-input px-3 py-1.5 text-sm text-muted">{t["tags.cancel"]}</button>
+            <button
+              type="button"
+              aria-label={t["tags.deleteTagAria"](tag)}
+              onClick={onDelete}
+              className="radius-input bg-danger-bg px-3 py-1.5 text-sm text-danger-ink"
+            >
+              {t["tags.deleteConfirmCta"]}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("menu")}
+              className="radius-input px-3 py-1.5 text-sm text-muted"
+            >
+              {t["tags.cancel"]}
+            </button>
           </div>
         </div>
       )}
@@ -214,10 +331,20 @@ function ManageMenu({
 }
 
 function EditablePill({
-  tag, color, colors, allTags, value, onChange, onTagDefinitionsChanged,
+  tag,
+  color,
+  colors,
+  allTags,
+  value,
+  onChange,
+  onTagDefinitionsChanged,
 }: {
-  tag: string; color: string; colors: Map<string, string>; allTags: TagCount[];
-  value: string[]; onChange: (tags: string[]) => void;
+  tag: string;
+  color: string;
+  colors: Map<string, string>;
+  allTags: TagCount[];
+  value: string[];
+  onChange: (tags: string[]) => void;
   onTagDefinitionsChanged?: (m: TagMutation) => void;
 }) {
   const { t } = useLanguage();
@@ -225,22 +352,35 @@ function EditablePill({
   const [error, setError] = useState<string | null>(null);
   const pressTimer = useRef<any>(null);
 
-  function close() { setOpen(false); setError(null); }
+  function close() {
+    setOpen(false);
+    setError(null);
+  }
 
   function startPress() {
     if (pressTimer.current) clearTimeout(pressTimer.current);
     pressTimer.current = setTimeout(() => {
-      try { (navigator as any).vibrate?.(10); } catch { /* ignore */ }
+      try {
+        (navigator as any).vibrate?.(10);
+      } catch {
+        /* ignore */
+      }
       setOpen(true);
     }, 500);
   }
   function cancelPress() {
-    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
   }
 
   async function handleRename(nextRaw: string) {
     const next = nextRaw.trim().toLowerCase();
-    if (!next || next === tag) { close(); return; }
+    if (!next || next === tag) {
+      close();
+      return;
+    }
     const existsDef = allTags.some((x) => x.tag === next);
     const existsValue = value.includes(next);
     if ((existsDef || existsValue) && !window.confirm(t["tags.mergeConfirm"](tag, next))) return;
@@ -294,14 +434,23 @@ function EditablePill({
   return (
     <span
       className="edge radius-pill relative inline-flex items-center gap-1.5 border-line bg-surface-2 py-0.5 pl-2 pr-1 text-sm text-ink"
-      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen((o) => !o);
+      }}
       onTouchStart={startPress}
       onTouchEnd={cancelPress}
       onTouchMove={cancelPress}
     >
       <TagDot color={color} />
       {tag}
-      <button type="button" aria-label={t["tags.removeTag"](tag)} className="text-muted hover:text-ink" onClick={() => onChange(value.filter((x) => x !== tag))}>
+      <button
+        type="button"
+        aria-label={t["tags.removeTag"](tag)}
+        className="text-muted hover:text-ink"
+        onClick={() => onChange(value.filter((x) => x !== tag))}
+      >
         ×
       </button>
       <button
@@ -309,20 +458,46 @@ function EditablePill({
         aria-label={t["tags.manageMenuAria"](tag)}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
         className="px-1 text-muted hover:text-ink"
       >
         …
       </button>
       {open && (
-        <ManageMenu tag={tag} color={color} onClose={close} onRename={handleRename} onRecolor={handleRecolor} onDelete={handleDelete} />
+        <ManageMenu
+          tag={tag}
+          color={color}
+          onClose={close}
+          onRename={handleRename}
+          onRecolor={handleRecolor}
+          onDelete={handleDelete}
+        />
       )}
-      {error && <span role="alert" className="sr-only">{error}</span>}
+      {error && (
+        <span role="alert" className="sr-only">
+          {error}
+        </span>
+      )}
     </span>
   );
 }
 
-function Combobox({ value, onChange, allowCreate, showSelected, onTagDefinitionsChanged }: { value: string[]; onChange: (tags: string[]) => void; allowCreate: boolean; showSelected: boolean; onTagDefinitionsChanged?: (m: TagMutation) => void }) {
+function Combobox({
+  value,
+  onChange,
+  allowCreate,
+  showSelected,
+  onTagDefinitionsChanged,
+}: {
+  value: string[];
+  onChange: (tags: string[]) => void;
+  allowCreate: boolean;
+  showSelected: boolean;
+  onTagDefinitionsChanged?: (m: TagMutation) => void;
+}) {
   const { t } = useLanguage();
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<TagCount[]>([]);
@@ -336,12 +511,17 @@ function Combobox({ value, onChange, allowCreate, showSelected, onTagDefinitions
     function load(opts?: { force?: boolean }) {
       const my = ++seq;
       const p = opts?.force ? fetchFreshTags("") : cachedTags("");
-      p.then((tags) => { if (!cancelled && my === seq) setAllDefs(tags); }).catch(() => {});
+      p.then((tags) => {
+        if (!cancelled && my === seq) setAllDefs(tags);
+      }).catch(() => {});
     }
     load();
     const onEvent = () => load({ force: true });
     window.addEventListener(TAG_COLORS_EVENT, onEvent);
-    return () => { cancelled = true; window.removeEventListener(TAG_COLORS_EVENT, onEvent); };
+    return () => {
+      cancelled = true;
+      window.removeEventListener(TAG_COLORS_EVENT, onEvent);
+    };
   }, [value.length]);
 
   useEffect(() => {
@@ -354,11 +534,20 @@ function Combobox({ value, onChange, allowCreate, showSelected, onTagDefinitions
     const tt = setTimeout(() => {
       setLoading(true);
       cachedTags(q)
-        .then((tags) => { if (!cancelled) setSuggestions(tags); })
-        .catch(() => { if (!cancelled) setSuggestions([]); })
-        .finally(() => { if (!cancelled) setLoading(false); });
+        .then((tags) => {
+          if (!cancelled) setSuggestions(tags);
+        })
+        .catch(() => {
+          if (!cancelled) setSuggestions([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 250);
-    return () => { cancelled = true; clearTimeout(tt); };
+    return () => {
+      cancelled = true;
+      clearTimeout(tt);
+    };
   }, [input]);
 
   const colors = useMemo(() => colorMap(allDefs), [allDefs]);
@@ -378,7 +567,12 @@ function Combobox({ value, onChange, allowCreate, showSelected, onTagDefinitions
     if (!colors.has(tg)) {
       colors.set(tg, colorForTag(tg));
       // Best-effort eager create so manage menu works pre-save; ignore races.
-      createTag(tg).then(() => { invalidateTagCache(); onTagDefinitionsChanged?.({ type: "create", name: tg }); }).catch(() => {});
+      createTag(tg)
+        .then(() => {
+          invalidateTagCache();
+          onTagDefinitionsChanged?.({ type: "create", name: tg });
+        })
+        .catch(() => {});
     }
     onChange([...value, tg]);
     setInput("");
@@ -395,13 +589,24 @@ function Combobox({ value, onChange, allowCreate, showSelected, onTagDefinitions
 
   return (
     <div className="relative">
-      <label className="mb-1 block text-sm font-medium text-ink" htmlFor="tag-input">{t["tags.label"]}</label>
+      <label className="mb-1 block text-sm font-medium text-ink" htmlFor="tag-input">
+        {t["tags.label"]}
+      </label>
       {showSelected && (
-      <div className="mb-1 flex flex-wrap gap-1">
-        {value.map((tag) => (
-          <EditablePill key={tag} tag={tag} color={pillColor(tag)} colors={colors} allTags={allDefs} value={value} onChange={onChange} onTagDefinitionsChanged={onTagDefinitionsChanged} />
-        ))}
-      </div>
+        <div className="mb-1 flex flex-wrap gap-1">
+          {value.map((tag) => (
+            <EditablePill
+              key={tag}
+              tag={tag}
+              color={pillColor(tag)}
+              colors={colors}
+              allTags={allDefs}
+              value={value}
+              onChange={onChange}
+              onTagDefinitionsChanged={onTagDefinitionsChanged}
+            />
+          ))}
+        </div>
       )}
       <input
         id="tag-input"
@@ -435,7 +640,10 @@ function Combobox({ value, onChange, allowCreate, showSelected, onTagDefinitions
                 className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-ink hover:bg-surface-2"
                 onClick={() => addTag(s.tag)}
               >
-                <span className="flex items-center gap-1.5"><TagDot color={s.color ?? colorForTag(s.tag)} />{s.tag}</span>
+                <span className="flex items-center gap-1.5">
+                  <TagDot color={s.color ?? colorForTag(s.tag)} />
+                  {s.tag}
+                </span>
                 <span className="font-telemetry text-muted">{s.count}</span>
               </button>
             ))}
