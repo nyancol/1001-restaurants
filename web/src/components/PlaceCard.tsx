@@ -1,11 +1,9 @@
 import type { Place } from "../lib/api";
-import { mapsUrlFor } from "../lib/api";
-import { useEffect, useRef, useState } from "react";
 import { PIN_FILL } from "../theme/pins";
 import IconGlyph from "./IconGlyph";
 import TagDot from "./TagDot";
 import HoursSection from "./HoursSection";
-import PlaceActionBar, { refreshErrorMessage } from "./PlaceActionBar";
+import PlaceActionBar from "./PlaceActionBar";
 import { colorForDisplay, useTagColors } from "../lib/useTagColors";
 import { useLanguage } from "../i18n/LanguageContext";
 
@@ -16,10 +14,6 @@ interface Props {
   readOnly?: boolean;
   onRefresh?: (p: Place) => Promise<unknown>;
   refreshing?: boolean;
-  /** Hide the photo placeholder grid (e.g. phone list follows Stitch: text-only cards). */
-  hidePhotos?: boolean;
-  /** Phone list uses Stitch pill buttons (Edit/Share) + icon actions; desktop uses compact icons. */
-  actionStyle?: "icons" | "pills";
 }
 
 const DAY_NAMES: string[][] = [
@@ -89,17 +83,9 @@ function ratingLabel(r: number | null): string {
   return "Noted";
 }
 
-export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, onRefresh, refreshing, hidePhotos, actionStyle = "icons" }: Props) {
+export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, onRefresh, refreshing }: Props) {
   const { t } = useLanguage();
   const tagColors = useTagColors();
-  const [copied, setCopied] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [busyLocal, setBusyLocal] = useState(false);
-  const copyTimer = useRef<number | null>(null);
-  useEffect(() => () => {
-    if (copyTimer.current) window.clearTimeout(copyTimer.current);
-  }, []);
-  const busy = (refreshing ?? false) || busyLocal;
   const closed = p.businessStatus === "CLOSED_PERMANENTLY";
   const tempClosed = p.businessStatus === "CLOSED_TEMPORARILY";
   const iconId = (p.icon || "fork").toLowerCase();
@@ -107,41 +93,6 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
   const price = priceLabel(p);
   const personal = p.rating ?? null;
   const google = p.googleRating ?? null;
-
-  async function shareMaps() {
-    const url = mapsUrlFor(p);
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = url;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
-    }
-    setCopied(true);
-    if (copyTimer.current) window.clearTimeout(copyTimer.current);
-    copyTimer.current = window.setTimeout(() => setCopied(false), 2000);
-  }
-
-  async function handleRefresh() {
-    if (busy || !onRefresh) return;
-    if (!p.googlePlaceId) {
-      setRefreshError(t["card.noGoogle"]);
-      return;
-    }
-    setRefreshError(null);
-    setBusyLocal(true);
-    try {
-      await onRefresh(p);
-    } catch (err: any) {
-      setRefreshError(refreshErrorMessage(err, p.googlePlaceId, t));
-    } finally {
-      setBusyLocal(false);
-    }
-  }
 
   return (
     <div className={closed ? "opacity-80" : ""}>
@@ -202,17 +153,6 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
         </blockquote>
       )}
 
-      {/* Photo placeholders (until photo support lands; hidden on phone list per Stitch) */}
-      {!hidePhotos && p.note && (
-        <div className="mt-3 grid grid-cols-2 gap-2" aria-hidden>
-          {[0, 1].map((i) => (
-            <div key={i} className="flex h-24 items-center justify-center bg-line/40 text-xs font-semibold uppercase tracking-wide text-muted" style={{ borderRadius: 12 }}>
-              img
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Tags */}
       {(p.tags ?? []).length > 0 && (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -243,72 +183,23 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
           ) : (
             <span>{google != null && personal != null ? `🅖 ${google}${p.googleRatingCount != null ? ` (${p.googleRatingCount})` : ""}` : ratingLabel(personal)}</span>
           )}
-        </span>
-        {actionStyle === "pills" && (
-          <span className="inline-flex w-full items-center gap-1.5 pt-1">
-            <PlaceActionBar place={p} onEdit={onEdit} onRefresh={onRefresh} refreshing={refreshing} readOnly={readOnly} />
-          </span>
-        )}
-        {!readOnly && actionStyle !== "pills" && (
-          <span className="inline-flex items-center gap-1.5">
-            <button
-              type="button"
-              className="edge radius-input inline-flex h-9 min-w-[36px] items-center justify-center border-line bg-surface px-2.5 text-ink hover:bg-surface-2"
-              onClick={() => onEdit(p)}
-              aria-label={t["card.edit"]}
-              title={t["card.edit"]}
+          {!readOnly && p.websiteUri && (
+            <a
+              href={p.websiteUri}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+              aria-label={t["card.website"]}
+              title={t["card.website"]}
             >
-              ✎
-            </button>
-            {onRefresh && (
-              <button
-                type="button"
-                className="edge radius-input inline-flex h-9 items-center justify-center gap-1 border-line bg-surface px-2.5 text-ink disabled:opacity-50 hover:bg-surface-2"
-                onClick={() => void handleRefresh()}
-                disabled={busy || !p.googlePlaceId}
-                title={!p.googlePlaceId ? t["card.noGoogle"] : t["card.refreshTitle"]}
-                aria-label={busy ? t["card.refreshingAria"] : t["card.refreshAria"]}
-              >
-                <span aria-hidden className={busy ? "animate-spin inline-block" : "inline-block"}>↻</span>
-              </button>
-            )}
-            {p.websiteUri && (
-              <a
-                href={p.websiteUri}
-                target="_blank"
-                rel="noreferrer"
-                className="edge radius-input inline-flex h-9 min-w-[36px] items-center justify-center border-line bg-surface px-2.5 text-accent"
-                aria-label={t["card.website"]}
-                title={t["card.website"]}
-              >
-                🌐
-              </a>
-            )}
-            {mapsUrlFor(p) && (
-              <button
-                type="button"
-                className="edge radius-input inline-flex h-9 min-w-[36px] items-center justify-center border-line bg-surface px-2.5 text-ink hover:bg-surface-2"
-                onClick={() => void shareMaps()}
-                aria-label={t["card.shareAria"]}
-                title={copied ? t["card.copied"] : t["card.share"]}
-              >
-                {copied ? "✓" : "⤴"}
-              </button>
-            )}
-          </span>
-        )}
+              <span aria-hidden>↗</span>
+            </a>
+          )}
+        </span>
+        <span className="inline-flex w-full items-center gap-1.5 pt-1">
+          <PlaceActionBar place={p} onEdit={onEdit} onRefresh={onRefresh} refreshing={refreshing} readOnly={readOnly} />
+        </span>
       </div>
-      {refreshError && (
-        <div className="edge radius-input mt-2 border-danger-line bg-danger-bg px-2 py-1 text-xs text-danger-ink" role="alert">
-          {refreshError}
-        </div>
-      )}
-      {copied && (
-        <div className="edge radius-input mt-2 border-been bg-been px-2 py-1 text-xs font-semibold text-been-ink" role="status">
-          ✓ {t["card.copiedLive"]}
-        </div>
-      )}
-      <div className="sr-only" aria-live="polite">{copied ? t["card.copiedLive"] : ""}</div>
     </div>
   );
 }

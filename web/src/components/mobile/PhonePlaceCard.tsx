@@ -38,8 +38,6 @@ export default function PhonePlaceCard({ place: p, selected, onToggleStatus, onE
         readOnly={readOnly}
         onRefresh={onRefresh}
         refreshing={refreshing}
-        hidePhotos
-        actionStyle="pills"
       />
     </article>
   );
