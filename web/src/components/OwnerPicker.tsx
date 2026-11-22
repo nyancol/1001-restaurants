@@ -76,7 +76,10 @@ export default function OwnerPicker({ owner, setOwner }: Props) {
           style={{ borderRadius: 999 }}
         >
           <span aria-hidden>👤</span> {t["scope.me"]}
-          <span className={`inline-flex min-h-[22px] min-w-[22px] items-center justify-center px-1.5 text-[11px] font-bold ${isMe ? "bg-white/20 text-accent-ink" : "bg-surface text-muted"}`} style={{ borderRadius: 999 }}>
+          <span
+            className={`inline-flex min-h-[22px] min-w-[22px] items-center justify-center px-1.5 text-[11px] font-bold ${isMe ? "bg-white/20 text-accent-ink" : "bg-surface text-muted"}`}
+            style={{ borderRadius: 999 }}
+          >
             {loading ? "…" : meCount}
           </span>
         </button>
@@ -90,8 +93,11 @@ export default function OwnerPicker({ owner, setOwner }: Props) {
           style={{ borderRadius: 999 }}
         >
           <span aria-hidden>👥</span> {t["scope.friends"]}
-          <span className={`inline-flex min-h-[22px] min-w-[22px] items-center justify-center px-1.5 text-[11px] font-bold ${isFriends ? "bg-white/20 text-accent-ink" : "bg-surface text-muted"}`} style={{ borderRadius: 999 }}>
-            {loading ? "…" : (friendsCount || others.length)}
+          <span
+            className={`inline-flex min-h-[22px] min-w-[22px] items-center justify-center px-1.5 text-[11px] font-bold ${isFriends ? "bg-white/20 text-accent-ink" : "bg-surface text-muted"}`}
+            style={{ borderRadius: 999 }}
+          >
+            {loading ? "…" : friendsCount || others.length}
           </span>
         </button>
       </div>

@@ -1,5 +1,12 @@
-export interface DayTime { day: number; hour: number; minute: number }
-export interface HoursPeriod { open?: DayTime | null; close?: DayTime | null }
+export interface DayTime {
+  day: number;
+  hour: number;
+  minute: number;
+}
+export interface HoursPeriod {
+  open?: DayTime | null;
+  close?: DayTime | null;
+}
 
 function toMinutes(d: DayTime): number {
   return d.day * 24 * 60 + d.hour * 60 + d.minute;
@@ -21,18 +28,27 @@ export function isOpenAt(periods: HoursPeriod[] | null | undefined, at: Date): b
     if (p.close.day < p.open.day) closeMin += 7 * 24 * 60;
     else if (closeMin <= openMin) closeMin += 24 * 60; // overnight within period
     // Also consider weekly wrap: test now and now +/- week for spans crossing Sunday.
-    if ((nowMin >= openMin && nowMin < closeMin) || (nowMin + 7 * 24 * 60 >= openMin && nowMin + 7 * 24 * 60 < closeMin)) {
+    if (
+      (nowMin >= openMin && nowMin < closeMin) ||
+      (nowMin + 7 * 24 * 60 >= openMin && nowMin + 7 * 24 * 60 < closeMin)
+    ) {
       return true;
     }
   }
   return false;
 }
 
-export function parseHoursJson(raw: unknown): { periods: HoursPeriod[]; weekdayDescriptions: string[] } | null {
+export function parseHoursJson(
+  raw: unknown,
+): { periods: HoursPeriod[]; weekdayDescriptions: string[] } | null {
   if (typeof raw !== "string" || !raw) return null;
   try {
     const v = JSON.parse(raw);
-    if (Array.isArray(v?.periods)) return { periods: v.periods as HoursPeriod[], weekdayDescriptions: v.weekdayDescriptions ?? [] };
+    if (Array.isArray(v?.periods))
+      return {
+        periods: v.periods as HoursPeriod[],
+        weekdayDescriptions: v.weekdayDescriptions ?? [],
+      };
     if (Array.isArray(v)) return { periods: v as HoursPeriod[], weekdayDescriptions: [] };
     return null;
   } catch {

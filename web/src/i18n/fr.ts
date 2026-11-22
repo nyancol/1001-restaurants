@@ -45,7 +45,8 @@ export const fr: typeof en = {
 
   "empty.noPlaces": "Aucun lieu pour le moment",
   "empty.scopeHasNoPlaces": (scope: string) => `${scope} n'a aucun lieu pour le moment`,
-  "empty.scopeHasNoPlacesFilter": (scope: string) => `${scope} n'a aucun lieu correspondant à ces filtres`,
+  "empty.scopeHasNoPlacesFilter": (scope: string) =>
+    `${scope} n'a aucun lieu correspondant à ces filtres`,
   "empty.tryClear": "Essayez de réinitialiser les filtres ou de voir un autre utilisateur.",
   "empty.saveFirst": "Enregistrez votre premier lieu depuis la page Ajouter.",
 
@@ -110,7 +111,8 @@ export const fr: typeof en = {
   "add.venueData": "Données du lieu (auto)",
   "add.readOnlyBadge": "Lecture seule",
   "add.googleReviews": (n: number) => `(${n.toLocaleString()} avis Google)`,
-  "add.hoursToggle": (open: boolean) => (open ? "Touchez pour masquer la semaine" : "Touchez pour voir la semaine"),
+  "add.hoursToggle": (open: boolean) =>
+    open ? "Touchez pour masquer la semaine" : "Touchez pour voir la semaine",
   "add.name": "Nom *",
   "add.namePlaceholder": "Nom du lieu",
   "add.address": "Adresse",
@@ -126,7 +128,8 @@ export const fr: typeof en = {
   "add.saving": "Enregistrement…",
   "add.nameRequired": "Le nom est requis.",
   "add.updatedExisting": "Votre entrée existante a été mise à jour.",
-  "add.duplicateNamed": (name: string) => `Vous avez déjà enregistré « ${name} ». Le mettre à jour au lieu de créer un doublon ?`,
+  "add.duplicateNamed": (name: string) =>
+    `Vous avez déjà enregistré « ${name} ». Le mettre à jour au lieu de créer un doublon ?`,
   "add.duplicateGeneric": "Vous avez déjà enregistré ce lieu. Le mettre à jour à la place ?",
   "add.saveFailed": "Échec de l'enregistrement.",
   "add.googleSnapshot": "Aperçu Google · enregistré avec ce lieu",
@@ -135,18 +138,21 @@ export const fr: typeof en = {
   "add.reviews": (n: number) => ` (${n} avis)`,
   "add.statusLabel": "Statut :",
   "add.hoursSaved": "🕒 Horaires (7 jours enregistrés) :",
-  "add.mapsLinkNote": "🔗 Le lien Maps sera disponible via Partager après l'enregistrement (non affiché ici)",
+  "add.mapsLinkNote":
+    "🔗 Le lien Maps sera disponible via Partager après l'enregistrement (non affiché ici)",
 
   "lookup.label": "Recherche de nom",
   "lookup.placeholder": "Tapez un nom, puis Rechercher",
   "lookup.search": "Rechercher",
   "lookup.searching": "Recherche…",
   "lookup.minChars": "Tapez au moins 2 caractères, puis Rechercher.",
-  "lookup.noMatches": "Aucun résultat — ajustez votre recherche ou enregistrez manuellement ci-dessous.",
+  "lookup.noMatches":
+    "Aucun résultat — ajustez votre recherche ou enregistrez manuellement ci-dessous.",
   "lookup.failed": "Échec de la recherche — vous pouvez enregistrer manuellement ci-dessous.",
-  "lookup.detailsFailed": "Détails indisponibles — votre texte est conservé, vous pouvez enregistrer sans coordonnées.",
-  "lookup.unavailable": "La recherche Google n'est pas configurée — la saisie manuelle ci-dessous fonctionne.",
-
+  "lookup.detailsFailed":
+    "Détails indisponibles — votre texte est conservé, vous pouvez enregistrer sans coordonnées.",
+  "lookup.unavailable":
+    "La recherche Google n'est pas configurée — la saisie manuelle ci-dessous fonctionne.",
 
   "icon.fork": "Couverts",
   "icon.burger": "Burger",
@@ -177,7 +183,8 @@ export const fr: typeof en = {
   "tags.noMatches": "Aucun résultat.",
   "tags.noMatchesCreate": "Aucun résultat — appuyez sur Entrée pour créer.",
   "tags.filterOptionsAria": "options de filtre par tag",
-  "tags.filterOption": (action: string, tag: string, count: number) => `${action} le filtre ${tag} (${count} lieu${count === 1 ? "" : "x"})`,
+  "tags.filterOption": (action: string, tag: string, count: number) =>
+    `${action} le filtre ${tag} (${count} lieu${count === 1 ? "" : "x"})`,
   "tags.addAction": "ajouter",
   "tags.removeAction": "retirer",
   "tags.tagInputAria": "saisie de tag",
@@ -192,12 +199,14 @@ export const fr: typeof en = {
   "tags.renameAria": (t: string) => `renommer le tag ${t}`,
   "tags.renamePrompt": (t: string) => `Renommer « ${t} » en :`,
   "tags.renameConfirm": "Renommer",
-  "tags.mergeConfirm": (from: string, to: string) => `« ${to} » existe déjà. Fusionner « ${from} » dedans ? Les lieux portant les deux n’en garderont qu’un.`,
+  "tags.mergeConfirm": (from: string, to: string) =>
+    `« ${to} » existe déjà. Fusionner « ${from} » dedans ? Les lieux portant les deux n’en garderont qu’un.`,
   "tags.changeColor": "Changer la couleur",
   "tags.changeColorAria": (t: string) => `changer la couleur de ${t}`,
   "tags.deleteTag": "Supprimer le tag",
   "tags.deleteTagAria": (t: string) => `supprimer le tag ${t}`,
-  "tags.deleteConfirm": (t: string) => `Supprimer le tag « ${t} » ? Il sera retiré de tous vos lieux qui le portent.`,
+  "tags.deleteConfirm": (t: string) =>
+    `Supprimer le tag « ${t} » ? Il sera retiré de tous vos lieux qui le portent.`,
   "tags.deleteConfirmCta": "Supprimer le tag",
   "tags.cancel": "Annuler",
   "tags.manageFailed": "Échec de la mise à jour du tag — réessayez.",
@@ -213,7 +222,8 @@ export const fr: typeof en = {
   "editor.deleteConfirmCta": "Supprimer le lieu",
   "editor.deleteCancel": "Conserver",
   "editor.deleting": "Suppression…",
-  "editor.deleteConfirm": (name: string) => `Supprimer « ${name} » ? Cette action est irréversible.`,
+  "editor.deleteConfirm": (name: string) =>
+    `Supprimer « ${name} » ? Cette action est irréversible.`,
   "editor.deleteFailed": "Échec de la suppression — réessayez.",
 
   "card.closed": "⛔ Fermé définitivement",
@@ -263,10 +273,14 @@ export const fr: typeof en = {
   "map.closeDetailsAria": "fermer les détails",
   "map.geoFallback": "Position indisponible — Paris affiché.",
   "map.geoStay": "Position indisponible — on reste ici.",
-  "map.failedToStart": (msg: string) => `Échec du démarrage de la carte : ${msg} — ce navigateur ne gère peut-être pas WebGL2.`,
-  "map.error": (msg: string) => `Erreur de carte : ${msg} — vérifiez la connexion/tuiles, puis rechargez.`,
-  "map.setupFailed": (msg: string) => `Échec de l'initialisation de la carte : ${msg} — rechargez pour réessayer.`,
-  "map.unlocatedHidden": (n: number) => `${n} lieu${n > 1 ? "x" : ""} sans position masqué${n > 1 ? "s" : ""} de la carte.`,
+  "map.failedToStart": (msg: string) =>
+    `Échec du démarrage de la carte : ${msg} — ce navigateur ne gère peut-être pas WebGL2.`,
+  "map.error": (msg: string) =>
+    `Erreur de carte : ${msg} — vérifiez la connexion/tuiles, puis rechargez.`,
+  "map.setupFailed": (msg: string) =>
+    `Échec de l'initialisation de la carte : ${msg} — rechargez pour réessayer.`,
+  "map.unlocatedHidden": (n: number) =>
+    `${n} lieu${n > 1 ? "x" : ""} sans position masqué${n > 1 ? "s" : ""} de la carte.`,
   "error.loadPlaces": "Échec du chargement des lieux.",
   "error.loadUsers": "Échec du chargement des utilisateurs.",
 };

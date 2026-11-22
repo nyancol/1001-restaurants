@@ -144,7 +144,8 @@ describe("POST /api/v1/places/:id/refresh", () => {
     const gfetch = overrides.googlePlacesKey === "" ? undefined : googleFetchOk(calls);
     const built = await buildApp({
       config,
-      googleFetch: (gfetch ?? (async () => ({ ok: true, status: 200, json: async () => detailsBody() }))) as any,
+      googleFetch: (gfetch ??
+        (async () => ({ ok: true, status: 200, json: async () => detailsBody() }))) as any,
       skipOidcDiscovery: true,
       placesKeyResolver: async () => publicKey,
     });
@@ -184,7 +185,11 @@ describe("POST /api/v1/places/:id/refresh", () => {
     });
     const before = created.updatedAt;
     await new Promise((r) => setTimeout(r, 5));
-    const res = await app.inject({ method: "POST", url: `/api/v1/places/${created.id}/refresh`, headers: { cookie: a } });
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/places/${created.id}/refresh`,
+      headers: { cookie: a },
+    });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.googleRating).toBe(4.5);
@@ -208,17 +213,29 @@ describe("POST /api/v1/places/:id/refresh", () => {
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);
     const created = await createPlace(a, { name: "A1", icon: "fork", googlePlaceId: "ChIJ123" });
-    const res = await app.inject({ method: "POST", url: `/api/v1/places/${created.id}/refresh`, headers: { cookie: b } });
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/places/${created.id}/refresh`,
+      headers: { cookie: b },
+    });
     expect(res.statusCode).toBe(403);
   });
 
   it("returns 404 for unknown id and 422 without googlePlaceId", async () => {
     await makeRefreshApp();
     const a = await cookieFor(ALICE);
-    const missing = await app.inject({ method: "POST", url: "/api/v1/places/nope/refresh", headers: { cookie: a } });
+    const missing = await app.inject({
+      method: "POST",
+      url: "/api/v1/places/nope/refresh",
+      headers: { cookie: a },
+    });
     expect(missing.statusCode).toBe(404);
     const manual = await createPlace(a, { name: "Manual", icon: "cocktail" });
-    const res = await app.inject({ method: "POST", url: `/api/v1/places/${manual.id}/refresh`, headers: { cookie: a } });
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/places/${manual.id}/refresh`,
+      headers: { cookie: a },
+    });
     expect(res.statusCode).toBe(422);
   });
 
@@ -227,7 +244,11 @@ describe("POST /api/v1/places/:id/refresh", () => {
     const a = await cookieFor(ALICE);
     // create needs no google key; inject directly since googleFetch unused for create
     const created = await createPlace(a, { name: "A1", icon: "fork", googlePlaceId: "ChIJ123" });
-    const res = await app.inject({ method: "POST", url: `/api/v1/places/${created.id}/refresh`, headers: { cookie: a } });
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/places/${created.id}/refresh`,
+      headers: { cookie: a },
+    });
     expect(res.statusCode).toBe(503);
   });
 
@@ -241,20 +262,27 @@ describe("POST /api/v1/places/:id/refresh", () => {
       googleRating: 4.3,
     });
     // force 429
-    (app as any);
+    app as any;
     await app.close();
     fs.rmSync(dir, { recursive: true, force: true });
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "oyster-refresh429-"));
     const rateLimitedFetch = async () => ({ ok: false, status: 429, json: async () => ({}) });
     const config: any = {
-      port: 0, host: "127.0.0.1", nodeEnv: "test",
+      port: 0,
+      host: "127.0.0.1",
+      nodeEnv: "test",
       databasePath: path.join(dir, "app.db"),
-      sessionSecret: SECRET, cookieSecure: false,
-      oidcIssuer: "", oidcClientId: "", oidcClientSecret: "",
+      sessionSecret: SECRET,
+      cookieSecure: false,
+      oidcIssuer: "",
+      oidcClientId: "",
+      oidcClientSecret: "",
       oidcRedirectUri: "http://localhost:3000/api/auth/callback",
-      oidcEnabled: false, googlePlacesKey: "test-key",
+      oidcEnabled: false,
+      googlePlacesKey: "test-key",
       placesApiResource: RESOURCE,
-      oidcIssuer: ISSUER, trustProxy: false,
+      oidcIssuer: ISSUER,
+      trustProxy: false,
     };
     ({ app } = await buildApp({
       config,
@@ -262,10 +290,23 @@ describe("POST /api/v1/places/:id/refresh", () => {
       skipOidcDiscovery: true,
       placesKeyResolver: async () => publicKey,
     }));
-    const created2 = await createPlace(a, { name: "B1", icon: "cocktail", googlePlaceId: "ChIJ999", googleRating: 3.1 });
-    const r429 = await app.inject({ method: "POST", url: `/api/v1/places/${created2.id}/refresh`, headers: { cookie: a } });
+    const created2 = await createPlace(a, {
+      name: "B1",
+      icon: "cocktail",
+      googlePlaceId: "ChIJ999",
+      googleRating: 3.1,
+    });
+    const r429 = await app.inject({
+      method: "POST",
+      url: `/api/v1/places/${created2.id}/refresh`,
+      headers: { cookie: a },
+    });
     expect(r429.statusCode).toBe(429);
-    const after = await app.inject({ method: "GET", url: `/api/v1/places/${created2.id}`, headers: { cookie: a } });
+    const after = await app.inject({
+      method: "GET",
+      url: `/api/v1/places/${created2.id}`,
+      headers: { cookie: a },
+    });
     expect(after.json().googleRating).toBe(3.1);
     void created;
   });
@@ -280,7 +321,11 @@ describe("POST /api/v1/places/:id/refresh", () => {
     const wrongAud = await mintToken(privateKey, { aud: "https://other.example.com" });
 
     // read:places lists all without cookie
-    const list = await app.inject({ method: "GET", url: "/api/v1/places?owner=all", headers: { authorization: `Bearer ${both}` } });
+    const list = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?owner=all",
+      headers: { authorization: `Bearer ${both}` },
+    });
     expect(list.statusCode).toBe(200);
     expect(list.json().data.length).toBe(1);
 

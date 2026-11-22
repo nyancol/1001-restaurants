@@ -10,7 +10,13 @@ type PlaceStatus = "WANT_TO_GO" | "BEEN_TO"; // mirror of api.ts Place.status
 
 interface Props {
   place: Place;
-  onSave: (patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: PlaceStatus }) => void;
+  onSave: (patch: {
+    tags: string[];
+    rating: number | null;
+    note: string | null;
+    icon: string;
+    status?: PlaceStatus;
+  }) => void;
   onCancel: () => void;
   onDelete?: () => void | Promise<void>;
   onTagDefinitionsChanged?: (m: TagMutation) => void;
@@ -24,13 +30,21 @@ function scoreLabel(r: number | null): string {
   return "Noted";
 }
 
-export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTagDefinitionsChanged }: Props) {
+export default function PlaceEditor({
+  place: p,
+  onSave,
+  onCancel,
+  onDelete,
+  onTagDefinitionsChanged,
+}: Props) {
   const { t } = useLanguage();
   const [tags, setTags] = useState<string[]>(p.tags ?? []);
   const [rating, setRating] = useState<number | null>(p.rating);
   const [note, setNote] = useState(p.note ?? "");
-  const [icon, setIcon] = useState((p.icon ?? "fork"));
-  const [status, setStatus] = useState<PlaceStatus>((p.status as PlaceStatus | undefined) ?? "WANT_TO_GO");
+  const [icon, setIcon] = useState(p.icon ?? "fork");
+  const [status, setStatus] = useState<PlaceStatus>(
+    (p.status as PlaceStatus | undefined) ?? "WANT_TO_GO",
+  );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -63,11 +77,17 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-display text-lg font-semibold text-ink">{p.name}</span>
         {p.rating != null && (
-          <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-xs font-bold text-ink" style={{ borderRadius: 999 }}>
+          <span
+            className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-xs font-bold text-ink"
+            style={{ borderRadius: 999 }}
+          >
             ★ {Number(p.rating).toFixed(1)}
           </span>
         )}
-        <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted" style={{ borderRadius: 999 }}>
+        <span
+          className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted"
+          style={{ borderRadius: 999 }}
+        >
           ✎ Editing place
         </span>
       </div>
@@ -75,10 +95,17 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
 
       {/* Status segmented */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <div className="edge inline-flex bg-surface-2 p-1" style={{ borderRadius: 999 }} role="group" aria-label="Visit status">
+        <div
+          className="edge inline-flex bg-surface-2 p-1"
+          style={{ borderRadius: 999 }}
+          role="group"
+          aria-label="Visit status"
+        >
           <button
             type="button"
-            onClick={() => { setStatus("WANT_TO_GO"); }}
+            onClick={() => {
+              setStatus("WANT_TO_GO");
+            }}
             aria-pressed={status === "WANT_TO_GO"}
             className={`inline-flex min-h-[36px] items-center gap-1 px-3 text-xs font-semibold ${status === "WANT_TO_GO" ? "bg-surface text-ink shadow-theme" : "text-muted"}`}
             style={{ borderRadius: 999 }}
@@ -87,7 +114,9 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
           </button>
           <button
             type="button"
-            onClick={() => { setStatus("BEEN_TO"); }}
+            onClick={() => {
+              setStatus("BEEN_TO");
+            }}
             aria-pressed={status === "BEEN_TO"}
             className={`inline-flex min-h-[36px] items-center gap-1 px-3 text-xs font-semibold ${status === "BEEN_TO" ? "bg-been text-been-ink shadow-theme" : "text-muted"}`}
             style={{ borderRadius: 999 }}
@@ -109,20 +138,35 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
       {/* Tags */}
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Tags &amp; Cuisine</span>
+          <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+            Tags &amp; Cuisine
+          </span>
           <span className="text-[11px] text-muted">{tags.length} active</span>
         </div>
         <div className="edge border-line bg-surface-2/60 p-2" style={{ borderRadius: 12 }}>
-          <TagCombobox value={tags} onChange={setTags} onTagDefinitionsChanged={onTagDefinitionsChanged} />
-          <p className="mt-1.5 text-[11px] text-muted">Suggestions: + French Bistro · + Candlelight · + Wood-fired</p>
+          <TagCombobox
+            value={tags}
+            onChange={setTags}
+            onTagDefinitionsChanged={onTagDefinitionsChanged}
+          />
+          <p className="mt-1.5 text-[11px] text-muted">
+            Suggestions: + French Bistro · + Candlelight · + Wood-fired
+          </p>
         </div>
       </div>
 
       {/* Rating */}
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-muted">Your Rating</span>
-          <span className="edge bg-surface-2 px-2 py-0.5 text-[11px] font-bold text-ink" style={{ borderRadius: 999 }}>{(rating ?? 0).toFixed(1)} / 5.0</span>
+          <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+            Your Rating
+          </span>
+          <span
+            className="edge bg-surface-2 px-2 py-0.5 text-[11px] font-bold text-ink"
+            style={{ borderRadius: 999 }}
+          >
+            {(rating ?? 0).toFixed(1)} / 5.0
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <Stars value={rating} onChange={setRating} />
@@ -132,7 +176,9 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
 
       {/* Note */}
       <div className="mt-3">
-        <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">Note</span>
+        <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">
+          Note
+        </span>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -169,7 +215,15 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
           type="button"
           className="edge inline-flex min-h-[44px] items-center justify-center gap-1.5 border-accent bg-accent px-5 text-sm font-semibold text-accent-ink"
           style={{ borderRadius: 999 }}
-          onClick={() => onSave({ tags, rating, note: note || null, icon: icon.trim().toLowerCase() || "fork", status })}
+          onClick={() =>
+            onSave({
+              tags,
+              rating,
+              note: note || null,
+              icon: icon.trim().toLowerCase() || "fork",
+              status,
+            })
+          }
         >
           ✓ Save Changes
         </button>
@@ -192,7 +246,9 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
           pendingLabel={t["editor.deleting"]}
           pending={deleting}
           onConfirm={() => void confirmDelete()}
-          onCancel={() => { if (!deleting) setConfirmOpen(false); }}
+          onCancel={() => {
+            if (!deleting) setConfirmOpen(false);
+          }}
         />
       )}
     </div>

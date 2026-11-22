@@ -33,12 +33,12 @@ export async function discoverOidc(config: AppConfig): Promise<client.Configurat
         client.discovery(
           new URL(config.oidcIssuer),
           config.oidcClientId,
-          config.oidcClientSecret || undefined
-        )
+          config.oidcClientSecret || undefined,
+        ),
     );
   } catch (err: any) {
     throw new Error(
-      `Invalid OIDC config: discovery failed for issuer "${config.oidcIssuer}" — ${err?.message ?? err}. Check OIDC_ISSUER/OIDC_CLIENT_ID/OIDC_REDIRECT_URI.`
+      `Invalid OIDC config: discovery failed for issuer "${config.oidcIssuer}" — ${err?.message ?? err}. Check OIDC_ISSUER/OIDC_CLIENT_ID/OIDC_REDIRECT_URI.`,
     );
   }
 }
@@ -74,7 +74,11 @@ function pkceTake(state: string): { verifier: string; state: string } | undefine
   return v;
 }
 
-export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc: () => client.Configuration | null) {
+export function registerAuthRoutes(
+  app: FastifyInstance,
+  deps: OidcDeps,
+  getOidc: () => client.Configuration | null,
+) {
   const { config, db } = deps;
 
   app.get("/api/auth/login", { config: rateLimitPresets.auth }, async (req, reply) => {
@@ -117,7 +121,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc
           client.authorizationCodeGrant(oidc, fullUrl, {
             pkceCodeVerifier: stored?.verifier,
             expectedState: stored ? state : undefined,
-          })
+          }),
       );
       const claims = tokens.claims();
       if (!claims?.sub) return reply.code(401).send({ error: "invalid_token" });
@@ -129,7 +133,9 @@ export function registerAuthRoutes(app: FastifyInstance, deps: OidcDeps, getOidc
       let userId: string;
       if (existing.length === 0) {
         userId = randomUUID();
-        await db.insert(users).values({ id: userId, sub, displayName, createdAt: now, updatedAt: now });
+        await db
+          .insert(users)
+          .values({ id: userId, sub, displayName, createdAt: now, updatedAt: now });
       } else {
         userId = existing[0].id;
         await db.update(users).set({ displayName, updatedAt: now }).where(eq(users.id, userId));

@@ -24,8 +24,7 @@ function newApiFetch(calls: any[]): any {
     if (String(url).includes("/v1/places/")) {
       return {
         status: 200,
-        text: async () =>
-          JSON.stringify({ id: "ChIJ Paris", displayName: { text: "Paris" } }),
+        text: async () => JSON.stringify({ id: "ChIJ Paris", displayName: { text: "Paris" } }),
       };
     }
     return {
@@ -45,14 +44,26 @@ describe("google proxy (Places API New) with mocked fetch", () => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "oyster-google-"));
     calls = [];
     const config: any = {
-      port: 0, host: "127.0.0.1", nodeEnv: "test",
+      port: 0,
+      host: "127.0.0.1",
+      nodeEnv: "test",
       databasePath: path.join(dir, "app.db"),
-      sessionSecret: SECRET, cookieSecure: false, devLoginEnabled: false,
-      oidcIssuer: "", oidcClientId: "", oidcClientSecret: "",
+      sessionSecret: SECRET,
+      cookieSecure: false,
+      devLoginEnabled: false,
+      oidcIssuer: "",
+      oidcClientId: "",
+      oidcClientSecret: "",
       oidcRedirectUri: "http://localhost:3000/api/auth/callback",
-      oidcEnabled: false, googlePlacesKey: "test-key", trustProxy: false,
+      oidcEnabled: false,
+      googlePlacesKey: "test-key",
+      trustProxy: false,
     };
-    ({ app } = await buildApp({ config, googleFetch: newApiFetch(calls), skipOidcDiscovery: true }));
+    ({ app } = await buildApp({
+      config,
+      googleFetch: newApiFetch(calls),
+      skipOidcDiscovery: true,
+    }));
     cookie = `oyster_session=${await signSession(SECRET, "u1")}`;
   });
 
@@ -62,7 +73,11 @@ describe("google proxy (Places API New) with mocked fetch", () => {
   });
 
   it("proxies autocomplete via POST with key in header, never in URL", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/google/autocomplete?q=par", headers: { cookie } });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/google/autocomplete?q=par",
+      headers: { cookie },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json().suggestions).toBeTruthy();
     expect(calls).toHaveLength(1);
@@ -75,7 +90,11 @@ describe("google proxy (Places API New) with mocked fetch", () => {
   });
 
   it("proxies details with field mask", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/google/details?placeId=ChIJParis", headers: { cookie } });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/google/details?placeId=ChIJParis",
+      headers: { cookie },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json().id).toBe("ChIJ Paris");
     const mask = calls[0].init.headers["X-Goog-FieldMask"] as string;
@@ -96,15 +115,27 @@ describe("google proxy (Places API New) with mocked fetch", () => {
   it("returns 503 when key missing", async () => {
     const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), "oyster-google2-"));
     const config: any = {
-      port: 0, host: "127.0.0.1", nodeEnv: "test",
+      port: 0,
+      host: "127.0.0.1",
+      nodeEnv: "test",
       databasePath: path.join(dir2, "app.db"),
-      sessionSecret: SECRET, cookieSecure: false, devLoginEnabled: false,
-      oidcIssuer: "", oidcClientId: "", oidcClientSecret: "",
+      sessionSecret: SECRET,
+      cookieSecure: false,
+      devLoginEnabled: false,
+      oidcIssuer: "",
+      oidcClientId: "",
+      oidcClientSecret: "",
       oidcRedirectUri: "http://localhost:3000/api/auth/callback",
-      oidcEnabled: false, googlePlacesKey: "", trustProxy: false,
+      oidcEnabled: false,
+      googlePlacesKey: "",
+      trustProxy: false,
     };
     const { app: app2 } = await buildApp({ config, skipOidcDiscovery: true });
-    const res = await app2.inject({ method: "GET", url: "/api/v1/google/autocomplete?q=par", headers: { cookie } });
+    const res = await app2.inject({
+      method: "GET",
+      url: "/api/v1/google/autocomplete?q=par",
+      headers: { cookie },
+    });
     expect(res.statusCode).toBe(503);
     await app2.close();
     fs.rmSync(dir2, { recursive: true, force: true });

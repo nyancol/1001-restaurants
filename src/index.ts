@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   }
   if (observability.enabled) {
     console.info(
-      `OTEL exporting to ${config.otelEndpoint} service=${config.otelServiceName} env=${config.otelEnvironment} version=${config.otelServiceVersion}`
+      `OTEL exporting to ${config.otelEndpoint} service=${config.otelServiceName} env=${config.otelEnvironment} version=${config.otelServiceVersion}`,
     );
     const shutdown = async (): Promise<void> => {
       try {

@@ -68,7 +68,8 @@ describe("places API auth + ownership", () => {
   it("create-then-get round trip forces ownerId to session user", async () => {
     const aliceCookie = await cookieFor(ALICE);
     const create = await app.inject({
-      method: "POST", url: "/api/v1/places",
+      method: "POST",
+      url: "/api/v1/places",
       headers: { cookie: aliceCookie },
       payload: { name: "Chez Janou", icon: "fork", tags: [" Japonais ", "JAPONAIS"], rating: 4 },
     });
@@ -78,7 +79,11 @@ describe("places API auth + ownership", () => {
     expect(body.status).toBe("WANT_TO_GO");
     expect(body.tags).toEqual(["japonais"]);
 
-    const get = await app.inject({ method: "GET", url: `/api/v1/places/${body.id}`, headers: { cookie: aliceCookie } });
+    const get = await app.inject({
+      method: "GET",
+      url: `/api/v1/places/${body.id}`,
+      headers: { cookie: aliceCookie },
+    });
     expect(get.statusCode).toBe(200);
     expect(get.json().name).toBe("Chez Janou");
   });
@@ -86,7 +91,9 @@ describe("places API auth + ownership", () => {
   it("rejects invalid rating with 400 and stores nothing", async () => {
     const c = await cookieFor(ALICE);
     const res = await app.inject({
-      method: "POST", url: "/api/v1/places", headers: { cookie: c },
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: c },
       payload: { name: "Bad rating", icon: "fork", rating: 9 },
     });
     expect(res.statusCode).toBe(400);
@@ -98,54 +105,147 @@ describe("places API auth + ownership", () => {
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);
     const create = await app.inject({
-      method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "Alice spot", icon: "fork" },
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "Alice spot", icon: "fork" },
     });
     const id = create.json().id;
-    const read = await app.inject({ method: "GET", url: `/api/v1/places/${id}`, headers: { cookie: b } });
+    const read = await app.inject({
+      method: "GET",
+      url: `/api/v1/places/${id}`,
+      headers: { cookie: b },
+    });
     expect(read.statusCode).toBe(200);
     const patch = await app.inject({
-      method: "PATCH", url: `/api/v1/places/${id}`, headers: { cookie: b }, payload: { note: "hijack" },
+      method: "PATCH",
+      url: `/api/v1/places/${id}`,
+      headers: { cookie: b },
+      payload: { note: "hijack" },
     });
     expect(patch.statusCode).toBe(403);
-    const del = await app.inject({ method: "DELETE", url: `/api/v1/places/${id}`, headers: { cookie: b } });
+    const del = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/places/${id}`,
+      headers: { cookie: b },
+    });
     expect(del.statusCode).toBe(403);
   });
 
   it("list defaults to own places; owner=all returns others", async () => {
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "A1", icon: "fork" } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: b }, payload: { name: "B1", icon: "coffee" } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "A1", icon: "fork" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: b },
+      payload: { name: "B1", icon: "coffee" },
+    });
     const mine = await app.inject({ method: "GET", url: "/api/v1/places", headers: { cookie: a } });
     expect(mine.json().data.map((p: any) => p.name)).toEqual(["A1"]);
-    const all = await app.inject({ method: "GET", url: "/api/v1/places?owner=all", headers: { cookie: a } });
-    expect(all.json().data.map((p: any) => p.name).sort()).toEqual(["A1", "B1"]);
-    const bobs = await app.inject({ method: "GET", url: `/api/v1/places?owner=${BOB}`, headers: { cookie: a } });
+    const all = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?owner=all",
+      headers: { cookie: a },
+    });
+    expect(
+      all
+        .json()
+        .data.map((p: any) => p.name)
+        .sort(),
+    ).toEqual(["A1", "B1"]);
+    const bobs = await app.inject({
+      method: "GET",
+      url: `/api/v1/places?owner=${BOB}`,
+      headers: { cookie: a },
+    });
     expect(bobs.json().data.map((p: any) => p.name)).toEqual(["B1"]);
   });
 
   it("filters by price tier and hides unknown prices", async () => {
     const a = await cookieFor(ALICE);
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "Cheap", icon: "fork", priceLevel: "PRICE_LEVEL_INEXPENSIVE" } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "Mid", icon: "fork", priceLevel: "PRICE_LEVEL_MODERATE" } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "Pricy", icon: "fork", priceLevel: "€€€" } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "Unknown", icon: "fork" } });
-    const mid = await app.inject({ method: "GET", url: "/api/v1/places?price=%24%24", headers: { cookie: a } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "Cheap", icon: "fork", priceLevel: "PRICE_LEVEL_INEXPENSIVE" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "Mid", icon: "fork", priceLevel: "PRICE_LEVEL_MODERATE" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "Pricy", icon: "fork", priceLevel: "€€€" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "Unknown", icon: "fork" },
+    });
+    const mid = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?price=%24%24",
+      headers: { cookie: a },
+    });
     expect(mid.statusCode).toBe(200);
     expect(mid.json().data.map((p: any) => p.name)).toEqual(["Mid"]);
-    const cheap = await app.inject({ method: "GET", url: "/api/v1/places?price=1", headers: { cookie: a } });
+    const cheap = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?price=1",
+      headers: { cookie: a },
+    });
     expect(cheap.json().data.map((p: any) => p.name)).toEqual(["Cheap"]);
-    const unfiltered = await app.inject({ method: "GET", url: "/api/v1/places", headers: { cookie: a } });
-    expect(unfiltered.json().data.map((p: any) => p.name).sort()).toEqual(["Cheap", "Mid", "Pricy", "Unknown"]);
+    const unfiltered = await app.inject({
+      method: "GET",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+    });
+    expect(
+      unfiltered
+        .json()
+        .data.map((p: any) => p.name)
+        .sort(),
+    ).toEqual(["Cheap", "Mid", "Pricy", "Unknown"]);
   });
 
   it("scopes tags to own places ranked by own total count", async () => {
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "A1", icon: "fork", tags: ["cozy", "japonais"] } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "A2", icon: "cocktail", tags: ["cozy"] } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: b }, payload: { name: "B1", icon: "coffee", tags: ["cozy", "terrasse"] } });
-    const res = await app.inject({ method: "GET", url: "/api/v1/tags?q=co", headers: { cookie: a } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "A1", icon: "fork", tags: ["cozy", "japonais"] },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "A2", icon: "cocktail", tags: ["cozy"] },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: b },
+      payload: { name: "B1", icon: "coffee", tags: ["cozy", "terrasse"] },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/tags?q=co",
+      headers: { cookie: a },
+    });
     expect(res.statusCode).toBe(200);
     const tags = res.json().data;
     const cozy = tags.find((t: any) => t.tag === "cozy");
@@ -156,9 +256,24 @@ describe("places API auth + ownership", () => {
   it("returns full ranked own tag list on empty query with totals", async () => {
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "A1", icon: "fork", tags: ["cozy", "japonais"] } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "A2", icon: "cocktail", tags: ["cozy"] } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: b }, payload: { name: "B1", icon: "coffee", tags: ["cozy", "terrasse", "zz-other"] } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "A1", icon: "fork", tags: ["cozy", "japonais"] },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "A2", icon: "cocktail", tags: ["cozy"] },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: b },
+      payload: { name: "B1", icon: "coffee", tags: ["cozy", "terrasse", "zz-other"] },
+    });
     const res = await app.inject({ method: "GET", url: "/api/v1/tags", headers: { cookie: a } });
     expect(res.statusCode).toBe(200);
     const tags = res.json().data;
@@ -190,27 +305,54 @@ describe("places API auth + ownership", () => {
     ]);
     const a = await cookieFor(ALICE);
     const b = await cookieFor(BOB);
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "A1", icon: "fork" } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: a }, payload: { name: "A2", icon: "cocktail" } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: b }, payload: { name: "B1", icon: "coffee" } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "A1", icon: "fork" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: a },
+      payload: { name: "A2", icon: "cocktail" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: b },
+      payload: { name: "B1", icon: "coffee" },
+    });
     const res = await app.inject({ method: "GET", url: "/api/v1/users", headers: { cookie: a } });
     expect(res.statusCode).toBe(200);
     expect(res.json().data).toEqual([
       { id: ALICE, displayName: "Alice", placeCount: 2 },
       { id: BOB, displayName: "Bob", placeCount: 1 },
     ]);
-    const all = await app.inject({ method: "GET", url: "/api/v1/places?owner=all", headers: { cookie: a } });
+    const all = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?owner=all",
+      headers: { cookie: a },
+    });
     expect(all.statusCode).toBe(200);
     const byName = new Map(all.json().data.map((p: any) => [p.name, p]));
     expect(byName.get("A1").ownerDisplayName).toBe("Alice");
     expect(byName.get("B1").ownerDisplayName).toBe("Bob");
-    const one = await app.inject({ method: "GET", url: `/api/v1/places/${byName.get("A1").id}`, headers: { cookie: b } });
+    const one = await app.inject({
+      method: "GET",
+      url: `/api/v1/places/${byName.get("A1").id}`,
+      headers: { cookie: b },
+    });
     expect(one.json().ownerDisplayName).toBe("Alice");
   });
 
   it("returns empty 200 for unknown owner id", async () => {
     const a = await cookieFor(ALICE);
-    const res = await app.inject({ method: "GET", url: "/api/v1/places?owner=no-such-user", headers: { cookie: a } });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?owner=no-such-user",
+      headers: { cookie: a },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json().data).toEqual([]);
   });

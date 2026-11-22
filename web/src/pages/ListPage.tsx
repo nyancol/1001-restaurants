@@ -23,10 +23,49 @@ function priceTiersFor(level: unknown): string[] {
 }
 
 export default function ListPage({ onUnauthorized }: { onUnauthorized: () => void }) {
-  const { owner, statusParam, tagsParam, qParam, openAtParam, openNowParam, priceParam, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, price, setPrice } = usePlaceFilters();
+  const {
+    owner,
+    statusParam,
+    tagsParam,
+    qParam,
+    openAtParam,
+    openNowParam,
+    priceParam,
+    status,
+    setStatus,
+    tags,
+    setTags,
+    q,
+    setQ,
+    openEnabled,
+    setOpenEnabled,
+    openAt,
+    setOpenAt,
+    price,
+    setPrice,
+  } = usePlaceFilters();
 
-  const { places, loading, error, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds, setError, fetchList } = usePlaces(
-    { owner, status: statusParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam, price: priceParam },
+  const {
+    places,
+    loading,
+    error,
+    flipStatus,
+    saveEdit,
+    deleteOne,
+    refreshOne,
+    refreshingIds,
+    setError,
+    fetchList,
+  } = usePlaces(
+    {
+      owner,
+      status: statusParam,
+      tags: tagsParam,
+      q: qParam,
+      openAt: openAtParam,
+      openNow: openNowParam,
+      price: priceParam,
+    },
     onUnauthorized,
   );
 
@@ -35,7 +74,9 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
   const [editingPlace, setEditingPlace] = useState<(typeof places)[number] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   // Derive the open sheet from live `places` so refresh/status flips stay current.
-  const notesPlaceLive = notesPlace ? (places.find((p) => p.id === notesPlace.id) ?? notesPlace) : null;
+  const notesPlaceLive = notesPlace
+    ? (places.find((p) => p.id === notesPlace.id) ?? notesPlace)
+    : null;
 
   useEffect(() => {
     const onOpenAdd = () => setAddOpen(true);
@@ -43,7 +84,12 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
     return () => window.removeEventListener("inmybelly:open-add", onOpenAdd);
   }, []);
 
-  const priceSelected = price ? price.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const priceSelected = price
+    ? price
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
   const filtered = useMemo(() => {
     let arr = [...places];
     if (priceSelected.length) {
@@ -67,11 +113,17 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
   const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
   const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
   const readOnly = owner !== "me";
-  const activeFilterCount = tags.length + (openEnabled ? 1 : 0) + priceSelected.length + (status ? 1 : 0);
+  const activeFilterCount =
+    tags.length + (openEnabled ? 1 : 0) + priceSelected.length + (status ? 1 : 0);
 
   return (
     <div className="mx-auto w-full max-w-md bg-bg px-4 pb-16 pt-3">
-      <SearchBar q={q} setQ={setQ} onOpenFilters={() => setSheetOpen(true)} activeFilterCount={activeFilterCount} />
+      <SearchBar
+        q={q}
+        setQ={setQ}
+        onOpenFilters={() => setSheetOpen(true)}
+        activeFilterCount={activeFilterCount}
+      />
 
       <div className="flex items-center justify-between pb-1 pt-3">
         <div className="flex items-baseline gap-1.5">
@@ -84,9 +136,14 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
       {loading ? (
         <div className="py-8 text-center text-sm text-muted">Loading…</div>
       ) : error ? (
-        <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>
+        <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">
+          {error}
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="edge radius-card border-line bg-surface px-4 py-10 text-center shadow-theme" style={{ borderRadius: 16 }}>
+        <div
+          className="edge radius-card border-line bg-surface px-4 py-10 text-center shadow-theme"
+          style={{ borderRadius: 16 }}
+        >
           <p className="font-display text-lg font-semibold text-ink">No places yet</p>
           <p className="mt-1 text-sm text-muted">Try clearing filters or save your first spot.</p>
           <button
@@ -112,7 +169,9 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
                 }}
                 onOpen={(pl) => setNotesPlace(pl)}
                 onRefresh={(pl) => {
-                  void refreshOne(pl).catch((e: unknown) => setError(e instanceof Error ? e.message : "Refresh failed"));
+                  void refreshOne(pl).catch((e: unknown) =>
+                    setError(e instanceof Error ? e.message : "Refresh failed"),
+                  );
                 }}
                 refreshing={refreshingIds.includes(p.id)}
                 readOnly={readOnly}
@@ -151,7 +210,9 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
           if (!readOnly) void flipStatus(p);
         }}
         onRefresh={(p) => {
-          void refreshOne(p).catch((e: unknown) => setError(e instanceof Error ? e.message : "Refresh failed"));
+          void refreshOne(p).catch((e: unknown) =>
+            setError(e instanceof Error ? e.message : "Refresh failed"),
+          );
         }}
         refreshing={notesPlaceLive ? refreshingIds.includes(notesPlaceLive.id) : false}
         readOnly={readOnly}

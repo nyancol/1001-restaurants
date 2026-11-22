@@ -17,7 +17,7 @@ export type GoogleFetch = typeof fetch;
  */
 export function registerGoogleRoutes(
   app: FastifyInstance,
-  deps: { config: AppConfig; googleFetch?: GoogleFetch }
+  deps: { config: AppConfig; googleFetch?: GoogleFetch },
 ) {
   const { config } = deps;
   const gfetch: GoogleFetch = deps.googleFetch ?? fetch;
@@ -72,43 +72,48 @@ export function registerGoogleRoutes(
     }
   }
 
-  app.get("/api/v1/google/autocomplete", { config: rateLimitPresets.google }, async (req, reply) => {
-    if (!requireKey(reply)) return;
-    const query = req.query as any;
-    const q = query?.q ?? query?.input;
-    if (!q) return reply.code(400).send({ error: "q is required" });
-    if (typeof q !== "string" || q.length > 200) return reply.code(400).send({ error: "invalid_q" });
-    const body: Record<string, unknown> = { input: q };
-    if (query.sessionToken) {
-      if (typeof query.sessionToken !== "string" || query.sessionToken.length > 128) {
-        return reply.code(400).send({ error: "invalid_session_token" });
+  app.get(
+    "/api/v1/google/autocomplete",
+    { config: rateLimitPresets.google },
+    async (req, reply) => {
+      if (!requireKey(reply)) return;
+      const query = req.query as any;
+      const q = query?.q ?? query?.input;
+      if (!q) return reply.code(400).send({ error: "q is required" });
+      if (typeof q !== "string" || q.length > 200)
+        return reply.code(400).send({ error: "invalid_q" });
+      const body: Record<string, unknown> = { input: q };
+      if (query.sessionToken) {
+        if (typeof query.sessionToken !== "string" || query.sessionToken.length > 128) {
+          return reply.code(400).send({ error: "invalid_session_token" });
+        }
+        body.sessionToken = query.sessionToken;
       }
-      body.sessionToken = query.sessionToken;
-    }
-    try {
-      const res = await withSpan(
-        "google.autocomplete",
-        { "peer.service": "places.googleapis.com", endpoint: "places:autocomplete" },
-        async (span: any) =>
-          gfetch("https://places.googleapis.com/v1/places:autocomplete", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": config.googlePlacesKey,
-              "X-Goog-FieldMask": autocompleteMask,
-            },
-            body: JSON.stringify(body),
-          }).then((r: Response) => {
-            span.setAttribute("http.status_code", r.status);
-            return r;
-          })
-      );
-      return relay(res, reply);
-    } catch (err) {
-      req.log.error({ err }, "google autocomplete failed");
-      return reply.code(502).send({ error: "google_unavailable" });
-    }
-  });
+      try {
+        const res = await withSpan(
+          "google.autocomplete",
+          { "peer.service": "places.googleapis.com", endpoint: "places:autocomplete" },
+          async (span: any) =>
+            gfetch("https://places.googleapis.com/v1/places:autocomplete", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": config.googlePlacesKey,
+                "X-Goog-FieldMask": autocompleteMask,
+              },
+              body: JSON.stringify(body),
+            }).then((r: Response) => {
+              span.setAttribute("http.status_code", r.status);
+              return r;
+            }),
+        );
+        return relay(res, reply);
+      } catch (err) {
+        req.log.error({ err }, "google autocomplete failed");
+        return reply.code(502).send({ error: "google_unavailable" });
+      }
+    },
+  );
 
   app.get("/api/v1/google/details", { config: rateLimitPresets.google }, async (req, reply) => {
     if (!requireKey(reply)) return;
@@ -123,18 +128,15 @@ export function registerGoogleRoutes(
         "google.details",
         { "peer.service": "places.googleapis.com", endpoint: "places.get" },
         async (span: any) =>
-          gfetch(
-            `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
-            {
-              headers: {
-                "X-Goog-Api-Key": config.googlePlacesKey,
-                "X-Goog-FieldMask": detailsMask,
-              },
-            }
-          ).then((r: Response) => {
+          gfetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+            headers: {
+              "X-Goog-Api-Key": config.googlePlacesKey,
+              "X-Goog-FieldMask": detailsMask,
+            },
+          }).then((r: Response) => {
             span.setAttribute("http.status_code", r.status);
             return r;
-          })
+          }),
       );
       return relay(res, reply);
     } catch (err) {
@@ -160,7 +162,7 @@ export function registerGoogleRoutes(
           gfetch(url).then((r: Response) => {
             span.setAttribute("http.status_code", r.status);
             return r;
-          })
+          }),
       );
       return relay(res, reply);
     } catch (err) {

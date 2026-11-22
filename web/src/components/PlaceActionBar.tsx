@@ -24,7 +24,13 @@ export function refreshErrorMessage(err: any, googlePlaceId: string | null, t: D
  * secondary Share, secondary Refresh — all in the map-sheet button design.
  * Read-only renders Share only (Edit/Refresh would mutate someone else's place).
  */
-export default function PlaceActionBar({ place: p, onEdit, onRefresh, refreshing, readOnly }: Props) {
+export default function PlaceActionBar({
+  place: p,
+  onEdit,
+  onRefresh,
+  refreshing,
+  readOnly,
+}: Props) {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
@@ -39,7 +45,7 @@ export default function PlaceActionBar({ place: p, onEdit, onRefresh, refreshing
   useEffect(() => {
     setCopied(false);
     setRefreshError(null);
-  }, [p.id ]);
+  }, [p.id]);
 
   const busy = (refreshing ?? false) || busyLocal;
   const shareUrl = mapsUrlFor(p);
@@ -92,7 +98,9 @@ export default function PlaceActionBar({ place: p, onEdit, onRefresh, refreshing
 
   return (
     <div className="w-full">
-      <div className={`grid gap-2 ${visibleCount >= 3 ? "grid-cols-3" : visibleCount === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div
+        className={`grid gap-2 ${visibleCount >= 3 ? "grid-cols-3" : visibleCount === 2 ? "grid-cols-2" : "grid-cols-1"}`}
+      >
         {!readOnly && (
           <button
             type="button"
@@ -135,12 +143,18 @@ export default function PlaceActionBar({ place: p, onEdit, onRefresh, refreshing
         )}
       </div>
       {refreshError && (
-        <div className="edge radius-input mt-2 border-danger-line bg-danger-bg px-2 py-1 text-xs text-danger-ink" role="alert">
+        <div
+          className="edge radius-input mt-2 border-danger-line bg-danger-bg px-2 py-1 text-xs text-danger-ink"
+          role="alert"
+        >
           {refreshError}
         </div>
       )}
       {copied && (
-        <div className="edge radius-input mt-2 border-been bg-been px-2 py-1 text-xs font-semibold text-been-ink" role="status">
+        <div
+          className="edge radius-input mt-2 border-been bg-been px-2 py-1 text-xs font-semibold text-been-ink"
+          role="status"
+        >
           ✓ {t["card.copiedLive"]}
         </div>
       )}

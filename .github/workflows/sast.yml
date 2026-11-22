@@ -2,15 +2,15 @@ name: SAST Security Scan
 
 on:
   push:
-    branches: [ "main"]
+    branches: ["main"]
   pull_request:
-    branches: [ "main"]
+    branches: ["main"]
 
 jobs:
   semgrep-sast:
     name: Run Semgrep SAST
     runs-on: [self-hosted]
-    
+
     container:
       image: semgrep/semgrep:latest # Runs Semgrep inside an isolated container natively on your runner
 

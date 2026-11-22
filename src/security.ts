@@ -27,7 +27,9 @@ export function isSameOrigin(req: any, appOrigin: string): boolean {
       expected.add(`https://${host}`);
       expected.add(`http://${host}`);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   const o = originOf(origin);
   if (o) return expected.has(o);
   const r = originOf(referer);

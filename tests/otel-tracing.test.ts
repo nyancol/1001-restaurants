@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { FastifyInstrumentation } from "@opentelemetry/instrumentation-fastify";
-import { InMemorySpanExporter, SimpleSpanProcessor, TracerProvider } from "@opentelemetry/sdk-trace";
+import {
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+  TracerProvider,
+} from "@opentelemetry/sdk-trace";
 import { trace, context } from "@opentelemetry/api";
 import { HealthFilterProcessor } from "../src/observability/index.js";
 
@@ -81,7 +85,7 @@ describe("health span filter", () => {
           "url.scheme": "http",
           "http.response.status_code": 200,
         },
-      })
+      }),
     );
     // Health with query string still matches on path.
     proc.onEnd(fakeSpan({ name: "GET", attributes: { "url.path": "/api/health?foo=bar" } }));
@@ -95,13 +99,13 @@ describe("health span filter", () => {
           "http.response.status_code": 200,
           "X-Goog-Api-Key": "secret-key",
         },
-      })
+      }),
     );
     proc.onEnd(
       fakeSpan({
         name: "GET /api/v1/places",
         attributes: { "http.route": "/api/v1/places", "X-Goog-Api-Key": "secret-key" },
-      })
+      }),
     );
     expect(seen).toHaveLength(2);
     for (const s of seen) {

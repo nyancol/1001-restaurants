@@ -37,7 +37,13 @@ interface Props {
 }
 
 /** Phone "Edit Place" sheet from Stitch. */
-export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTagDefinitionsChanged }: Props) {
+export default function EditPlaceSheet({
+  place,
+  onClose,
+  onSave,
+  onDelete,
+  onTagDefinitionsChanged,
+}: Props) {
   const { t } = useLanguage();
   const [tags, setTags] = useState<string[]>([]);
   const [rating, setRating] = useState<number | null>(null);
@@ -66,7 +72,13 @@ export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTag
     setSaving(true);
     setError(null);
     try {
-      await onSave(place, { tags, rating, note: note.trim() ? note : null, icon: icon.trim().toLowerCase() || "fork", status });
+      await onSave(place, {
+        tags,
+        rating,
+        note: note.trim() ? note : null,
+        icon: icon.trim().toLowerCase() || "fork",
+        status,
+      });
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -99,7 +111,8 @@ export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTag
         <>
           <div className="flex items-center justify-between px-4 pb-1 pt-1">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink">
-              <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-accent" /> Edit place
+              <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-accent" /> Edit
+              place
             </span>
             <button
               type="button"
@@ -111,10 +124,18 @@ export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTag
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{ overscrollBehavior: "contain" }}>
+          <div
+            className="flex-1 overflow-y-auto px-4 pb-4"
+            style={{ overscrollBehavior: "contain" }}
+          >
             <div className="flex items-center gap-2">
-              <h2 className="font-display flex-1 text-[26px] font-bold leading-tight text-ink">{place.name}</h2>
-              <span className="edge inline-flex items-center gap-1 border-transparent bg-want px-2.5 py-1.5 text-sm font-bold text-want-ink" style={{ borderRadius: 12 }}>
+              <h2 className="font-display flex-1 text-[26px] font-bold leading-tight text-ink">
+                {place.name}
+              </h2>
+              <span
+                className="edge inline-flex items-center gap-1 border-transparent bg-want px-2.5 py-1.5 text-sm font-bold text-want-ink"
+                style={{ borderRadius: 12 }}
+              >
                 <span aria-hidden>★</span> {displayRating(place.googleRating ?? place.rating)}
               </span>
             </div>
@@ -122,7 +143,12 @@ export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTag
               <span aria-hidden>📍</span> {place.address ?? "Paris"} • {price}
             </p>
 
-            <div className="edge mt-3 grid grid-cols-2 gap-1 border-transparent bg-surface-2/50 p-1" style={{ borderRadius: 12 }} role="group" aria-label="Visit status">
+            <div
+              className="edge mt-3 grid grid-cols-2 gap-1 border-transparent bg-surface-2/50 p-1"
+              style={{ borderRadius: 12 }}
+              role="group"
+              aria-label="Visit status"
+            >
               <button
                 type="button"
                 aria-pressed={status === "WANT_TO_GO"}
@@ -145,7 +171,9 @@ export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTag
 
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Icon (shown on map &amp; timeline)</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Icon (shown on map &amp; timeline)
+                </h3>
               </div>
               <IconPicker value={icon} onChange={setIcon} />
             </div>
@@ -153,26 +181,42 @@ export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTag
             <div className="mt-4">
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">Tags</h3>
               <div className="edge border-line/50 bg-surface p-2" style={{ borderRadius: 12 }}>
-                <TagCombobox value={tags} onChange={setTags} onTagDefinitionsChanged={onTagDefinitionsChanged} />
+                <TagCombobox
+                  value={tags}
+                  onChange={setTags}
+                  onTagDefinitionsChanged={onTagDefinitionsChanged}
+                />
               </div>
             </div>
 
-            <div className="edge mt-4 border-line/50 bg-surface-2/40 p-3" style={{ borderRadius: 12 }}>
+            <div
+              className="edge mt-4 border-line/50 bg-surface-2/40 p-3"
+              style={{ borderRadius: 12 }}
+            >
               <div className="mb-1 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Your rating</h3>
-                <span className="edge inline-flex bg-been px-2 py-0.5 text-xs font-bold text-been-ink" style={{ borderRadius: 999 }}>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Your rating
+                </h3>
+                <span
+                  className="edge inline-flex bg-been px-2 py-0.5 text-xs font-bold text-been-ink"
+                  style={{ borderRadius: 999 }}
+                >
                   {(rating ?? 0).toFixed(1)} / 5.0
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <Stars value={rating} onChange={setRating} />
-                <span className="font-display text-sm italic text-accent">“{scoreLabel(rating)}”</span>
+                <span className="font-display text-sm italic text-accent">
+                  “{scoreLabel(rating)}”
+                </span>
               </div>
             </div>
 
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted">My personal note</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+                  My personal note
+                </h3>
                 <span className="text-[11px] text-muted">Markdown supported</span>
               </div>
               <div className="edge border-line/50 bg-surface-2/40 p-3" style={{ borderRadius: 12 }}>
@@ -185,12 +229,18 @@ export default function EditPlaceSheet({ place, onClose, onSave, onDelete, onTag
                   aria-label="My personal note"
                   className="w-full bg-transparent text-[15px] leading-relaxed text-ink outline-none placeholder:text-muted"
                 />
-                <div className="mt-1 text-right text-[11px] text-muted">{note.length} characters</div>
+                <div className="mt-1 text-right text-[11px] text-muted">
+                  {note.length} characters
+                </div>
               </div>
             </div>
 
             {error && (
-              <div className="edge mt-3 border-danger-line bg-danger-bg px-2 py-1.5 text-xs text-danger-ink" style={{ borderRadius: 8 }} role="alert">
+              <div
+                className="edge mt-3 border-danger-line bg-danger-bg px-2 py-1.5 text-xs text-danger-ink"
+                style={{ borderRadius: 8 }}
+                role="alert"
+              >
                 {error}
               </div>
             )}

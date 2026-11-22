@@ -27,22 +27,60 @@ hot-reload — `/api/*` calls from the Vite server are proxied to the backend.
 Open http://localhost:5173 for UI work and use **Use dev user** on the login
 screen (enabled by `DEV_LOGIN=true`) to sign in without OIDC.
 
+## Shipping: feature branch → prod
+
+```bash
+mise run setup              # once per clone: enables versioned git hooks (.githooks/)
+git checkout -b feat/<name> # branch from main (same-repo branches only — forks can't use preprod)
+# ... hack, then:
+mise run check              # typecheck + lint + format:check + tests (coverage gate); mirrors CI
+git commit -m "feat(api): ..."  # Conventional Commits, enforced by .githooks/commit-msg
+git push -u origin feat/<name>
+```
+
+1. **Open a PR to `main`.** `ci.yml` runs on every PR/push: typecheck, lint,
+   format check, tests with coverage thresholds, production build, `npm audit`
+   (high+), betterleaks secret scan, and a Dockerfile build. `sast.yml` runs
+   Semgrep. Keep the PR green before review.
+2. **Preview on preprod (optional).** Add the `preview` label to the PR —
+   `preprod-preview.yml` deploys the PR head to the single staging slot
+   (`places-staging`, http://localhost:5174 /
+   https://places-staging.patates.club) and posts a `[PREVIEW]` GREEN/RED
+   comment with verify output. One slot only: claiming it evicts the previous
+   owner (fresh DB on claim). Removing the label or closing the PR tears the
+   slot down if your branch owns it. Local equivalent: `mise run preprod-up`
+   / `preprod-verify` / `preprod-down` (see `mise.toml`, `compose.preprod.yaml`,
+   `hermes.yaml`).
+3. **Merge to `main`.** Squash or merge — keep Conventional Commit subjects so
+   history stays readable. Merging a preview PR frees the slot.
+4. **Prod deploys itself.** Arcane polls `main` (~every 5m), pulls, rebuilds,
+   and restarts `places` (https://places.patates.club). Never restart prod
+   by hand. If prod goes red, roll back with `git revert <sha>` on `main` +
+   push (additive migrations only) — see `rollback:` in `hermes.yaml`.
+5. **Cut a release when it matters** (not every merge): update `CHANGELOG.md`,
+   `npm version <patch|minor|major>`, `git push origin main --tags`. The
+   `release.yml` workflow checks tag == `package.json` + CHANGELOG entry,
+   then builds, attaches an SBOM, and publishes the GitHub Release.
+
+Secrets (`.env.dev`, `.env.preprod`, prod env) are never committed —
+betterleaks blocks leaks at commit time and in CI.
+
 ## Environment
 
-| Var | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `PORT` | no | `3000` | HTTP listen port (`.env.dev` uses `3232`) |
-| `HOST` | no | `0.0.0.0` | HTTP bind address |
-| `DATABASE_PATH` | no | `/data/app.db` | SQLite file (WAL mode). Mount a volume at `/data` in Docker. Override locally, e.g. `./data/app.db` |
-| `SESSION_SECRET` | **yes in production** | dev fallback in non-production | HS256 key for the `oyster_session` cookie (32+ chars). Container exits at boot without it when `NODE_ENV=production` |
-| `COOKIE_SECURE` | no | `true` in production, else `false` | Set `false` behind HTTP-only dev; keep default behind TLS proxy |
-| `OIDC_ISSUER` | for login | — | PocketID issuer URL, e.g. `https://id.example.com` |
-| `OIDC_CLIENT_ID` | for login | — | PocketID client id |
-| `OIDC_CLIENT_SECRET` | for login | — | PocketID client secret (empty allowed only for public clients) |
-| `OIDC_REDIRECT_URI` | no | `http://localhost:<PORT>/api/auth/callback` | Must match the PocketID client registration |
-| `GOOGLE_PLACES_KEY` | for Google proxy | — | Server-side Google key (never sent to the browser). Endpoints return `503 google_not_configured` without it |
-| `TRUST_PROXY` | no | `true` | Trust `X-Forwarded-Proto/Host` from the homelab reverse proxy |
-| `DEV_LOGIN` | no | `false` | **Development only.** Set `true` with a non-production `NODE_ENV` to register `POST /api/auth/dev-login`, which mints a test session without OIDC. Forced off in production (route returns `404` there even if set) |
+| Var                  | Required              | Default                                     | Purpose                                                                                                                                                                                                             |
+| -------------------- | --------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`               | no                    | `3000`                                      | HTTP listen port (`.env.dev` uses `3232`)                                                                                                                                                                           |
+| `HOST`               | no                    | `0.0.0.0`                                   | HTTP bind address                                                                                                                                                                                                   |
+| `DATABASE_PATH`      | no                    | `/data/app.db`                              | SQLite file (WAL mode). Mount a volume at `/data` in Docker. Override locally, e.g. `./data/app.db`                                                                                                                 |
+| `SESSION_SECRET`     | **yes in production** | dev fallback in non-production              | HS256 key for the `oyster_session` cookie (32+ chars). Container exits at boot without it when `NODE_ENV=production`                                                                                                |
+| `COOKIE_SECURE`      | no                    | `true` in production, else `false`          | Set `false` behind HTTP-only dev; keep default behind TLS proxy                                                                                                                                                     |
+| `OIDC_ISSUER`        | for login             | —                                           | PocketID issuer URL, e.g. `https://id.example.com`                                                                                                                                                                  |
+| `OIDC_CLIENT_ID`     | for login             | —                                           | PocketID client id                                                                                                                                                                                                  |
+| `OIDC_CLIENT_SECRET` | for login             | —                                           | PocketID client secret (empty allowed only for public clients)                                                                                                                                                      |
+| `OIDC_REDIRECT_URI`  | no                    | `http://localhost:<PORT>/api/auth/callback` | Must match the PocketID client registration                                                                                                                                                                         |
+| `GOOGLE_PLACES_KEY`  | for Google proxy      | —                                           | Server-side Google key (never sent to the browser). Endpoints return `503 google_not_configured` without it                                                                                                         |
+| `TRUST_PROXY`        | no                    | `true`                                      | Trust `X-Forwarded-Proto/Host` from the homelab reverse proxy                                                                                                                                                       |
+| `DEV_LOGIN`          | no                    | `false`                                     | **Development only.** Set `true` with a non-production `NODE_ENV` to register `POST /api/auth/dev-login`, which mints a test session without OIDC. Forced off in production (route returns `404` there even if set) |
 
 > Dev login is double-gated: the route is registered only when `DEV_LOGIN=true`
 > **and** `NODE_ENV != production`. Test identities get `sub = "dev:<name>"`
@@ -100,12 +138,12 @@ The service ships traces, metrics, and correlated logs via OTLP/HTTP to the
 homelab `lgtm` stack (`grafana/otel-lgtm`) over the external `telemetry`
 Docker network. Preprod/dev export nothing.
 
-| Var | Required | Default | Purpose |
-| --- | --- | --- | --- |
+| Var                           | Required               | Default                        | Purpose                                                                                                                                                    |
+| ----------------------------- | ---------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | prod only (via Arcane) | — (unset = telemetry disabled) | e.g. `http://lgtm:4318`. Presence of a valid `http(s)` URL is the switch — `NODE_ENV` is `production` in both prod and preprod, so it cannot be the switch |
-| `OTEL_SERVICE_NAME` | no | `places` | `service.name` on every signal |
-| `DEPLOYMENT_ENVIRONMENT` | no | `NODE_ENV` | `deployment.environment` (`production` in prod) |
-| `OTEL_SERVICE_VERSION` | no | `package.json` version | `service.version` — bump with `npm version` on release; explicit value wins (`unknown` is treated as unset) |
+| `OTEL_SERVICE_NAME`           | no                     | `places`                       | `service.name` on every signal                                                                                                                             |
+| `DEPLOYMENT_ENVIRONMENT`      | no                     | `NODE_ENV`                     | `deployment.environment` (`production` in prod)                                                                                                            |
+| `OTEL_SERVICE_VERSION`        | no                     | `package.json` version         | `service.version` — bump with `npm version` on release; explicit value wins (`unknown` is treated as unset)                                                |
 
 - Activation is fail-open: the SDK starts before instrumented imports
   (`src/observability/register.ts` is the first import in `src/index.ts`);
@@ -135,6 +173,21 @@ Tempo `service.name=places`, Loki `{service_name="places"}`, Mimir
 ## Tests
 
 ```bash
-npm test          # vitest: 401/403/400 cases, owner scoping, tag counts, mocked Google
+npm test          # vitest with V8 coverage gate (thresholds in vitest.config.ts)
 npm run typecheck # tsc --noEmit
+npm run lint      # eslint (JS core rules; types via tsc — see eslint.config.mjs)
+npm run format:check # prettier --check . (write with `npm run format`)
+mise run check   # all four gates, mirrors CI verify job
+```
+
+Commits must follow [Conventional Commits](https://www.conventionalcommits.org/)
+(`feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert`), enforced by
+`.githooks/commit-msg`. See `CHANGELOG.md` (Keep a Changelog).
+
+## Releases
+
+```bash
+npm version <patch|minor|major>  # bumps package.json, update CHANGELOG.md, commits + tags vX.Y.Z
+git push origin main --tags      # .github/workflows/release.yml verifies tag == package.json,
+                                 # CHANGELOG entry exists, builds, attaches SBOM, publishes GitHub Release
 ```

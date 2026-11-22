@@ -53,7 +53,7 @@ describe("otel metrics", () => {
     }
     expect(points.length).toBeGreaterThan(0);
     const byRoute = points.filter(
-      (p: any) => (p.attributes as Record<string, unknown>)["http.route"] === "/api/v1/places"
+      (p: any) => (p.attributes as Record<string, unknown>)["http.route"] === "/api/v1/places",
     );
     expect(byRoute.length).toBeGreaterThan(0);
     for (const p of points) {
@@ -66,9 +66,7 @@ describe("otel metrics", () => {
     }
     const legacy = points.find((p: any) => (p.attributes as any)["http.method"] === "GET");
     expect(legacy?.attributes["http.route"]).toBe("/api/v1/places");
-    const stable = points.find(
-      (p: any) => (p.attributes as any)["http.request.method"] === "GET"
-    );
+    const stable = points.find((p: any) => (p.attributes as any)["http.request.method"] === "GET");
     expect(stable?.attributes["http.route"]).toBe("/api/v1/places");
     expect(stable?.attributes["http.response.status_code"]).toBe(200);
     await provider.shutdown().catch(() => {});

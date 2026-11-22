@@ -5,10 +5,7 @@ import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { FastifyInstrumentation } from "@opentelemetry/instrumentation-fastify";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import {
-  BatchLogRecordProcessor,
-  type LogRecordProcessor,
-} from "@opentelemetry/sdk-logs";
+import { BatchLogRecordProcessor, type LogRecordProcessor } from "@opentelemetry/sdk-logs";
 import {
   PeriodicExportingMetricReader,
   createAllowListAttributesProcessor,
@@ -188,7 +185,7 @@ export function initObservability(config: OtelConfig): Observability {
         maxExportBatchSize: 512,
         scheduledDelayMillis: 5000,
         exportTimeoutMillis: 10_000,
-      })
+      }),
     );
     const metricReader = new PeriodicExportingMetricReader({
       exporter: metricExporter,
@@ -202,7 +199,7 @@ export function initObservability(config: OtelConfig): Observability {
         maxExportBatchSize: 512,
         scheduledDelayMillis: 5000,
         exportTimeoutMillis: 10_000,
-      })
+      }),
     );
 
     const sdk = new NodeSDK({
@@ -221,7 +218,10 @@ export function initObservability(config: OtelConfig): Observability {
           // so correlation/sending don't depend on require-hook load order.
           // Disable the auto log-sending stream to avoid double delivery;
           // the auto mixin (same trace_id values) is harmless if patched.
-          "@opentelemetry/instrumentation-pino": { enabled: true, disableLogSending: true } as never,
+          "@opentelemetry/instrumentation-pino": {
+            enabled: true,
+            disableLogSending: true,
+          } as never,
         }),
         // Fastify is not part of the auto bundle — explicit is required.
         new FastifyInstrumentation({ enabled: true }),

@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listPlaces, patchPlace, refreshPlace, deletePlace, UnauthorizedError, type Place } from "./api";
+import {
+  listPlaces,
+  patchPlace,
+  refreshPlace,
+  deletePlace,
+  UnauthorizedError,
+  type Place,
+} from "./api";
 import { useLanguage } from "../i18n/LanguageContext";
 
 export interface PlaceFilterParams {
@@ -98,14 +105,18 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
           unauthRef.current();
           setPlaces((cur) =>
             cur.map((x) =>
-              x.id === p.id ? { ...x, tags: p.tags, rating: p.rating, note: p.note, icon: p.icon } : x,
+              x.id === p.id
+                ? { ...x, tags: p.tags, rating: p.rating, note: p.note, icon: p.icon }
+                : x,
             ),
           );
           return;
         }
         setPlaces((cur) =>
           cur.map((x) =>
-            x.id === p.id ? { ...x, tags: p.tags, rating: p.rating, note: p.note, icon: p.icon } : x,
+            x.id === p.id
+              ? { ...x, tags: p.tags, rating: p.rating, note: p.note, icon: p.icon }
+              : x,
           ),
         );
         setError(err?.message ?? t["editor.updateFailed"]);
@@ -154,5 +165,17 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
     [fetchList, t],
   );
 
-  return { places, setPlaces, loading, error, setError, fetchList, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds };
+  return {
+    places,
+    setPlaces,
+    loading,
+    error,
+    setError,
+    fetchList,
+    flipStatus,
+    saveEdit,
+    deleteOne,
+    refreshOne,
+    refreshingIds,
+  };
 }

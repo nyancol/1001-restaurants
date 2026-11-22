@@ -25,7 +25,11 @@ export default function Stars({ value, onChange }: Props) {
           </button>
         ))}
         {value != null && (
-          <button type="button" className="ml-2 text-sm text-muted underline hover:text-ink" onClick={() => onChange(null)}>
+          <button
+            type="button"
+            className="ml-2 text-sm text-muted underline hover:text-ink"
+            onClick={() => onChange(null)}
+          >
             {t["stars.clear"]}
           </button>
         )}

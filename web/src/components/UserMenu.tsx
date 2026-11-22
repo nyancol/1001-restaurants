@@ -37,7 +37,7 @@ export default function UserMenu({ displayName }: Props) {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open ]);
+  }, [open]);
 
   if (!loading && users.length <= 1) {
     return (
@@ -106,48 +106,55 @@ export default function UserMenu({ displayName }: Props) {
           className="edge absolute right-0 top-full z-30 mt-2 w-60 border-line bg-surface p-1.5 shadow-theme"
           style={{ borderRadius: 16 }}
         >
-          {loading
-            ? [0, 1].map((i) => (
-                <div
-                  key={i}
+          {loading ? (
+            [0, 1].map((i) => (
+              <div key={i} aria-hidden className="flex animate-pulse items-center gap-2 px-2 py-2">
+                <span
+                  className="inline-flex h-8 w-8 items-center justify-center bg-line/40"
+                  style={{ borderRadius: 999 }}
+                />
+                <span className="h-3 w-24 bg-line/40" style={{ borderRadius: 999 }} />
+              </div>
+            ))
+          ) : error ? (
+            <div role="alert" className="px-2 py-2 text-[11px] text-danger">
+              {error}
+            </div>
+          ) : (
+            entries.map((e) => (
+              <button
+                key={e.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={e.active}
+                onClick={() => pick(e.id)}
+                className={`flex min-h-[52px] w-full items-center gap-2 px-2 py-1.5 text-left transition ${
+                  e.active
+                    ? "bg-accent text-accent-ink shadow-theme"
+                    : "text-ink hover:bg-surface-2/70"
+                }`}
+                style={{ borderRadius: 12 }}
+              >
+                <span
                   aria-hidden
-                  className="flex animate-pulse items-center gap-2 px-2 py-2"
-                >
-                  <span className="inline-flex h-8 w-8 items-center justify-center bg-line/40" style={{ borderRadius: 999 }} />
-                  <span className="h-3 w-24 bg-line/40" style={{ borderRadius: 999 }} />
-                </div>
-              ))
-            : error
-              ? <div role="alert" className="px-2 py-2 text-[11px] text-danger">{error}</div>
-              : entries.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={e.active}
-                  onClick={() => pick(e.id)}
-                  className={`flex min-h-[52px] w-full items-center gap-2 px-2 py-1.5 text-left transition ${
-                    e.active ? "bg-accent text-accent-ink shadow-theme" : "text-ink hover:bg-surface-2/70"
+                  className={`inline-flex h-8 w-8 shrink-0 items-center justify-center text-sm font-bold ${
+                    e.active ? "bg-white/20 text-accent-ink" : "bg-surface-2 text-ink"
                   }`}
-                  style={{ borderRadius: 12 }}
+                  style={{ borderRadius: 999 }}
                 >
+                  {e.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <span className="max-w-[140px] truncate text-sm font-bold">{e.name}</span>
                   <span
-                    aria-hidden
-                    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center text-sm font-bold ${
-                      e.active ? "bg-white/20 text-accent-ink" : "bg-surface-2 text-ink"
-                    }`}
-                    style={{ borderRadius: 999 }}
+                    className={`text-[11px] font-medium ${e.active ? "text-accent-ink/80" : "text-muted"}`}
                   >
-                    {e.name.slice(0, 1).toUpperCase()}
+                    {t["scope.countPlaces"](e.count)}
                   </span>
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <span className="max-w-[140px] truncate text-sm font-bold">{e.name}</span>
-                    <span className={`text-[11px] font-medium ${e.active ? "text-accent-ink/80" : "text-muted"}`}>
-                      {t["scope.countPlaces"](e.count)}
-                    </span>
-                  </span>
-                </button>
-              ))}
+                </span>
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

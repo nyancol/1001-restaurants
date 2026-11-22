@@ -1,0 +1,85 @@
+# Release: tag-driven GitHub Release with SBOM.
+# Cut a release with:
+#   npm version <patch|minor|major>   # bumps package.json + CHANGELOG entry, commits + tags vX.Y.Z
+#   git push origin main --tags
+# Pushing a `v*` tag runs this workflow: verifies package.json version ==
+# tag, CHANGELOG has an entry, then builds (server+web+docker), generates
+# SBOM (anchore/sbom-action), and publishes a GitHub Release with the
+# SBOM + CHANGELOG excerpt. No deploys — Arcane pulls main separately.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build / SBOM / GitHub Release
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout (full history for changelog)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "26.13.1" # must match mise.toml [tools] node
+          cache: npm
+
+      - name: Derive version from tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"           # e.g. v0.2.0
+          PKG="v$(node -p "require('./package.json').version")"
+          echo "tag=$TAG pkg=$PKG"
+          [ "$TAG" = "$PKG" ] || { echo "::error::tag $TAG != package.json $PKG — run npm version first"; exit 1; }
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - name: CHANGELOG entry required
+        run: |
+          grep -Eq "^## \[${VERSION//./\\.}\]" CHANGELOG.md || {
+            echo "::error::CHANGELOG.md has no '## [$VERSION]' entry"
+            exit 1
+          }
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests (coverage gate)
+        run: npm test
+
+      - name: Production build (server + web)
+        run: npm run build
+
+      - name: Docker build
+        run: docker build -t places:${GITHUB_REF_NAME} -f Dockerfile .
+
+      - name: SBOM (SPDX)
+        uses: anchore/sbom-action@d3748d52984cf2029bda467fdf77d1c45cea0d32 # v0.20.5
+        with:
+          image: places:${{ github.ref_name }}
+          format: spdx-json
+          output-file: sbom-${{ github.ref_name }}.spdx.json
+
+      - name: Release notes (CHANGELOG excerpt)
+        run: |
+          awk "/^## \\[${VERSION//./\\.}\\]/{flag=1;next}/^## \\[/{flag=0}flag" CHANGELOG.md > /tmp/notes.md
+          [ -s /tmp/notes.md ] || echo "Release ${GITHUB_REF_NAME}" > /tmp/notes.md
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@4634c16e79c402b9d1cea534154a37763fb0bb6c0 # v2.4.2
+        with:
+          body_path: /tmp/notes.md
+          files: sbom-${{ github.ref_name }}.spdx.json

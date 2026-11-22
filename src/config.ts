@@ -31,10 +31,12 @@ function required(name: string, value: string | undefined): string {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const nodeEnv = env.NODE_ENV ?? "development";
   const databasePath = env.DATABASE_PATH?.trim() || "/data/app.db";
-  const sessionSecret = env.SESSION_SECRET?.trim() || (nodeEnv === "production" ? "" : "dev-only-secret-change-me-32-chars!!");
+  const sessionSecret =
+    env.SESSION_SECRET?.trim() ||
+    (nodeEnv === "production" ? "" : "dev-only-secret-change-me-32-chars!!");
   if (!sessionSecret) {
     throw new Error(
-      "Invalid config: SESSION_SECRET must be set in production (32+ chars recommended)."
+      "Invalid config: SESSION_SECRET must be set in production (32+ chars recommended).",
     );
   }
   const oidcIssuer = required("OIDC_ISSUER", env.OIDC_ISSUER);
@@ -56,13 +58,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
     } catch {
       throw new Error(
-        `Invalid OIDC config: OIDC_ISSUER is not a valid URL ("${oidcIssuer}"). Check issuer/client/redirect values.`
+        `Invalid OIDC config: OIDC_ISSUER is not a valid URL ("${oidcIssuer}"). Check issuer/client/redirect values.`,
       );
     }
   }
   if (oidcEnabled && !oidcClientSecret) {
     throw new Error(
-      "Invalid OIDC config: OIDC_CLIENT_SECRET is required when OIDC_ISSUER and OIDC_CLIENT_ID are set."
+      "Invalid OIDC config: OIDC_CLIENT_SECRET is required when OIDC_ISSUER and OIDC_CLIENT_ID are set.",
     );
   }
   try {
@@ -70,14 +72,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
   } catch {
     throw new Error(
-      `Invalid config: APP_ORIGIN is not a valid URL ("${appOrigin}"). Expected e.g. "https://app.example.com".`
+      `Invalid config: APP_ORIGIN is not a valid URL ("${appOrigin}"). Expected e.g. "https://app.example.com".`,
     );
   }
   try {
     new URL(oidcRedirectUri);
   } catch {
     throw new Error(
-      `Invalid OIDC config: OIDC_REDIRECT_URI is not a valid URL ("${oidcRedirectUri}").`
+      `Invalid OIDC config: OIDC_REDIRECT_URI is not a valid URL ("${oidcRedirectUri}").`,
     );
   }
   if (placesApiResource) {
@@ -86,12 +88,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       if (!["http:", "https:"].includes(u.protocol)) throw new Error("bad protocol");
     } catch {
       throw new Error(
-        `Invalid Places API config: PLACES_API_RESOURCE is not a valid URL ("${placesApiResource}").`
+        `Invalid Places API config: PLACES_API_RESOURCE is not a valid URL ("${placesApiResource}").`,
       );
     }
     if (!oidcIssuer) {
       throw new Error(
-        "Invalid Places API config: OIDC_ISSUER is required when PLACES_API_RESOURCE is set."
+        "Invalid Places API config: OIDC_ISSUER is required when PLACES_API_RESOURCE is set.",
       );
     }
   }
@@ -114,9 +116,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     databasePath,
     sessionSecret,
     devLoginEnabled,
-    cookieSecure: env.COOKIE_SECURE !== undefined
-      ? env.COOKIE_SECURE === "true"
-      : nodeEnv === "production",
+    cookieSecure:
+      env.COOKIE_SECURE !== undefined ? env.COOKIE_SECURE === "true" : nodeEnv === "production",
     appOrigin,
     oidcIssuer,
     oidcClientId,

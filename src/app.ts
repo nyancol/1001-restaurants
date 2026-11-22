@@ -60,7 +60,9 @@ export interface BuildOptions {
   placesKeyResolver?: KeyResolver;
 }
 
-export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstance; oidcFailed?: Error }> {
+export async function buildApp(
+  opts: BuildOptions,
+): Promise<{ app: FastifyInstance; oidcFailed?: Error }> {
   const { config } = opts;
   // Redaction + trace mixin live in buildPinoOptions. When OTEL is enabled,
   // tee records to the OTLP bridge (global LoggerProvider is registered by
@@ -68,7 +70,10 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   // plain stdout — byte-compatible with the pre-OTEL format.
   const pinoOptions = buildPinoOptions() as any;
   const logger = (config as any).otelEnabled
-    ? { ...pinoOptions, stream: multistream([{ stream: process.stdout }, { stream: new OtlpBridgeStream() }]) }
+    ? {
+        ...pinoOptions,
+        stream: multistream([{ stream: process.stdout }, { stream: new OtlpBridgeStream() }]),
+      }
     : pinoOptions;
   const app = Fastify({ logger, trustProxy: config.trustProxy });
 
@@ -77,7 +82,11 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   app.decorate("db", db);
   app.decorate("sqlite", sqlite);
   app.addHook("onClose", async () => {
-    try { sqlite.close(); } catch { /* ignore */ }
+    try {
+      sqlite.close();
+    } catch {
+      /* ignore */
+    }
   });
 
   await app.register(cookie);
@@ -147,7 +156,10 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
     try {
       oidcConfig = await discoverOidc(config);
       if (oidcConfig) app.log.info(`OIDC discovery ok for issuer ${config.oidcIssuer}`);
-      else app.log.warn("OIDC not configured; /api/auth/login will return 503 until OIDC_ISSUER/OIDC_CLIENT_ID are set.");
+      else
+        app.log.warn(
+          "OIDC not configured; /api/auth/login will return 503 until OIDC_ISSUER/OIDC_CLIENT_ID are set.",
+        );
     } catch (err: any) {
       app.log.error(`Invalid OIDC config: ${err.message}`);
       oidcFailed = err;
@@ -157,7 +169,9 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
 
   registerAuthRoutes(app, { config, db, sqlite, log: app.log }, getOidc);
   if (config.devLoginEnabled) {
-    app.log.warn("DEV_LOGIN enabled — POST /api/auth/dev-login mints test sessions. Never enable in production.");
+    app.log.warn(
+      "DEV_LOGIN enabled — POST /api/auth/dev-login mints test sessions. Never enable in production.",
+    );
     registerDevLoginRoute(app, { config, db });
   }
   registerPlaceRoutes(app, { db, sqlite, config, googleFetch: opts.googleFetch });
@@ -177,7 +191,9 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   try {
     await app.register(fastifyStatic, { root: publicDir, prefix: "/" });
   } catch {
-    app.get("/", async (_req, reply) => reply.type("text/html").send("<h1>In my Belly</h1><p>Foundation API running.</p>"));
+    app.get("/", async (_req, reply) =>
+      reply.type("text/html").send("<h1>In my Belly</h1><p>Foundation API running.</p>"),
+    );
   }
   app.setNotFoundHandler(async (req, reply) => {
     if (req.url.startsWith("/api/")) return reply.code(404).send({ error: "not_found" });

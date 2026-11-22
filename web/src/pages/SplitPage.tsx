@@ -15,12 +15,52 @@ import { useLanguage } from "../i18n/LanguageContext";
  * Phone: stacked rail summary + feed; map lives on /map.
  */
 export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => void }) {
-  const { owner, setOwner, statusParam, tagsParam, qParam, openAtParam, openNowParam, priceParam, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, price, setPrice } = usePlaceFilters();
+  const {
+    owner,
+    setOwner,
+    statusParam,
+    tagsParam,
+    qParam,
+    openAtParam,
+    openNowParam,
+    priceParam,
+    status,
+    setStatus,
+    tags,
+    setTags,
+    q,
+    setQ,
+    openEnabled,
+    setOpenEnabled,
+    openAt,
+    setOpenAt,
+    price,
+    setPrice,
+  } = usePlaceFilters();
   const { me, users } = useUsers();
   const { t } = useLanguage();
 
-  const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds, fetchList } = usePlaces(
-    { owner, status: statusParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam, price: priceParam },
+  const {
+    places,
+    loading,
+    error,
+    setError,
+    flipStatus,
+    saveEdit,
+    deleteOne,
+    refreshOne,
+    refreshingIds,
+    fetchList,
+  } = usePlaces(
+    {
+      owner,
+      status: statusParam,
+      tags: tagsParam,
+      q: qParam,
+      openAt: openAtParam,
+      openNow: openNowParam,
+      price: priceParam,
+    },
     onUnauthorized,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -28,21 +68,29 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
   const [sort, setSort] = useState<SortId>("recent");
   const listElRef = useRef<HTMLUListElement | null>(null);
 
-  const handleTagDefinitionsChanged = useCallback((m: TagMutation) => {
-    if (m.type === "rename") {
-      setTags(tags.map((tg) => (tg === m.oldName ? m.newName : tg)));
-    } else if (m.type === "delete") {
-      setTags(tags.filter((tg) => tg !== m.name));
-    }
-    void fetchList();
-  }, [tags, setTags, fetchList]);
+  const handleTagDefinitionsChanged = useCallback(
+    (m: TagMutation) => {
+      if (m.type === "rename") {
+        setTags(tags.map((tg) => (tg === m.oldName ? m.newName : tg)));
+      } else if (m.type === "delete") {
+        setTags(tags.filter((tg) => tg !== m.name));
+      }
+      void fetchList();
+    },
+    [tags, setTags, fetchList],
+  );
 
   const locatedCount = places.filter((p) => p.lat != null && p.lng != null).length;
   const unlocatedCount = places.length - locatedCount;
   const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
   const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
   const readOnly = owner !== "me";
-  const scopeName = owner === "me" ? t["scope.me"] : owner === "all" ? t["scope.everyone"] : (displayNameFor(owner, me, users) ?? t["scope.userFallback"]);
+  const scopeName =
+    owner === "me"
+      ? t["scope.me"]
+      : owner === "all"
+        ? t["scope.everyone"]
+        : (displayNameFor(owner, me, users) ?? t["scope.userFallback"]);
   const sorted = useMemo(() => sortPlaces(places, sort), [places, sort]);
 
   const handleSelect = useCallback((id: string | null) => {
@@ -58,24 +106,37 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
 
   return (
     <div className="mx-auto w-full max-w-[1600px] bg-bg px-4 pb-16 pt-4 lg:px-8">
-      <p className="sr-only" aria-live="polite">{t["scope.locatedSummary"](places.length, locatedCount, unlocatedCount, readOnly)}</p>
+      <p className="sr-only" aria-live="polite">
+        {t["scope.locatedSummary"](places.length, locatedCount, unlocatedCount, readOnly)}
+      </p>
       {geoNote && (
-        <div className="edge radius-input mb-3 border-line bg-surface-2 px-3 py-2 text-xs text-muted">{geoNote}</div>
+        <div className="edge radius-input mb-3 border-line bg-surface-2 px-3 py-2 text-xs text-muted">
+          {geoNote}
+        </div>
       )}
       <div className="gap-6 lg:grid lg:grid-cols-[280px_minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start">
         {/* Left rail */}
         <aside className="mb-4 lg:sticky lg:top-[76px] lg:mb-0 lg:max-h-[calc(100dvh-96px)] lg:overflow-y-auto lg:pr-1">
-          <div className="edge radius-card border-line bg-surface p-3 shadow-theme lg:bg-transparent lg:p-0 lg:shadow-none lg:border-transparent" style={{ borderRadius: 16 }}>
+          <div
+            className="edge radius-card border-line bg-surface p-3 shadow-theme lg:bg-transparent lg:p-0 lg:shadow-none lg:border-transparent"
+            style={{ borderRadius: 16 }}
+          >
             <div className="mb-4">
               <OwnerPicker owner={owner} setOwner={setOwner} />
             </div>
             <FilterBar
-              status={status} setStatus={setStatus}
-              tags={tags} setTags={setTags}
-              q={q} setQ={setQ}
-              openEnabled={openEnabled} setOpenEnabled={setOpenEnabled}
-              openAt={openAt} setOpenAt={setOpenAt}
-              price={price} setPrice={setPrice}
+              status={status}
+              setStatus={setStatus}
+              tags={tags}
+              setTags={setTags}
+              q={q}
+              setQ={setQ}
+              openEnabled={openEnabled}
+              setOpenEnabled={setOpenEnabled}
+              openAt={openAt}
+              setOpenAt={setOpenAt}
+              price={price}
+              setPrice={setPrice}
               layout="rail"
               statusCounts={{ all: places.length, want: wantCount, been: beenCount }}
             />
@@ -85,7 +146,11 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
         {/* Center feed */}
         <section aria-label={t["map.listAria"]} className="min-w-0">
           <FeedHeader total={places.length} sort={sort} setSort={setSort} />
-          <p className="mb-2 text-xs text-muted">Viewing {scopeName} · {locatedCount} shown{unlocatedCount > 0 ? ` · ${unlocatedCount} hidden` : ""}{readOnly ? " · read-only" : ""}</p>
+          <p className="mb-2 text-xs text-muted">
+            Viewing {scopeName} · {locatedCount} shown
+            {unlocatedCount > 0 ? ` · ${unlocatedCount} hidden` : ""}
+            {readOnly ? " · read-only" : ""}
+          </p>
           <PlaceListPane
             places={sorted}
             loading={loading}
@@ -98,13 +163,18 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             onError={setError}
             focusedId={selectedId}
             onCardSelect={setSelectedId}
-            listRef={(el) => { listElRef.current = el; }}
+            listRef={(el) => {
+              listElRef.current = el;
+            }}
             readOnly={readOnly}
             onTagDefinitionsChanged={handleTagDefinitionsChanged}
             emptyTitle={readOnly ? t["empty.scopeHasNoPlaces"](scopeName) : undefined}
             emptySubtitle={readOnly ? t["empty.tryClear"] : undefined}
             emptyHint={
-              <a href="/add" className="edge radius-input mt-3 inline-block border-accent bg-accent px-4 py-2 text-sm text-accent-ink">
+              <a
+                href="/add"
+                className="edge radius-input mt-3 inline-block border-accent bg-accent px-4 py-2 text-sm text-accent-ink"
+              >
                 {t["action.addPlace"]}
               </a>
             }
@@ -112,7 +182,10 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
         </section>
 
         {/* Right map */}
-        <section aria-label={t["map.mapAria"]} className="mt-6 min-w-0 lg:sticky lg:top-[76px] lg:mt-0">
+        <section
+          aria-label={t["map.mapAria"]}
+          className="mt-6 min-w-0 lg:sticky lg:top-[76px] lg:mt-0"
+        >
           <MapView
             places={places}
             loading={loading}
@@ -132,7 +205,11 @@ export default function SplitPage({ onUnauthorized }: { onUnauthorized: () => vo
             onTagDefinitionsChanged={handleTagDefinitionsChanged}
           />
           <p className="mt-2 text-[11px] text-muted">
-            © <a className="underline" href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors
+            ©{" "}
+            <a className="underline" href="https://www.openstreetmap.org/copyright">
+              OpenStreetMap
+            </a>{" "}
+            contributors
           </p>
         </section>
       </div>

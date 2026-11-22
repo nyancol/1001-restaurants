@@ -12,11 +12,19 @@ async function makeApp() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "oyster-v1-"));
   const dbPath = path.join(dir, "app.db");
   const config: any = {
-    port: 0, host: "127.0.0.1", nodeEnv: "test", databasePath: dbPath,
-    sessionSecret: SECRET, cookieSecure: false,
-    oidcIssuer: "", oidcClientId: "", oidcClientSecret: "",
+    port: 0,
+    host: "127.0.0.1",
+    nodeEnv: "test",
+    databasePath: dbPath,
+    sessionSecret: SECRET,
+    cookieSecure: false,
+    oidcIssuer: "",
+    oidcClientId: "",
+    oidcClientSecret: "",
     oidcRedirectUri: "http://localhost:3000/api/auth/callback",
-    oidcEnabled: false, googlePlacesKey: "test-key", trustProxy: false,
+    oidcEnabled: false,
+    googlePlacesKey: "test-key",
+    trustProxy: false,
   };
   const { app } = await buildApp({ config, skipOidcDiscovery: true });
   return { app, dir };
@@ -28,16 +36,36 @@ async function cookieFor(userId: string): Promise<string> {
 }
 
 describe("api v1 contract", () => {
-  let app: any; let dir: string;
+  let app: any;
+  let dir: string;
   const ALICE = "alice-v1";
-  beforeEach(async () => { ({ app, dir } = await makeApp()); });
-  afterEach(async () => { await app?.close(); fs.rmSync(dir, { recursive: true, force: true }); });
+  beforeEach(async () => {
+    ({ app, dir } = await makeApp());
+  });
+  afterEach(async () => {
+    await app?.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 
   it("returns paginated envelope with limit/total/nextCursor on places", async () => {
     const c = await cookieFor(ALICE);
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: c }, payload: { name: "A1", icon: "fork" } });
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: c }, payload: { name: "A2", icon: "fork" } });
-    const res = await app.inject({ method: "GET", url: "/api/v1/places?owner=me&limit=1", headers: { cookie: c } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: c },
+      payload: { name: "A1", icon: "fork" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: c },
+      payload: { name: "A2", icon: "fork" },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?owner=me&limit=1",
+      headers: { cookie: c },
+    });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(Array.isArray(body.data)).toBe(true);
@@ -45,7 +73,11 @@ describe("api v1 contract", () => {
     expect(body.pagination.limit).toBe(1);
     expect(body.pagination.total).toBe(2);
     expect(typeof body.pagination.nextCursor).toBe("string");
-    const p2 = await app.inject({ method: "GET", url: `/api/v1/places?owner=me&limit=1&cursor=${encodeURIComponent(body.pagination.nextCursor)}`, headers: { cookie: c } });
+    const p2 = await app.inject({
+      method: "GET",
+      url: `/api/v1/places?owner=me&limit=1&cursor=${encodeURIComponent(body.pagination.nextCursor)}`,
+      headers: { cookie: c },
+    });
     expect(p2.statusCode).toBe(200);
     expect(p2.json().data).toHaveLength(1);
     expect(p2.json().data[0].name).not.toBe(body.data[0].name);
@@ -54,7 +86,11 @@ describe("api v1 contract", () => {
 
   it("rejects invalid cursor with 400", async () => {
     const c = await cookieFor(ALICE);
-    for (const u of ["/api/v1/places?cursor=nope", "/api/v1/tags?cursor=nope", "/api/v1/users?cursor=nope"]) {
+    for (const u of [
+      "/api/v1/places?cursor=nope",
+      "/api/v1/tags?cursor=nope",
+      "/api/v1/users?cursor=nope",
+    ]) {
       const res = await app.inject({ method: "GET", url: u, headers: { cookie: c } });
       expect(res.statusCode).toBe(400);
       expect(res.json().error).toBe("invalid_cursor");
@@ -63,7 +99,11 @@ describe("api v1 contract", () => {
 
   it("clamps limit to max and echoes effective value", async () => {
     const c = await cookieFor(ALICE);
-    const res = await app.inject({ method: "GET", url: "/api/v1/places?limit=9999", headers: { cookie: c } });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/places?limit=9999",
+      headers: { cookie: c },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json().pagination.limit).toBe(100);
   });
@@ -88,7 +128,12 @@ describe("api v1 contract", () => {
 
   it("tags and users return envelope with exact totals", async () => {
     const c = await cookieFor(ALICE);
-    await app.inject({ method: "POST", url: "/api/v1/places", headers: { cookie: c }, payload: { name: "T1", icon: "fork", tags: ["cozy"] } });
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/places",
+      headers: { cookie: c },
+      payload: { name: "T1", icon: "fork", tags: ["cozy"] },
+    });
     const tags = await app.inject({ method: "GET", url: "/api/v1/tags", headers: { cookie: c } });
     expect(tags.statusCode).toBe(200);
     expect(Array.isArray(tags.json().data)).toBe(true);

@@ -5,7 +5,7 @@ import { sanitizeAttributes } from "./sanitize.js";
 export async function withSpan<T>(
   name: string,
   attrs: Record<string, unknown>,
-  fn: (span: any) => Promise<T>
+  fn: (span: any) => Promise<T>,
 ): Promise<T> {
   // Resolve the tracer lazily so tests (and re-init) that swap the global
   // provider always use the current one instead of a stale cached instance.

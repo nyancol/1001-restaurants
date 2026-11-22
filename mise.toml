@@ -26,6 +26,19 @@ trap 'kill $BACKEND_PID 2>/dev/null' EXIT INT TERM
 npm run dev:web
 """
 
+# ── Quality gates (mirror CI verify job) ────────────────────────────────────
+[tasks.check]
+description = "Typecheck + lint + format:check + tests (coverage gate)"
+run = "npm run typecheck && npm run lint && npm run format:check && npm test"
+
+[tasks.lint]
+description = "ESLint (JS core rules; types via tsc)"
+run = "npm run lint"
+
+[tasks.format]
+description = "Prettier write"
+run = "npm run format"
+
 # ── Preprod environment ─────────────────────────────────────────────────────
 # Isolated app instance for testing (host port 5174, container port 5173 to
 # match the Caddy target, own container + data volume). Production is never

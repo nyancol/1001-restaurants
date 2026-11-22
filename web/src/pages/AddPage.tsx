@@ -5,7 +5,13 @@ import TagCombobox from "../components/TagCombobox";
 import IconPicker from "../components/IconPicker";
 import Stars from "../components/Stars";
 import VenueDataCard from "../components/VenueDataCard";
-import { createPlace, listPlaces, patchPlace, UnauthorizedError, type PlaceDetails } from "../lib/api";
+import {
+  createPlace,
+  listPlaces,
+  patchPlace,
+  UnauthorizedError,
+  type PlaceDetails,
+} from "../lib/api";
 import { useLanguage } from "../i18n/LanguageContext";
 
 import AddPlaceSheet from "../components/mobile/AddPlaceSheet";
@@ -88,7 +94,9 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
         googleRating: enrichment?.googleRating ?? null,
         googleRatingCount: enrichment?.googleRatingCount ?? null,
         websiteUri: enrichment?.websiteUri ?? null,
-        mapsLinks: enrichment?.mapsLinks ?? (enrichment?.googleMapsUri ? { placeUri: enrichment.googleMapsUri } : null),
+        mapsLinks:
+          enrichment?.mapsLinks ??
+          (enrichment?.googleMapsUri ? { placeUri: enrichment.googleMapsUri } : null),
         utcOffsetMinutes: enrichment?.utcOffsetMinutes ?? null,
       };
       if (googlePlaceId) {
@@ -144,30 +152,49 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
   return (
     <div className="mx-auto max-w-xl bg-bg px-4 pb-28 pt-4 lg:max-w-2xl">
       <h1 className="font-display mb-4 text-xl font-bold text-ink">{t["add.title"]}</h1>
-      {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
-      {info && <div className="edge radius-input mb-3 border-info-line bg-info-bg px-3 py-2 text-sm text-info-ink">{info}</div>}
+      {error && (
+        <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">
+          {error}
+        </div>
+      )}
+      {info && (
+        <div className="edge radius-input mb-3 border-info-line bg-info-bg px-3 py-2 text-sm text-info-ink">
+          {info}
+        </div>
+      )}
       <div className="flex flex-col gap-4">
-        <LookupField text={lookupText} onTextChange={(t) => { setLookupText(t); if (!name || t === "") setName(t); }} onPick={handlePick} />
+        <LookupField
+          text={lookupText}
+          onTextChange={(t) => {
+            setLookupText(t);
+            if (!name || t === "") setName(t);
+          }}
+          onPick={handlePick}
+        />
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="name">{t["add.name"]}</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="name">
+            {t["add.name"]}
+          </label>
           <input
             id="name"
             value={name}
-          onChange={(e) => {
-            const v = e.target.value;
-            setName(v);
-            // Manual edits detach the picked Google place to avoid mis-attribution.
-            if (googlePlaceId && v !== lookupText) {
-              setGooglePlaceId(null);
-              setEnrichment(null);
-            }
-          }}
+            onChange={(e) => {
+              const v = e.target.value;
+              setName(v);
+              // Manual edits detach the picked Google place to avoid mis-attribution.
+              if (googlePlaceId && v !== lookupText) {
+                setGooglePlaceId(null);
+                setEnrichment(null);
+              }
+            }}
             className="edge radius-input w-full border-line bg-surface px-3 py-2 text-ink placeholder:text-muted"
             placeholder={t["add.namePlaceholder"]}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="address">{t["add.address"]}</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="address">
+            {t["add.address"]}
+          </label>
           <input
             id="address"
             value={address}
@@ -206,7 +233,9 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
         <TagCombobox value={tags} onChange={setTags} />
         <Stars value={rating} onChange={setRating} />
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="note">{t["add.note"]}</label>
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="note">
+            {t["add.note"]}
+          </label>
           <textarea
             id="note"
             value={note}
@@ -217,7 +246,10 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
           />
         </div>
       </div>
-      <div className="fixed bottom-0 left-0 right-0 border-t border-line bg-surface/95 p-3 backdrop-blur" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+      <div
+        className="fixed bottom-0 left-0 right-0 border-t border-line bg-surface/95 p-3 backdrop-blur"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
         <div className="mx-auto flex max-w-xl gap-2 lg:max-w-2xl">
           <button
             type="button"

@@ -2,8 +2,16 @@ import { describe, expect, it } from "vitest";
 import { Writable } from "node:stream";
 import pino, { multistream } from "pino";
 import { trace, context, logs } from "@opentelemetry/api";
-import { LoggerProvider, InMemoryLogRecordExporter, SimpleLogRecordProcessor } from "@opentelemetry/sdk-logs";
-import { TracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace";
+import {
+  LoggerProvider,
+  InMemoryLogRecordExporter,
+  SimpleLogRecordProcessor,
+} from "@opentelemetry/sdk-logs";
+import {
+  TracerProvider,
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import {
   buildPinoOptions,
@@ -55,7 +63,10 @@ describe("otel pino logs", () => {
         logger.info("inside");
         span.end();
       });
-      const line = chunks.join("").split("\n").find((l) => l.includes("inside"));
+      const line = chunks
+        .join("")
+        .split("\n")
+        .find((l) => l.includes("inside"));
       expect(line).toBeDefined();
       const rec = JSON.parse(line!);
       expect(rec.trace_id).toBeDefined();
@@ -81,12 +92,21 @@ describe("otel pino logs", () => {
     (logs as any).setGlobalLoggerProvider(loggerProvider);
     try {
       const chunks: string[] = [];
-      const stream = multistream([{ stream: memoryStream(chunks) }, { stream: new OtlpBridgeStream() }]);
+      const stream = multistream([
+        { stream: memoryStream(chunks) },
+        { stream: new OtlpBridgeStream() },
+      ]);
       const logger = pino(buildPinoOptions() as any, stream as any);
-      logger.error({ googlePlacesKey: "secret-key", "X-Goog-Api-Key": "secret-key-2" }, "google details failed");
+      logger.error(
+        { googlePlacesKey: "secret-key", "X-Goog-Api-Key": "secret-key-2" },
+        "google details failed",
+      );
       await loggerProvider.forceFlush();
       // Stdout side is untouched redacted JSON.
-      const line = chunks.join("").split("\n").find((l) => l.includes("google details failed"));
+      const line = chunks
+        .join("")
+        .split("\n")
+        .find((l) => l.includes("google details failed"));
       expect(line).toBeDefined();
       expect(() => JSON.parse(line!)).not.toThrow();
       expect(line!).not.toContain("secret-key");

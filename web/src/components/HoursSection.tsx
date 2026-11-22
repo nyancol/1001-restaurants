@@ -31,8 +31,16 @@ export default function HoursSection({ place: p, fallback }: Props) {
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        aria-label={expanded ? String(t["hours.hideWeek"] ?? "Hide full week hours") : String(t["hours.showWeek"] ?? "Show full week hours")}
-        title={expanded ? String(t["hours.hideWeek"] ?? "Hide full week hours") : String(t["hours.showWeek"] ?? "Show full week hours")}
+        aria-label={
+          expanded
+            ? String(t["hours.hideWeek"] ?? "Hide full week hours")
+            : String(t["hours.showWeek"] ?? "Show full week hours")
+        }
+        title={
+          expanded
+            ? String(t["hours.hideWeek"] ?? "Hide full week hours")
+            : String(t["hours.showWeek"] ?? "Show full week hours")
+        }
         className="inline-flex max-w-full items-center gap-1.5 rounded-full hover:opacity-80"
       >
         <span
@@ -46,11 +54,16 @@ export default function HoursSection({ place: p, fallback }: Props) {
         {todayRow && !expanded && todayRow.hoursText && (
           <span className="truncate text-muted">· {todayRow.hoursText}</span>
         )}
-        <span aria-hidden className="shrink-0 text-muted">{expanded ? "▴" : "▾"}</span>
+        <span aria-hidden className="shrink-0 text-muted">
+          {expanded ? "▴" : "▾"}
+        </span>
       </button>
 
       {expanded && (
-        <span className="edge mt-2 block border-line/60 bg-surface-2/40 p-3" style={{ borderRadius: 12 }}>
+        <span
+          className="edge mt-2 block border-line/60 bg-surface-2/40 p-3"
+          style={{ borderRadius: 12 }}
+        >
           <span className="mb-2 flex items-center justify-between gap-2 border-b border-line/60 pb-2">
             <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-ink">
               <span aria-hidden>🕒</span> {t["hours.title"] ?? "Hours & Service"}
@@ -68,9 +81,7 @@ export default function HoursSection({ place: p, fallback }: Props) {
               <span
                 key={`${r.dayIndex}-${r.dayLabel}`}
                 className={`flex items-center justify-between gap-2 py-0.5 ${
-                  r.isToday
-                    ? "edge bg-surface px-2 font-bold text-ink shadow-theme"
-                    : "text-muted"
+                  r.isToday ? "edge bg-surface px-2 font-bold text-ink shadow-theme" : "text-muted"
                 }`}
                 style={r.isToday ? { borderRadius: 8 } : undefined}
               >
@@ -79,7 +90,9 @@ export default function HoursSection({ place: p, fallback }: Props) {
                     <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
                   )}
                   {r.dayLabel}
-                  {r.isToday && <span className="font-semibold">({t["hours.today"] ?? "Today"})</span>}
+                  {r.isToday && (
+                    <span className="font-semibold">({t["hours.today"] ?? "Today"})</span>
+                  )}
                 </span>
                 <span className={`text-right font-medium ${r.isToday ? "text-accent" : ""}`}>
                   {r.hoursText || (t["hours.closed"] ?? "Closed")}

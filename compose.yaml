@@ -60,7 +60,13 @@ services:
       - caddy
       - telemetry
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       start_period: 10s
@@ -75,11 +81,11 @@ networks:
   caddy:
     name: caddy_public
     external: true
-# Shared observability network (homelab LGTM stack lives here as `lgtm`).
-# Created on the host outside this project: `docker network create telemetry`.
-# Attaching here lets prod reach the collector as http://lgtm:4318.
-# Preprod inherits the attachment via merge but exports nothing — its env
-# never sets OTEL_EXPORTER_OTLP_ENDPOINT, so the SDK stays a no-op there.
+  # Shared observability network (homelab LGTM stack lives here as `lgtm`).
+  # Created on the host outside this project: `docker network create telemetry`.
+  # Attaching here lets prod reach the collector as http://lgtm:4318.
+  # Preprod inherits the attachment via merge but exports nothing — its env
+  # never sets OTEL_EXPORTER_OTLP_ENDPOINT, so the SDK stays a no-op there.
   telemetry:
     name: telemetry
     external: true

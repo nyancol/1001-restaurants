@@ -10,7 +10,11 @@ export function normalizeTagName(raw: unknown): string | null {
 }
 
 /** Ensure definitions exist for each name; creates missing with random palette colors. */
-export async function ensureTagDefinitions(db: any, ownerId: string, names: string[]): Promise<void> {
+export async function ensureTagDefinitions(
+  db: any,
+  ownerId: string,
+  names: string[],
+): Promise<void> {
   const normalized = normalizeTags(names);
   if (!normalized.length) return;
   const existing = await db
@@ -26,7 +30,9 @@ export async function ensureTagDefinitions(db: any, ownerId: string, names: stri
     const color = randomPaletteColor(usedColors);
     usedColors.add(color);
     try {
-      await db.insert(tagDefinitions).values({ ownerId, name, color, createdAt: now, updatedAt: now });
+      await db
+        .insert(tagDefinitions)
+        .values({ ownerId, name, color, createdAt: now, updatedAt: now });
     } catch {
       // race: unique (ownerId, name) — treat as idempotent success
     }
@@ -42,7 +48,11 @@ export function assertPaletteColor(color: unknown): string | null {
 }
 
 /** Rewrite helper: replace oldName with newName across owner's places (dedupe). */
-export function rewriteTagInList(tags: string[], oldName: string, newName: string | null): string[] {
+export function rewriteTagInList(
+  tags: string[],
+  oldName: string,
+  newName: string | null,
+): string[] {
   if (newName == null) {
     return tags.filter((t) => t !== oldName);
   }

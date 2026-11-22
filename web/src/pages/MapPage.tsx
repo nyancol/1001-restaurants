@@ -23,10 +23,49 @@ function priceTiersFor(level: unknown): string[] {
 }
 
 export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void }) {
-  const { owner, statusParam, tagsParam, qParam, openAtParam, openNowParam, priceParam, status, setStatus, tags, setTags, q, setQ, openEnabled, setOpenEnabled, openAt, setOpenAt, price, setPrice } = usePlaceFilters();
+  const {
+    owner,
+    statusParam,
+    tagsParam,
+    qParam,
+    openAtParam,
+    openNowParam,
+    priceParam,
+    status,
+    setStatus,
+    tags,
+    setTags,
+    q,
+    setQ,
+    openEnabled,
+    setOpenEnabled,
+    openAt,
+    setOpenAt,
+    price,
+    setPrice,
+  } = usePlaceFilters();
 
-  const { places, loading, error, setError, flipStatus, saveEdit, deleteOne, refreshOne, refreshingIds, fetchList } = usePlaces(
-    { owner, status: statusParam, tags: tagsParam, q: qParam, openAt: openAtParam, openNow: openNowParam, price: priceParam },
+  const {
+    places,
+    loading,
+    error,
+    setError,
+    flipStatus,
+    saveEdit,
+    deleteOne,
+    refreshOne,
+    refreshingIds,
+    fetchList,
+  } = usePlaces(
+    {
+      owner,
+      status: statusParam,
+      tags: tagsParam,
+      q: qParam,
+      openAt: openAtParam,
+      openNow: openNowParam,
+      price: priceParam,
+    },
     onUnauthorized,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -41,7 +80,12 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
     return () => window.removeEventListener("inmybelly:open-add", onOpenAdd);
   }, []);
 
-  const priceSelected = price ? price.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const priceSelected = price
+    ? price
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
   const filtered = useMemo(() => {
     if (!priceSelected.length) return places;
     return places.filter((p) => {
@@ -62,11 +106,14 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
   const wantCount = places.filter((p) => p.status === "WANT_TO_GO").length;
   const beenCount = places.filter((p) => p.status === "BEEN_TO").length;
   const readOnly = owner !== "me";
-  const activeFilterCount = tags.length + (openEnabled ? 1 : 0) + priceSelected.length + (status ? 1 : 0);
+  const activeFilterCount =
+    tags.length + (openEnabled ? 1 : 0) + priceSelected.length + (status ? 1 : 0);
   // Single selection surface on phone: a pin tap opens the bottom sheet directly.
   // Derived from places so status toggles stay live while the sheet is open.
   const notesPlace = notesPlaceId
-    ? (filtered.find((p) => p.id === notesPlaceId) ?? places.find((p) => p.id === notesPlaceId) ?? null)
+    ? (filtered.find((p) => p.id === notesPlaceId) ??
+      places.find((p) => p.id === notesPlaceId) ??
+      null)
     : null;
 
   function handleSelect(id: string | null) {
@@ -76,7 +123,12 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
 
   return (
     <div className="mx-auto w-full max-w-md bg-bg px-4 pb-8 pt-3">
-      <SearchBar q={q} setQ={setQ} onOpenFilters={() => setSheetOpen(true)} activeFilterCount={activeFilterCount} />
+      <SearchBar
+        q={q}
+        setQ={setQ}
+        onOpenFilters={() => setSheetOpen(true)}
+        activeFilterCount={activeFilterCount}
+      />
 
       <div className="flex items-center justify-between pb-1 pt-3">
         <div className="flex items-baseline gap-1.5">
@@ -86,9 +138,16 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
         <ViewToggle />
       </div>
 
-      {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
+      {error && (
+        <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">
+          {error}
+        </div>
+      )}
 
-      <div className="edge relative overflow-hidden border-line bg-surface-2/30" style={{ borderRadius: 16 }}>
+      <div
+        className="edge relative overflow-hidden border-line bg-surface-2/30"
+        style={{ borderRadius: 16 }}
+      >
         <MapView
           places={filtered}
           loading={loading}
@@ -97,7 +156,9 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
           onSaveEdit={saveEdit}
           onDelete={deleteOne}
           onRefresh={(p) => {
-            void refreshOne(p).catch((e: unknown) => setError(e instanceof Error ? e.message : "Refresh failed"));
+            void refreshOne(p).catch((e: unknown) =>
+              setError(e instanceof Error ? e.message : "Refresh failed"),
+            );
           }}
           refreshingIds={refreshingIds}
           selectedId={selectedId}
@@ -142,7 +203,9 @@ export default function MapPage({ onUnauthorized }: { onUnauthorized: () => void
           if (!readOnly) void flipStatus(p);
         }}
         onRefresh={(p) => {
-          void refreshOne(p).catch((e: unknown) => setError(e instanceof Error ? e.message : "Refresh failed"));
+          void refreshOne(p).catch((e: unknown) =>
+            setError(e instanceof Error ? e.message : "Refresh failed"),
+          );
         }}
         refreshing={notesPlace ? refreshingIds.includes(notesPlace.id) : false}
         readOnly={readOnly}
