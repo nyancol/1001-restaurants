@@ -5,8 +5,9 @@ import { PIN_FILL } from "../theme/pins";
 import IconGlyph from "./IconGlyph";
 import TagDot from "./TagDot";
 import HoursSection from "./HoursSection";
+import PlaceActionBar, { refreshErrorMessage } from "./PlaceActionBar";
 import { colorForDisplay, useTagColors } from "../lib/useTagColors";
-import { useLanguage, type Dict } from "../i18n/LanguageContext";
+import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
   place: Place;
@@ -125,15 +126,6 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
     copyTimer.current = window.setTimeout(() => setCopied(false), 2000);
   }
 
-  function refreshMessage(err: any, googlePlaceId: string | null, t: Dict): string {
-    const status = err?.status;
-    if (status === 422 || (!googlePlaceId && !status)) return t["card.noGoogle"];
-    if (status === 429) return t["card.rateLimited"];
-    if (status === 503 || status === 502) return t["card.googleUnavailable"];
-    if (status === 403) return t["card.notAllowed"];
-    return err?.message ?? t["card.refreshFailed"];
-  }
-
   async function handleRefresh() {
     if (busy || !onRefresh) return;
     if (!p.googlePlaceId) {
@@ -145,7 +137,7 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
     try {
       await onRefresh(p);
     } catch (err: any) {
-      setRefreshError(refreshMessage(err, p.googlePlaceId, t));
+      setRefreshError(refreshErrorMessage(err, p.googlePlaceId, t));
     } finally {
       setBusyLocal(false);
     }
@@ -252,55 +244,9 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
             <span>{google != null && personal != null ? `🅖 ${google}${p.googleRatingCount != null ? ` (${p.googleRatingCount})` : ""}` : ratingLabel(personal)}</span>
           )}
         </span>
-        {!readOnly && actionStyle === "pills" && (
+        {actionStyle === "pills" && (
           <span className="inline-flex w-full items-center gap-1.5 pt-1">
-            <button
-              type="button"
-              className="edge inline-flex min-h-[36px] items-center gap-1 border-line bg-surface-2/60 px-2.5 text-xs font-semibold text-ink hover:bg-surface-2"
-              style={{ borderRadius: 999 }}
-              onClick={() => onEdit(p)}
-              aria-label={t["card.edit"]}
-              title={t["card.edit"]}
-            >
-              <span aria-hidden>✎</span> {t["card.edit"]}
-            </button>
-            {mapsUrlFor(p) && (
-              <button
-                type="button"
-                className="edge inline-flex min-h-[36px] items-center gap-1 border-line bg-surface-2/60 px-2.5 text-xs font-semibold text-ink hover:bg-surface-2"
-                style={{ borderRadius: 999 }}
-                onClick={() => void shareMaps()}
-                aria-label={t["card.shareAria"]}
-                title={copied ? t["card.copied"] : t["card.share"]}
-              >
-                <span aria-hidden>{copied ? "✓" : "⤴"}</span> {t["card.sharePill"] ?? "Share"}
-              </button>
-            )}
-            <span className="flex-1" />
-            {onRefresh && (
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-50"
-                onClick={() => void handleRefresh()}
-                disabled={busy || !p.googlePlaceId}
-                title={!p.googlePlaceId ? t["card.noGoogle"] : t["card.refreshTitle"]}
-                aria-label={busy ? t["card.refreshingAria"] : t["card.refreshAria"]}
-              >
-                <span aria-hidden className={busy ? "animate-spin inline-block" : "inline-block"}>↻</span>
-              </button>
-            )}
-            {p.websiteUri && (
-              <a
-                href={p.websiteUri}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
-                aria-label={t["card.website"]}
-                title={t["card.website"]}
-              >
-                <span aria-hidden>↗</span>
-              </a>
-            )}
+            <PlaceActionBar place={p} onEdit={onEdit} onRefresh={onRefresh} refreshing={refreshing} readOnly={readOnly} />
           </span>
         )}
         {!readOnly && actionStyle !== "pills" && (

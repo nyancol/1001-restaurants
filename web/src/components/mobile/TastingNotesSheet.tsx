@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
 import type { Place } from "../../lib/api";
-import { mapsUrlFor } from "../../lib/api";
 import BottomSheet from "./BottomSheet";
+import PlaceActionBar from "../PlaceActionBar";
 
 function displayRating(p: Place): string | null {
   const r = p.googleRating ?? p.rating ?? null;
@@ -42,42 +41,13 @@ interface Props {
   onClose: () => void;
   onEdit: (p: Place) => void;
   onToggleStatus: (p: Place) => void;
+  onRefresh?: (p: Place) => Promise<unknown>;
+  refreshing?: boolean;
   readOnly?: boolean;
 }
 
 /** Phone "Expanded Tasting Notes" sheet from Stitch. */
-export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStatus, readOnly }: Props) {
-  const [copied, setCopied] = useState(false);
-  const copyTimer = useRef<number | null>(null);
-  useEffect(
-    () => () => {
-      if (copyTimer.current) window.clearTimeout(copyTimer.current);
-    },
-    [],
-  );
-  useEffect(() => {
-    setCopied(false);
-  }, [place?.id]);
-
-  async function share() {
-    if (!place) return;
-    const url = mapsUrlFor(place);
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = url;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
-    }
-    setCopied(true);
-    if (copyTimer.current) window.clearTimeout(copyTimer.current);
-    copyTimer.current = window.setTimeout(() => setCopied(false), 2000);
-  }
-
+export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStatus, onRefresh, refreshing, readOnly }: Props) {
   const rating = place ? displayRating(place) : null;
   const price = place ? priceLabel(place) : null;
   const been = place?.status === "BEEN_TO";
@@ -156,33 +126,11 @@ export default function TastingNotesSheet({ place, onClose, onEdit, onToggleStat
               </div>
             )}
 
-            {copied && (
-              <div className="edge mt-3 border-been bg-been px-2 py-1.5 text-xs font-semibold text-been-ink" style={{ borderRadius: 8 }} role="status">
-                ✓ Google Maps link copied
-              </div>
-            )}
             <div className="h-2" />
           </div>
 
-          <div className="grid grid-cols-[1fr_auto] gap-2 border-t border-line/60 bg-[#fff8e8] p-4">
-            {!readOnly && (
-              <button
-                type="button"
-                onClick={() => onEdit(place)}
-                className="edge inline-flex min-h-[52px] items-center justify-center gap-2 border-accent bg-accent px-4 text-base font-bold text-accent-ink"
-                style={{ borderRadius: 12 }}
-              >
-                <span aria-hidden>✎</span> Edit Place
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => void share()}
-              className="edge inline-flex min-h-[52px] items-center justify-center gap-1.5 border-line bg-surface-2/60 px-5 text-base font-bold text-ink"
-              style={{ borderRadius: 12 }}
-            >
-              <span aria-hidden>⤴</span> Share
-            </button>
+          <div className="border-t border-line/60 bg-[#fff8e8] p-4">
+            <PlaceActionBar place={place} onEdit={onEdit} onRefresh={onRefresh} refreshing={refreshing} readOnly={readOnly} />
           </div>
         </>
       )}

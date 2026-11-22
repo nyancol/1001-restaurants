@@ -224,6 +224,7 @@ export const fr: typeof en = {
   "card.googleRatingTitle": "Note Google",
   "card.edit": "Modifier",
   "card.refresh": "Actualiser depuis Google",
+  "card.refreshCta": "Actualiser",
   "card.refreshing": "Actualisation…",
   "card.refreshTitle": "Recharger les détails Google",
   "card.noGoogle": "Pas de lien Google — actualisation indisponible",

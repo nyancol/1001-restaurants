@@ -144,6 +144,8 @@ export default function ListPage({ onUnauthorized }: { onUnauthorized: () => voi
         onToggleStatus={(p) => {
           if (!readOnly) void flipStatus(p);
         }}
+        onRefresh={(p) => refreshOne(p)}
+        refreshing={notesPlace ? refreshingIds.includes(notesPlace.id) : false}
         readOnly={readOnly}
       />
 

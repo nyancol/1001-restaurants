@@ -222,6 +222,7 @@ export const en = {
   "card.googleRatingTitle": "Google rating",
   "card.edit": "Edit",
   "card.refresh": "Refresh from Google",
+  "card.refreshCta": "Refresh",
   "card.refreshing": "Refreshing…",
   "card.refreshTitle": "Re-fetch Google details",
   "card.noGoogle": "No Google link — refresh unavailable",
