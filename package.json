@@ -37,7 +37,7 @@
     "better-sqlite3": "^13.0.3",
     "fastify": "^5.6.1",
     "jose": "^6.0.12",
-    "maplibre-gl": "^6.17.0",
+    "maplibre-gl": "^6.18.0",
     "openid-client": "^6.9.0",
     "pino": "^10.4.0",
     "react": "^19.3.1",
