@@ -13,12 +13,12 @@ The system SHALL render a desktop (`lg+`) journal with left filter rail (~280px)
 - **WHEN** the user picks a tag in the left rail on desktop
 - **THEN** the center feed filters and map pins update without reload, and pin tap highlights the matching card via scroll-into-view.
 
-#### Scenario: Map preview drives feed
+#### Scenario: Pin tap selects feed card
 - **WHEN** the user taps a map pin on desktop
-- **THEN** the system highlights the matching feed card and shows the preview card docked above the map footer.
+- **THEN** the system highlights the pin and scrolls the matching feed card into view without showing any overlay on the map.
 
 ### Requirement: Left filter rail
-The system SHALL show Me/Friends scope toggle with counts, search input with `⌘K`, LISTS & STATE section (All Saved Tables / Want to Visit / Been & Loved with counts), TAGS section (12 tags label, “Add tag to filter…” input, pill cloud with active `#NaturalWine` state), and “Reset all journal filters” link.
+The system SHALL show Me/Friends scope toggle with counts, search input, LISTS & STATE section (All Saved Tables / Want to Visit / Been & Loved with counts), TAGS section (12 tags label, “Add tag to filter…” input, pill cloud with active `#NaturalWine` state), and “Reset all journal filters” link.
 
 #### Scenario: Reset clears all
 - **WHEN** the user clicks reset

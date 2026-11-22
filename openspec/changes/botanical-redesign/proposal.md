@@ -8,7 +8,7 @@ The current XP/Retro UI is functional but generic and dense. Stitch explorations
 
 - Add `botanical` theme (default) implementing Botanical Butter & Earth tokens; keep `xp`/`retro` working via ThemeSwitcher.
 - Reskin app shell: header with “In my Belly / Personal dining journal & shared taste”, `+ New Memory` CTA, user chip; warm footer with tagline + guide links.
-- Desktop (`lg+`) 3-pane journal: left filter rail (Me/Friends, search `⌘K`, Lists & State counts, Tags with counts + reset), center Saved Tables feed (header + sort + card/grid toggle + journal cards), right sticky map with Artisan/Transit + RE-CENTER + preview card + “View Tasting Notes”.
+- Desktop (`lg+`) 3-pane journal: left filter rail (Me/Friends, search, Lists & State counts, Tags with counts + reset), center Saved Tables feed (header + sort + card/grid toggle + journal cards), right sticky map with Artisan/Transit + RE-CENTER + preview card + “View Tasting Notes”.
 - Mobile: stacked — header, Me/Friends + search, Lists collapsible, Tags horizontal scroll, Saved Tables feed; map via existing `/map` route with bottom preview sheet.
 - Journal cards: title + `★ rating` honey pill + `Been 3x` / `Want to go` status pill, italic quote note on butter wash, photo duo placeholders, address/price/visited footer.
 - In-place edit mode (Clamato pattern): `Editing place` badge, Want-to-go/Been-here segmented, VISITS stepper, ICON picker row, TAGS & CUISINE pill editor with suggestions + count, YOUR RATING stars + `4.8 / 5.0` + label, NOTE textarea, Delete / Cancel / Save Changes bar.

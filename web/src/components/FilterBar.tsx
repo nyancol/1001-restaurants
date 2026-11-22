@@ -213,10 +213,9 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
               onChange={(e) => setQ(e.target.value)}
               placeholder="Dishes, spots, arrondissements..."
               enterKeyHint="search"
-              className="edge w-full border-line bg-surface py-2.5 pl-9 pr-12 text-sm text-ink placeholder:text-muted"
+              className="edge w-full border-line bg-surface py-2.5 pl-9 pr-4 text-sm text-ink placeholder:text-muted"
               style={{ borderRadius: 999, minHeight: 44 }}
             />
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-muted" style={{ borderRadius: 6 }}>⌘K</kbd>
           </div>
 
           {/* Lists & State */}

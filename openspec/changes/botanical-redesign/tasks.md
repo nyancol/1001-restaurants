@@ -14,7 +14,7 @@
 ## 3. Journal rail + feed
 
 - [x] 3.1 Rework `SplitPage.tsx` to lg 3-pane grid (280px rail / feed / 1.2x map, sticky rail+map) reusing single `usePlaceFilters`+`usePlaces`, verify pin→card scroll and card→pin highlight work.
-- [x] 3.2 Restyle `FilterBar layout=rail` to journal rail (search ⌘K, LISTS & STATE with live counts, TAGS cloud + add input + reset) and `ListPage` phone stacking, verify clear-all resets status/tags/q/openAt and tests in `TagCombobox.test` still pass.
+- [x] 3.2 Restyle `FilterBar layout=rail` to journal rail (search, LISTS & STATE with live counts, TAGS cloud + add input + reset) and `ListPage` phone stacking, verify clear-all resets status/tags/q/openAt and tests in `TagCombobox.test` still pass.
 - [x] 3.3 Restyle `PlaceListPane` + `PlaceCard` to journal cards (title+★ honey pill+Been/Want pill, butter quote wash, photo placeholders, address•price•visited footer, tag pills, hide missing) and verify `vitest run` card/list suites pass + visual check vs Le Servan/Clamato cards.
 - [x] 3.4 Add feed header (Saved Tables (N) + Recently Saved sort + card/grid toggle with working sort) and themed empty state with New Memory CTA, verify sort toggle preserves filters.
 
