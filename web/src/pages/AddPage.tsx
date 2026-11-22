@@ -4,6 +4,7 @@ import LookupField from "../components/LookupField";
 import TagCombobox from "../components/TagCombobox";
 import IconPicker from "../components/IconPicker";
 import Stars from "../components/Stars";
+import VenueDataCard from "../components/VenueDataCard";
 import { createPlace, listPlaces, patchPlace, UnauthorizedError, type PlaceDetails } from "../lib/api";
 import { useLanguage } from "../i18n/LanguageContext";
 
@@ -164,28 +165,7 @@ function DesktopAddPage({ onUnauthorized }: { onUnauthorized: () => void }) {
           />
         </div>
         <IconPicker value={icon} onChange={setIcon} />
-        {enrichment && (
-          <div className="edge radius-card border-line bg-surface-2 px-3 py-2">
-            <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">{t["add.googleSnapshot"]}</div>
-            <div className="flex flex-col gap-1 text-xs text-ink">
-              {enrichment.priceLevel && <div>💶 {t["add.price"]} <strong>{enrichment.priceLevel}</strong></div>}
-              {enrichment.googleRating != null && <div>🅖 {t["add.google"]} <strong>{enrichment.googleRating}</strong>{enrichment.googleRatingCount != null ? t["add.reviews"](enrichment.googleRatingCount) : ""}</div>}
-              {enrichment.websiteUri && <div className="truncate">🌐 <span className="text-accent underline">{enrichment.websiteUri}</span></div>}
-              {enrichment.businessStatus && enrichment.businessStatus !== "OPERATIONAL" && <div>⚠️ {t["add.statusLabel"]} <strong>{enrichment.businessStatus}</strong></div>}
-              {Array.isArray(enrichment.hours?.weekdayDescriptions) && enrichment.hours.weekdayDescriptions.length > 0 && (
-                <div>
-                  <div>{t["add.hoursSaved"]}</div>
-                  <ul className="mt-0.5 flex flex-col gap-0.5 pl-3">
-                    {enrichment.hours.weekdayDescriptions.map((d: string, i: number) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {(enrichment.mapsLinks || enrichment.googleMapsUri) && <div>{t["add.mapsLinkNote"]}</div>}
-            </div>
-          </div>
-        )}
+        {enrichment && <VenueDataCard enrichment={enrichment} />}
         <div>
           <span className="mb-1 block text-sm font-medium text-ink">{t["add.status"]}</span>
           <div className="flex gap-2" role="radiogroup" aria-label={t["add.statusAria"]}>

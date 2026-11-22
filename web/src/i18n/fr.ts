@@ -106,6 +106,10 @@ export const fr: typeof en = {
   "filter.ellipsis": "…",
 
   "add.title": "Ajouter un lieu",
+  "add.venueData": "Données du lieu (auto)",
+  "add.readOnlyBadge": "Lecture seule",
+  "add.googleReviews": (n: number) => `(${n.toLocaleString()} avis Google)`,
+  "add.hoursToggle": (open: boolean) => (open ? "Touchez pour masquer la semaine" : "Touchez pour voir la semaine"),
   "add.name": "Nom *",
   "add.namePlaceholder": "Nom du lieu",
   "add.address": "Adresse",

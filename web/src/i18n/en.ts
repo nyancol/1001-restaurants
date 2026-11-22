@@ -104,6 +104,10 @@ export const en = {
   "filter.ellipsis": "…",
 
   "add.title": "Add a place",
+  "add.venueData": "Venue data (auto-fetched)",
+  "add.readOnlyBadge": "Read-only",
+  "add.googleReviews": (n: number) => `(${n.toLocaleString()} Google reviews)`,
+  "add.hoursToggle": (open: boolean) => (open ? "Tap to hide full week" : "Tap to see full week"),
   "add.name": "Name *",
   "add.namePlaceholder": "Place name",
   "add.address": "Address",

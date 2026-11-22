@@ -12,20 +12,11 @@ import {
 } from "../../lib/api";
 import BottomSheet from "./BottomSheet";
 import IconGlyph from "../IconGlyph";
+import VenueDataCard from "../VenueDataCard";
 import TagCombobox, { type TagMutation } from "../TagCombobox";
 import { useLanguage } from "../../i18n/LanguageContext";
 
 const ICON_ROW = ["fork", "croissant", "coffee", "wine", "cocktail"] as const;
-
-function priceLabel(level: unknown): string | null {
-  const v = String(level ?? "").toUpperCase();
-  if (v.includes("VERY_EXPENSIVE") || v === "$$$$") return "$$$$";
-  if (v.includes("EXPENSIVE") || v === "$$$") return "$$$";
-  if (v.includes("MODERATE") || v === "$$") return "$$";
-  if (v.includes("INEXPENSIVE") || v === "$") return "$";
-  const m = String(level ?? "").match(/\$+/);
-  return m ? m[0] : null;
-}
 
 interface Props {
   open: boolean;
@@ -54,7 +45,6 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
   const [tags, setTags] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [enrichment, setEnrichment] = useState<PlaceDetails | null>(null);
-  const [hoursOpen, setHoursOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +65,6 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
       setTags([]);
       setNote("");
       setEnrichment(null);
-      setHoursOpen(false);
       setSaving(false);
       setError(null);
     }
@@ -206,12 +195,6 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
     }
   }
 
-  const price = priceLabel(enrichment?.priceLevel);
-  const hoursList: string[] = Array.isArray(enrichment?.hours?.weekdayDescriptions)
-    ? enrichment.hours.weekdayDescriptions
-    : [];
-  const hoursSummary = hoursList.length > 2 ? `${hoursList[2]}${hoursList[3] ? `, ${hoursList[3]}` : ""}` : hoursList[0] ?? null;
-
   return (
     <BottomSheet open={open} onClose={onClose} ariaLabel="Add place">
       <>
@@ -311,53 +294,7 @@ export default function AddPlaceSheet({ open, onClose, onSaved, onUnauthorized, 
             )}
           </div>
 
-          {enrichment && (
-            <div className="edge mb-4 rounded-xl border-transparent bg-surface-2/60 p-3.5">
-              <div className="mb-2.5 flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-want-ink">
-                  <span aria-hidden>✪</span> Venue data (auto-fetched)
-                </span>
-                <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-muted">Read-only</span>
-              </div>
-              <div className="mb-2.5 flex flex-wrap items-center gap-2">
-                {typeof enrichment.googleRating === "number" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-surface px-2.5 py-1 text-xs font-bold text-ink">
-                    <span aria-hidden className="text-star">★</span> {enrichment.googleRating.toFixed(1)}
-                    {typeof enrichment.googleRatingCount === "number" && (
-                      <span className="text-[11px] font-normal text-muted">({enrichment.googleRatingCount.toLocaleString()} Google reviews)</span>
-                    )}
-                  </span>
-                )}
-                {price && (
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-bold text-ink">
-                    <span className="text-want-ink">{price}</span>
-                    <span className="text-[11px] font-medium text-muted">Upscale Bistro</span>
-                  </span>
-                )}
-              </div>
-              {(hoursSummary || hoursList.length > 0) && (
-                <div className="flex items-start justify-between gap-2 rounded-lg bg-surface/70 p-2.5">
-                  <div className="flex min-w-0 items-start gap-2">
-                    <span aria-hidden className="mt-0.5 shrink-0">◷</span>
-                    <div className="flex min-w-0 flex-col">
-                      <span className="text-xs font-bold leading-tight text-ink">{hoursSummary ?? hoursList[0]}</span>
-                      <span className="text-[11px] font-medium text-muted">Tap to {hoursOpen ? "hide" : "see"} full week</span>
-                      {hoursOpen && (
-                        <ul className="mt-1 flex flex-col gap-0.5">
-                          {hoursList.map((d, i) => (
-                            <li key={i} className="text-[11px] text-muted">{d}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                  <button type="button" aria-label="Toggle hours" onClick={() => setHoursOpen((o) => !o)} className="shrink-0 text-muted">
-                    {hoursOpen ? "︿" : "﹀"}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          {enrichment && <VenueDataCard enrichment={enrichment} />}
 
           {error && <div className="edge radius-input mb-3 border-danger-line bg-danger-bg px-3 py-2 text-sm text-danger-ink">{error}</div>}
 
