@@ -191,6 +191,25 @@ Commits must follow [Conventional Commits](https://www.conventionalcommits.org/)
 (`feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert`), enforced by
 `.githooks/commit-msg`. See `CHANGELOG.md` (Keep a Changelog).
 
+## Agent skills
+
+This repo carries two distinct sets of agent skills (per the
+[Agent Skills](https://agentskills.io/specification) layout):
+
+- **`.agents/skills/` — project ops skills (authored here).** Runbooks for
+  operating this app: `ops` (router/index), `ops-observe`, `ops-preview`,
+  `ops-incident`, `ops-data`, `ops-runner`, `ops-ship`. Versioned with the
+  code — update the matching skill in the same PR that changes the infra it
+  mirrors. `ops-preview` and `ops-ship` are marked
+  `disable-model-invocation: true`: they mutate preprod/releases and must be
+  invoked explicitly (`/skill:ops-preview`, `/skill:ops-ship`).
+- **`.opencode/skills/` — imported tool skills (vendored, do not hand-edit).**
+  Third-party skills for development workflows (design, openspec, UI
+  recipes). Update them as a set from their upstream source.
+
+Each ops skill states its "sources of truth" (the config files it mirrors);
+keep those in sync.
+
 ## Releases
 
 ```bash

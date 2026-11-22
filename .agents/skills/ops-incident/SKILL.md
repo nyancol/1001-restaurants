@@ -1,13 +1,19 @@
+---
+name: ops-incident
+description: Prod incident handling for "places" — Hermes health/version watch and the git-revert rollback runbook. Use when prod looks down, prod version drifts from main, or a rollback is explicitly ordered.
+---
+
 # Places Incident Skill
 
 Prod health + version watch (Hermes) and git-revert rollback. The agent
 verifies and prepares — Arcane owns deploys. Rollback runs ONLY on explicit
 order.
 
-Secrets: the agent MAY read the Arcane-managed prod `.env` for
-presence/shape validation (set?, valid URL?, length >= 32?). It MUST never
-print, commit, forward, or include secret values in alerts, logs, prompts,
-or reports — presence/shape only (e.g. `SESSION_SECRET set, length ok`).
+Sources of truth: `hermes.yaml` (prod watch section).
+
+Secrets, deploy ownership (Arcane), and the explicit-order gate follow the
+family conventions in the `ops` router skill — load
+`.agents/skills/ops/SKILL.md` if not already loaded.
 
 ## Shared context
 
@@ -54,10 +60,10 @@ running: <version>  health: <body>
 
 ### What NOT to do
 
-- Never build, restart, or `exec` into prod; never touch prod `/data`.
-  The agent verifies and prepares — Arcane owns deploys.
-- Never include secret values: presence/shape only
-  (e.g. `SESSION_SECRET set, length ok`).
+- Never build, restart, or `exec` into prod; never touch prod `/data`
+  (family deploy-ownership rule, `ops` skill).
+- Never include secret values (family secrets rule, `ops` skill):
+  presence/shape only, e.g. `SESSION_SECRET set, length ok`.
 
 ---
 

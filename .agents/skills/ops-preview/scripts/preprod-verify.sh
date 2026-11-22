@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
 # shellcheck disable=SC1091
-. ./skills/ops-preview/scripts/lib-docker.sh # sets SUDO/COMPOSE, auto-detecting docker access
+. .agents/skills/ops-preview/scripts/lib-docker.sh # sets SUDO/COMPOSE, auto-detecting docker access
 FAIL=0
 CHECK_ERR=0
 say() { printf '%s\n' "$*"; }
@@ -65,7 +65,7 @@ if [ -f "$SLOT_FILE" ]; then
     say "SKIP version check: slot branch ($BRANCH) != current checkout (redeploy records it)"
   fi
 else
-  say "SKIP version check: no slot record (deploy with skills/ops-preview/scripts/preprod-deploy.sh to record it)"
+  say "SKIP version check: no slot record (deploy with .agents/skills/ops-preview/scripts/preprod-deploy.sh to record it)"
 fi
 
 if [ "${EXPECT_FIXTURE:-0}" = "1" ]; then

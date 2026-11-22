@@ -1,13 +1,18 @@
+---
+name: ops-observe
+description: Observe prod "places" via the homelab LGTM stack (RED signals) and guard Google API quota spend. Use when checking prod health, dashboards, alerts, or billing/quota. Read-only — never mutates app data.
+---
+
 # Places Observe Skill
 
 How to observe prod `places` via the homelab LGTM stack. Read-only: never
 mutates app data.
 
-Secrets: the agent MAY read `.env.preprod` and the Arcane-managed prod `.env`
-for presence/shape validation (set?, valid URL?, length >= 32?). It MUST
-never print, commit, forward, or include secret values in alerts,
-logs, prompts, or reports — presence/shape only (e.g. `SESSION_SECRET set,
-length ok`).
+Sources of truth: `hermes.yaml` (watch cadences/thresholds), LGTM stack
+config in the homelab.
+
+Secrets and exit codes follow the family conventions in the `ops` router
+skill — load `.agents/skills/ops/SKILL.md` if not already loaded.
 
 ## What lives where
 
@@ -176,7 +181,7 @@ Thresholds: **70% watch / 90% urgent of each SKU's free cap**, MTD
 Programmatic check:
 
 ```bash
-GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json mise x gcloud@593.0.0 -- ./skills/ops-observe/scripts/quota-check.sh
+GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json mise x gcloud@593.0.0 -- .agents/skills/ops-observe/scripts/quota-check.sh
 # exit 0 ok (WATCH lines possible) / 1 urgent (>=90% any cap) / 2 check-errored
 ```
 

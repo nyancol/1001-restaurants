@@ -1,12 +1,17 @@
+---
+name: ops-runner
+description: Health watch for the single self-hosted github-runner that drives the preprod preview loop. Use when preview CI runs are stuck, missing, or the runner container looks unhealthy. Read-only.
+---
+
 # Places Runner Skill
 
 The preprod preview loop depends on the single self-hosted `github-runner`.
-Check with `skills/ops-runner/scripts/runner-watch.sh` (host-side, needs docker + `gh`):
+Check with `.agents/skills/ops-runner/scripts/runner-watch.sh` (host-side, needs docker + `gh`):
 container alive + every open `preview` PR has a `preprod-preview` run on
 its current head (stuck = non-completed run older than 15m).
 
-Exit codes match the preprod convention: `0` = green, `1` = red,
-`2` = check errored (indeterminate — NOT a red, fix access and re-run).
+Exit codes follow the family check convention (`ops` router skill):
+`0` = green, `1` = red, `2` = indeterminate.
 
 Assessment content:
 

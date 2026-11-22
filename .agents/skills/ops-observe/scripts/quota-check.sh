@@ -6,7 +6,7 @@
 # Host-side; needs gcloud + a service account key with monitoring.viewer
 # (and billing.viewer for the budget cross-check) on the project.
 #
-#   GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json ./skills/ops-observe/scripts/quota-check.sh
+#   GCP_SA_KEY_FILE=~/.secrets/gcp-billing-viewer.json .agents/skills/ops-observe/scripts/quota-check.sh
 #
 # Exit 0 = ok (watch lines may still be present), 1 = urgent (>=90% any cap),
 # 2 = check errored (gcloud missing/auth failed/empty unreadable — NOT a quota
