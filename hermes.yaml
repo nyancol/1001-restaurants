@@ -81,7 +81,7 @@ lgtm:
   otlp: http://localhost:4318 # app export target (host port); not a query path
   access: grafana_datasource_proxy_only # Mimir :9090 / Loki :3100 / Tempo :3200 are container-loopback; never docker exec for reads
   datasources: { prometheus_uid: prometheus, loki_uid: loki, tempo_uid: tempo }
-  auth: service_account places-ops (Viewer role), bearer token via GRAFANA_TOKEN env var (0600 store at ~/.secrets/grafana-places-ops.token, never printed)
+  auth: service_account places-ops (Viewer role), bearer token via GRAFANA_TOKEN env var (assumed set, never printed)
   query_script: .agents/skills/ops-observe/scripts/lgtm-query.sh # health|prom|loki|tempo; exit 0 query-ok, 2 check-errored-not-a-red
   overrides: GRAFANA_URL (default http://localhost:3001)
 

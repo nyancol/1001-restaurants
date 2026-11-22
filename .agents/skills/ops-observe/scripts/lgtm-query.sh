@@ -8,11 +8,10 @@
 # inside the lgtm container — reach them through the Grafana datasource proxy.
 #
 # Auth: Grafana service account `places-ops` (Viewer role). The Bearer
-#   token MUST be provided in $GRAFANA_TOKEN (never a file flag, never the
-#   admin password). Load it from the 0600 store without printing it:
-#   `export GRAFANA_TOKEN="$(cat ~/.secrets/grafana-places-ops.token)"`.
+#   token MUST be provided in $GRAFANA_TOKEN, which is assumed already set
+#   in the environment. Never use the admin password for queries.
 #
-#   GRAFANA_TOKEN="$(cat ~/.secrets/grafana-places-ops.token)" .agents/skills/ops-observe/scripts/lgtm-query.sh health
+#   GRAFANA_TOKEN="$GRAFANA_TOKEN" .agents/skills/ops-observe/scripts/lgtm-query.sh health
 #   .agents/skills/ops-observe/scripts/lgtm-query.sh prom --query 'sum(rate(http_server_request_duration_seconds_count{service_name="places"}[5m]))' --since 1h
 #   .agents/skills/ops-observe/scripts/lgtm-query.sh loki --query '{service_name="places", level=~"50|60"}' --since 1h --limit 20
 #   .agents/skills/ops-observe/scripts/lgtm-query.sh tempo --query '{ resource.service.name = "places" }' --limit 5
@@ -54,7 +53,7 @@ since_to_epoch_ns() { # $1 = --since value -> prints nanosecond epoch
 
 read_token() {
   TOKEN="${GRAFANA_TOKEN:-}"
-  [ -n "$TOKEN" ] || { cerr "GRAFANA_TOKEN is unset or empty (export it from the 0600 store: export GRAFANA_TOKEN=\"\$(cat ~/.secrets/grafana-places-ops.token)\" — never print or log it)"; exit 2; }
+  [ -n "$TOKEN" ] || { cerr "GRAFANA_TOKEN is unset or empty (it is expected to already be set in the environment — never print or log it)"; exit 2; }
 }
 
 gget() { # path... — authenticated GET, prints body, returns curl status

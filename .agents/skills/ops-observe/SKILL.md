@@ -29,9 +29,8 @@ into `places`) for observability — the backends are reachable without it.
   proxy (`/api/datasources/proxy/uid/<prometheus|loki|tempo>/...`), never
   by entering the container.
 * Auth: Grafana service account `places-ops` (Viewer role). The Bearer
-  token MUST come from the `GRAFANA_TOKEN` env var — never a file flag,
-  never the admin password. Load it from the 0600 store without printing
-  it: `export GRAFANA_TOKEN="$(cat ~/.secrets/grafana-places-ops.token)"`.
+  token MUST come from the `GRAFANA_TOKEN` env var, which is assumed
+  already set — never a file flag, never the admin password.
   Presence/shape only — never print the token.
   Overrides: `GRAFANA_URL` (default `http://localhost:3001`).
 * Helper (host-side, needs `curl` + `jq`; exit `0` = query ok, `2` =
@@ -39,8 +38,7 @@ into `places`) for observability — the backends are reachable without it.
   NOT a red):
 
 ```bash
-export GRAFANA_TOKEN="$(cat ~/.secrets/grafana-places-ops.token)" # 0600 store, never print
-.agents/skills/ops-observe/scripts/lgtm-query.sh health   # Grafana reachability + token auth check
+.agents/skills/ops-observe/scripts/lgtm-query.sh health   # Grafana reachability + token auth check (needs GRAFANA_TOKEN)
 .agents/skills/ops-observe/scripts/lgtm-query.sh prom --query '<PromQL>' --since 1h [--step 60s]
 .agents/skills/ops-observe/scripts/lgtm-query.sh loki --query '<LogQL>' --since 1h [--limit 50]
 .agents/skills/ops-observe/scripts/lgtm-query.sh tempo --query '<TraceQL>' [--limit 10]
