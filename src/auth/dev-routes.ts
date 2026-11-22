@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import type { AppConfig } from "../config.js";
 import { users } from "../db/schema.js";
 import { signSession, sessionCookieName } from "./session.js";
+import { rateLimitPresets } from "../security.js";
 
 const NAME_RE = /^[a-zA-Z0-9_-]{1,32}$/;
 
@@ -25,6 +26,7 @@ export function registerDevLoginRoute(app: FastifyInstance, deps: { config: AppC
   app.get("/api/auth/dev-login", async () => ({ enabled: true }));
 
   app.post("/api/auth/dev-login", {
+    config: rateLimitPresets.auth,
     schema: {
       body: {
         type: "object",

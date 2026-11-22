@@ -19,6 +19,7 @@ import { type AppConfig } from "./config.js";
 import { dbHealth, openDb, runMigrations } from "./db/index.js";
 import { buildPinoOptions, OtlpBridgeStream } from "./observability/logger.js";
 import { multistream } from "pino";
+import { registerSecurity } from "./security.js";
 import { registerGoogleRoutes, type GoogleFetch } from "./google/routes.js";
 import { registerPlaceRoutes } from "./places/routes.js";
 import { registerUserRoutes } from "./users/routes.js";
@@ -80,6 +81,7 @@ export async function buildApp(opts: BuildOptions): Promise<{ app: FastifyInstan
   });
 
   await app.register(cookie);
+  await registerSecurity(app, config);
   await app.register(swagger, {
     openapi: {
       openapi: "3.0.3",
