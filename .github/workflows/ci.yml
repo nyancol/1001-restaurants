@@ -81,10 +81,10 @@ jobs:
           BETTERLEAKS_VERSION="$(sed -n 's/^betterleaks *= *"\([^"]*\)".*/\1/p' mise.toml)"
           [ -n "$BETTERLEAKS_VERSION" ] || { echo "::error::could not parse betterleaks version from mise.toml"; exit 1; }
           echo "betterleaks $BETTERLEAKS_VERSION (from mise.toml)"
-          curl -sSL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/betterleaks.tar.gz
+          curl -sSL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz" -o "/tmp/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz"
           curl -sSL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/checksums.txt" -o /tmp/betterleaks-checksums.txt
           (cd /tmp && grep "betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz" betterleaks-checksums.txt | sha256sum -c -)
-          tar -xzf /tmp/betterleaks.tar.gz -C /tmp betterleaks
+          tar -xzf "/tmp/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz" -C /tmp betterleaks
           install -m 0755 /tmp/betterleaks "${HOME}/.local/bin/betterleaks" 2>/dev/null || install -m 0755 /tmp/betterleaks /usr/local/bin/betterleaks
           echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
           betterleaks version
