@@ -67,7 +67,7 @@ jobs:
         run: docker build -t places:${GITHUB_REF_NAME} -f Dockerfile .
 
       - name: SBOM (SPDX)
-        uses: anchore/sbom-action@d3748d52984cf2029bda467fdf77d1c45cea0d32 # v0.20.5
+        uses: anchore/sbom-action@da167eac915b4e86f08b264dbdbc867b61be6f0c # v0.20.5
         with:
           image: places:${{ github.ref_name }}
           format: spdx-json
