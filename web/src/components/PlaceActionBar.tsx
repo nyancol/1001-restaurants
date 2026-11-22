@@ -52,12 +52,18 @@ export default function PlaceActionBar({ place: p, onEdit, onRefresh, refreshing
     try {
       await navigator.clipboard.writeText(shareUrl);
     } catch {
-      const ta = document.createElement("textarea");
-      ta.value = shareUrl;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
+      let fallbackOk = false;
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = shareUrl;
+        document.body.appendChild(ta);
+        ta.select();
+        fallbackOk = document.execCommand("copy"); // deprecated legacy API
+        ta.remove();
+      } catch {
+        fallbackOk = false;
+      }
+      if (!fallbackOk) return; // copy failed — don't show the "Copied ✓" state
     }
     setCopied(true);
     if (copyTimer.current) window.clearTimeout(copyTimer.current);

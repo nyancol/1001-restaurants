@@ -31,9 +31,10 @@ export default function FeedHeader({ total, sort, setSort }: Props) {
   );
 }
 
-export function sortPlaces<T extends { name: string; rating?: number | null; createdAt?: string; updatedAt?: string }>(places: T[], sort: SortId): T[] {
+export function sortPlaces<T extends { name: string; rating?: number | null; createdAt?: number | string; updatedAt?: number | string }>(places: T[], sort: SortId): T[] {
   const arr = [...places];
   if (sort === "name") arr.sort((a, b) => a.name.localeCompare(b.name));
   else if (sort === "rating") arr.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
+  else arr.sort((a, b) => (Number(b.updatedAt ?? b.createdAt ?? 0) || 0) - (Number(a.updatedAt ?? a.createdAt ?? 0) || 0));
   return arr;
 }

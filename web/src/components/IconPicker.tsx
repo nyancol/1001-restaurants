@@ -9,7 +9,8 @@ interface Props {
 
 export default function IconPicker({ value, onChange }: Props) {
   const { t } = useLanguage();
-  const current = (value ?? "fork").toLowerCase();
+  // Same normalization contract as IconGlyph / pins.ts: trim + lowercase + default.
+  const current = (value ?? "fork").trim().toLowerCase() || "fork";
   return (
     <div>
       <span className="mb-1 block text-sm font-medium text-ink">{t["icon.label"] ?? "Icon"}</span>

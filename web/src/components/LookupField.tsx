@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { apiFetch, parseAutocomplete, parseDetails, type PlaceDetails } from "../lib/api";
+import { useRef, useState } from "react";
+import { apiFetch, parseAutocomplete, parseDetails, UnauthorizedError, type PlaceDetails } from "../lib/api";
 import { useLanguage } from "../i18n/LanguageContext";
 
 interface Props {
@@ -20,6 +20,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [searched, setSearched] = useState(false);
+  const pickSeqRef = useRef(0);
 
   async function search() {
     const q = text.trim();
@@ -58,12 +59,18 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
   }
 
   async function pick(placeId: string, label: string) {
+    const seq = ++pickSeqRef.current;
     setOpen(false);
     setError(null);
     try {
       const body = await apiFetch(`/api/google/details?placeId=${encodeURIComponent(placeId)}`);
-      onPick(parseDetails(body, placeId, label));
-    } catch {
+      if (seq === pickSeqRef.current) onPick(parseDetails(body, placeId, label));
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        // Let the app-level auth flow handle session expiry; don't fall back to manual entry.
+        return;
+      }
+      if (seq !== pickSeqRef.current) return;
       setError(t["lookup.detailsFailed"]);
       onPick({ googlePlaceId: placeId, name: label, address: null, lat: null, lng: null });
     }
@@ -85,7 +92,7 @@ export default function LookupField({ text, onTextChange, onPick }: Props) {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              void search();
+              if (!loading) void search(); // also consider AbortController to cancel the previous query
             } else if (e.key === "Escape") {
               setOpen(false);
             }

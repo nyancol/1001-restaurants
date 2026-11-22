@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Place } from "../lib/api";
 import TagCombobox, { type TagMutation } from "./TagCombobox";
 import IconPicker from "./IconPicker";
@@ -6,9 +6,11 @@ import Stars from "./Stars";
 import ConfirmDialog from "./ConfirmDialog";
 import { useLanguage } from "../i18n/LanguageContext";
 
+type PlaceStatus = "WANT_TO_GO" | "BEEN_TO"; // mirror of api.ts Place.status
+
 interface Props {
   place: Place;
-  onSave: (patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: string }) => void;
+  onSave: (patch: { tags: string[]; rating: number | null; note: string | null; icon: string; status?: PlaceStatus }) => void;
   onCancel: () => void;
   onDelete?: () => void | Promise<void>;
   onTagDefinitionsChanged?: (m: TagMutation) => void;
@@ -28,9 +30,19 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
   const [rating, setRating] = useState<number | null>(p.rating);
   const [note, setNote] = useState(p.note ?? "");
   const [icon, setIcon] = useState((p.icon ?? "fork"));
-  const [status, setStatus] = useState(p.status ?? "WANT_TO_GO");
+  const [status, setStatus] = useState<PlaceStatus>((p.status as PlaceStatus | undefined) ?? "WANT_TO_GO");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Re-sync local draft when a different place (or a refreshed snapshot) arrives.
+  // (Call sites also key by id+updatedAt; this covers in-place prop updates.)
+  useEffect(() => {
+    setTags(p.tags ?? []);
+    setRating(p.rating);
+    setNote(p.note ?? "");
+    setIcon(p.icon ?? "fork");
+    setStatus((p.status as PlaceStatus | undefined) ?? "WANT_TO_GO");
+  }, [p]);
 
   async function confirmDelete() {
     if (!onDelete || deleting) return;
@@ -38,6 +50,8 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
     try {
       await onDelete();
       setConfirmOpen(false);
+    } catch {
+      // parent already surfaces t["editor.deleteFailed"]; keep dialog open for retry
     } finally {
       setDeleting(false);
     }
@@ -50,7 +64,7 @@ export default function PlaceEditor({ place: p, onSave, onCancel, onDelete, onTa
         <span className="font-display text-lg font-semibold text-ink">{p.name}</span>
         {p.rating != null && (
           <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-xs font-bold text-ink" style={{ borderRadius: 999 }}>
-            ★ {p.rating.toFixed(1)}
+            ★ {Number(p.rating).toFixed(1)}
           </span>
         )}
         <span className="edge inline-flex items-center gap-1 border-line bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted" style={{ borderRadius: 999 }}>

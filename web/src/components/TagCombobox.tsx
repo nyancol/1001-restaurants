@@ -350,18 +350,15 @@ function Combobox({ value, onChange, allowCreate, showSelected, onTagDefinitions
       setSuggestions([]);
       return;
     }
-    const tt = setTimeout(async () => {
+    let cancelled = false;
+    const tt = setTimeout(() => {
       setLoading(true);
-      try {
-        const tags = await cachedTags(q);
-        setSuggestions(tags);
-      } catch {
-        setSuggestions([]);
-      } finally {
-        setLoading(false);
-      }
+      cachedTags(q)
+        .then((tags) => { if (!cancelled) setSuggestions(tags); })
+        .catch(() => { if (!cancelled) setSuggestions([]); })
+        .finally(() => { if (!cancelled) setLoading(false); });
     }, 250);
-    return () => clearTimeout(tt);
+    return () => { cancelled = true; clearTimeout(tt); };
   }, [input]);
 
   const colors = useMemo(() => colorMap(allDefs), [allDefs]);

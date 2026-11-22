@@ -26,21 +26,25 @@ const DAY_NAMES: string[][] = [
   ["saturday", "sat", "samedi", "sam"],
 ];
 
-function todayIndex(descs: string[]): number {
-  const today = new Date().getDay();
+function todayIndex(descs: string[], utcOffsetMinutes?: number | null): number {
+  // Day-of-week at the place's location, not the viewer's local timezone.
+  const today = new Date(Date.now() + (utcOffsetMinutes ?? 0) * 60_000).getUTCDay();
   for (let i = 0; i < descs.length; i++) {
     const low = (descs[i] ?? "").toLowerCase();
     if (!low) continue;
-    if (DAY_NAMES[today].some((n) => low.startsWith(n) || low.includes(n))) return i;
+    // Only anchor-match the leading day name ("Tuesday: ..."), never a mid-string
+    // hit like "sunset"/"dim sum"/"marché", which would select the wrong weekday row.
+    if (DAY_NAMES[today].some((n) => low.startsWith(n))) return i;
   }
   return -1;
 }
 
-function openLabel(hours: Place["hours"]): string | null {
+function openLabel(hours: Place["hours"], utcOffsetMinutes?: number | null): string | null {
   const descs = (hours as any)?.weekdayDescriptions;
   if (!Array.isArray(descs) || !descs.length) return null;
-  const idx = todayIndex(descs);
-  return (idx >= 0 ? descs[idx] : descs[0]) ?? null;
+  const idx = todayIndex(descs, utcOffsetMinutes);
+  if (idx < 0) return null; // don't present another day's (e.g. Sunday's) hours as today's
+  return descs[idx] ?? null;
 }
 
 function priceLabel(p: Place): string | null {
@@ -60,9 +64,16 @@ function priceLabel(p: Place): string | null {
   let rangeText: string | null = null;
   if (typeof range === "string" && range) rangeText = range;
   else if (range && typeof range === "object") {
-    const fmt = (v: any) => (typeof v === "number" ? `€${v}` : v?.currencyCode && v?.units ? `${v.units} ${v.currencyCode}` : null);
-    const start = fmt(range.start ?? range.min ?? range.low);
-    const end = fmt(range.end ?? range.max ?? range.high);
+    // Google Places priceRange snapshot: { startPrice: { units: "10", currencyCode }, endPrice: {...} }
+    const fmtMoney = (v: { units?: string | number; currencyCode?: string } | null | undefined): string | null => {
+      if (!v || v.units === undefined || v.units === null) return null;
+      const n = Number(v.units);
+      if (Number.isNaN(n)) return null;
+      return v.currencyCode ? `${v.units} ${v.currencyCode}` : `€${n}`;
+    };
+    const legacyFmt = (v: any) => (typeof v === "number" ? `€${v}` : v?.currencyCode && v?.units ? `${v.units} ${v.currencyCode}` : null);
+    const start = fmtMoney((range as any).startPrice) ?? legacyFmt((range as any).start ?? (range as any).min ?? (range as any).low);
+    const end = fmtMoney((range as any).endPrice) ?? legacyFmt((range as any).end ?? (range as any).max ?? (range as any).high);
     if (start || end) rangeText = [start, end].filter(Boolean).join(" – ");
   }
   if (!level && !rangeText) return null;
@@ -72,6 +83,10 @@ function priceLabel(p: Place): string | null {
   }
   if (level) return levelSymbols[level] ?? level.replace(/PRICE_LEVEL_/g, "").replace(/_/g, " ").toLowerCase();
   return rangeText;
+}
+
+function isHttpUrl(url: string | null | undefined): boolean {
+  return !!url && /^https?:\/\//i.test(url);
 }
 
 function ratingLabel(r: number | null): string {
@@ -175,15 +190,15 @@ export default function PlaceCard({ place: p, onToggleStatus, onEdit, readOnly, 
           >
             <IconGlyph id={iconId} size={15} />
           </span>
-          {openLabel(p.hours) ? (
+          {openLabel(p.hours, p.utcOffsetMinutes) ? (
             <HoursSection
               place={p}
-              fallback={<span className="truncate">🕒 {openLabel(p.hours)}</span>}
+              fallback={<span className="truncate">🕒 {openLabel(p.hours, p.utcOffsetMinutes)}</span>}
             />
           ) : (
             <span>{google != null && personal != null ? `🅖 ${google}${p.googleRatingCount != null ? ` (${p.googleRatingCount})` : ""}` : ratingLabel(personal)}</span>
           )}
-          {!readOnly && p.websiteUri && (
+          {!readOnly && isHttpUrl(p.websiteUri) && (
             <a
               href={p.websiteUri}
               target="_blank"

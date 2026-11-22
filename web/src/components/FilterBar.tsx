@@ -147,14 +147,18 @@ export default function FilterBar({ status, setStatus, tags, setTags, q, setQ, o
     setOpenAt("");
     setPrice("");
   }
-  const openMode = !openEnabled ? "any" : openAt ? "at" : "now";
+  // A truthy-but-unparseable openAt (e.g. corrupted URL param) falls back to "now"
+  // instead of rendering the "at" panel with empty date/time parts.
+  const openMode = !openEnabled ? "any" : openDateValid ? "at" : "now";
   const { date: openDate, time: openTime } = splitOpenAt(openAt);
+  const openDateValid = openDate !== "" && openTime !== "";
   // Free-typed 24h "HH:MM" field (a select of every combination is unwieldy,
   // and native time inputs render AM/PM in some locales and can't be forced
   // to 24h). The draft holds in-progress typing; valid entries commit live.
   const [timeDraft, setTimeDraft] = useState(openTime || "20:00");
   useEffect(() => {
-    if (openTime) setTimeDraft(openTime);
+    // Also reset when the filter is cleared (openTime becomes "").
+    setTimeDraft(openTime || "20:00");
   }, [openTime]);
   const timeValid = isValid24h(timeDraft.trim());
   const showTimeError =

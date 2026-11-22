@@ -68,9 +68,17 @@ export default function PlaceListPane({ places, loading, error, onToggleStatus, 
         <li
           key={p.id}
           data-place-id={p.id}
+          role={onCardSelect ? "button" : undefined}
+          tabIndex={onCardSelect ? 0 : undefined}
           onClick={(e) => {
             if (!onCardSelect) return;
             if ((e.target as HTMLElement).closest("button, a, input, textarea, select, summary, details")) return;
+            onCardSelect(p.id);
+          }}
+          onKeyDown={(e) => {
+            if (!onCardSelect || (e.key !== "Enter" && e.key !== " ")) return;
+            if ((e.target as HTMLElement).closest("button, a, input, textarea, select, summary, details")) return;
+            e.preventDefault();
             onCardSelect(p.id);
           }}
           className={`edge radius-card border-line bg-surface p-4 shadow-theme transition ${focusedId === p.id ? "outline-2 outline-accent" : ""} ${editingId === p.id ? "border-accent" : ""}`}
@@ -78,7 +86,7 @@ export default function PlaceListPane({ places, loading, error, onToggleStatus, 
         >
           <PlaceCard place={p} onToggleStatus={onToggleStatus} onEdit={(pl) => { if (!readOnly) setEditingId(pl.id); }} readOnly={readOnly} onRefresh={onRefresh} refreshing={refreshingIds?.includes(p.id)} />
           {!readOnly && editingId === p.id && (
-            <PlaceEditor place={p} onSave={(patch) => handleSave(p, patch)} onCancel={() => setEditingId(null)} onDelete={onDeleteEdit ? () => handleDelete(p) : undefined} onTagDefinitionsChanged={onTagDefinitionsChanged} />
+            <PlaceEditor key={`${p.id}:${(p as any).updatedAt ?? ""}`} place={p} onSave={(patch) => handleSave(p, patch)} onCancel={() => setEditingId(null)} onDelete={onDeleteEdit ? () => handleDelete(p) : undefined} onTagDefinitionsChanged={onTagDefinitionsChanged} />
           )}
         </li>
       ))}

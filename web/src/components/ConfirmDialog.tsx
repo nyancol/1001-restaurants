@@ -36,13 +36,17 @@ export default function ConfirmDialog({
   const { t } = useLanguage();
   const cancelRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const onCancelRef = useRef(onCancel);
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
 
   useEffect(() => {
     cancelRef.current?.focus();
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape") onCancelRef.current();
       // Lightweight focus containment: keep Tab inside the panel.
       if (e.key === "Tab" && panelRef.current) {
         const focusables = panelRef.current.querySelectorAll<HTMLElement>(
@@ -66,7 +70,8 @@ export default function ConfirmDialog({
       document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", onKey);
     };
-  }, [onCancel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per open; latest onCancel read via ref
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">

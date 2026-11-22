@@ -112,7 +112,7 @@ export default function MapPreviewCard({
       className="edge radius-card relative border-line bg-surface p-3 shadow-theme will-change-transform"
       style={{
         borderRadius: 16,
-        transform: dismissing ? undefined : `translateY(${dragY}px)`,
+        transform: `translateY(${dragY}px)`,
         opacity: dismissing ? 0 : dragging ? Math.max(0.35, 1 - dragY / 500) : 1,
         transition: dragging ? "none" : "transform 220ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms",
       }}

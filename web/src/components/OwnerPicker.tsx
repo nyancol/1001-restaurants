@@ -89,9 +89,9 @@ export default function OwnerPicker({ owner, setOwner }: Props) {
           className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 px-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${isFriends ? "bg-accent text-accent-ink shadow-theme" : "text-muted hover:text-ink"}`}
           style={{ borderRadius: 999 }}
         >
-          <span aria-hidden>👥</span> Friends
+          <span aria-hidden>👥</span> {t["scope.friends"]}
           <span className={`inline-flex min-h-[22px] min-w-[22px] items-center justify-center px-1.5 text-[11px] font-bold ${isFriends ? "bg-white/20 text-accent-ink" : "bg-surface text-muted"}`} style={{ borderRadius: 999 }}>
-            {loading ? "…" : (others.length || friendsCount)}
+            {loading ? "…" : (friendsCount || others.length)}
           </span>
         </button>
       </div>

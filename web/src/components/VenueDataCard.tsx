@@ -5,9 +5,10 @@ import { useLanguage } from "../i18n/LanguageContext";
 function priceLabel(level: unknown): string | null {
   const v = String(level ?? "").toUpperCase();
   if (v.includes("VERY_EXPENSIVE") || v === "$$$$") return "$$$$";
+  // "INEXPENSIVE" contains "EXPENSIVE", so test the more specific name first.
+  if (v.includes("INEXPENSIVE") || v === "$") return "$";
   if (v.includes("EXPENSIVE") || v === "$$$") return "$$$";
   if (v.includes("MODERATE") || v === "$$") return "$$";
-  if (v.includes("INEXPENSIVE") || v === "$") return "$";
   const m = String(level ?? "").match(/\$+/);
   return m ? m[0] : null;
 }
@@ -25,7 +26,9 @@ export default function VenueDataCard({ enrichment }: { enrichment: PlaceDetails
   const hoursList: string[] = Array.isArray(enrichment?.hours?.weekdayDescriptions)
     ? enrichment.hours.weekdayDescriptions
     : [];
-  const hoursSummary = hoursList.length > 2 ? `${hoursList[2]}${hoursList[3] ? `, ${hoursList[3]}` : ""}` : hoursList[0] ?? null;
+  // weekdayDescriptions order is locale-dependent (Sun-first en / Mon-first fr),
+  // so a fixed index slice would show arbitrary days — surface the first row.
+  const hoursSummary = hoursList[0] ?? null;
 
   return (
     <div className="edge mb-4 rounded-xl border-transparent bg-surface-2/60 p-3.5">
@@ -47,7 +50,6 @@ export default function VenueDataCard({ enrichment }: { enrichment: PlaceDetails
         {price && (
           <span className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-bold text-ink">
             <span className="text-want-ink">{price}</span>
-            <span className="text-[11px] font-medium text-muted">Upscale Bistro</span>
           </span>
         )}
       </div>
