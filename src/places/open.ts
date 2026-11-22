@@ -16,7 +16,10 @@ export function isOpenAt(periods: HoursPeriod[] | null | undefined, at: Date): b
     const openMin = toMinutes(p.open);
     if (!p.close) return true; // 24h
     let closeMin = toMinutes(p.close);
-    if (closeMin <= openMin) closeMin += 24 * 60; // overnight within period
+    // Close earlier in the week than open wraps past Sunday (e.g. Sat 18:00 -> Sun 02:00):
+    // shift by a full week, not one day, so the interval is non-empty. Mirrors web/src/lib/hours.ts.
+    if (p.close.day < p.open.day) closeMin += 7 * 24 * 60;
+    else if (closeMin <= openMin) closeMin += 24 * 60; // overnight within period
     // Also consider weekly wrap: test now and now +/- week for spans crossing Sunday.
     if ((nowMin >= openMin && nowMin < closeMin) || (nowMin + 7 * 24 * 60 >= openMin && nowMin + 7 * 24 * 60 < closeMin)) {
       return true;

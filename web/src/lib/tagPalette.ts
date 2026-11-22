@@ -63,5 +63,6 @@ export function resolveTagColor(
   if (definitions instanceof Map) {
     return definitions.get(name) ?? colorForTag(name);
   }
-  return (definitions as Record<string, string>)[name] ?? colorForTag(name);
+  const record = definitions as Record<string, string> | null | undefined;
+  return record && Object.hasOwn(record, name) ? record[name] : colorForTag(name);
 }

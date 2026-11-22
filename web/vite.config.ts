@@ -17,7 +17,9 @@ export default defineConfig({
     // other machines on the homelab network). allowedHosts permits
     // *.local / Tailscale names in dev (never used for builds).
     host: true,
-    allowedHosts: true,
+    // Allow only the homelab/Tailscale hostnames instead of disabling
+    // Vite's Host-header validation (DNS-rebinding protection).
+    allowedHosts: [".local", ".ts.net"],
     proxy: {
       "/api": {
         target: `http://localhost:${process.env.PORT ?? 3232}`,

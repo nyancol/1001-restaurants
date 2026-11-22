@@ -5,12 +5,27 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export class ApiError extends Error {
+  status: number;
+  body: unknown;
+  constructor(message: string, status: number, body: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<any> {
   const hasBody = init.body !== undefined && init.body !== null;
+  const headers = new Headers(init.headers);
+  if (hasBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   const res = await fetch(path, {
     credentials: "same-origin",
-    ...(hasBody ? { headers: { "Content-Type": "application/json", ...(init.headers ?? {}) } } : { headers: { ...(init.headers ?? {}) } }),
     ...init,
+    headers,
   });
   if (res.status === 401) throw new UnauthorizedError();
   const text = await res.text();
@@ -21,10 +36,10 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<an
     body = text;
   }
   if (!res.ok) {
-    const err: any = new Error(body?.error ?? `request failed: ${res.status}`);
-    err.status = res.status;
-    err.body = body;
-    throw err;
+    let message = `request failed: ${res.status}`;
+    if (typeof body === "string" && body.trim()) message = body;
+    else if (typeof body?.error === "string" && body.error) message = body.error;
+    throw new ApiError(message, res.status, body);
   }
   return body;
 }
@@ -304,11 +319,22 @@ export function parseDetails(body: any, fallbackPlaceId: string, fallbackText: s
   };
 }
 
+function safeExternalUrl(u: unknown): string | null {
+  if (typeof u !== "string" || !u) return null;
+  try {
+    const parsed = new URL(u);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? u : null;
+  } catch {
+    return null;
+  }
+}
+
 export function mapsUrlFor(p: Place): string | null {
-  if (p.googleMapsUri) return p.googleMapsUri;
-  const m: any = p.mapsLinks;
-  if (m?.placeUri) return m.placeUri;
-  if (typeof m === "string") return m;
+  const stored =
+    safeExternalUrl(p.googleMapsUri) ??
+    safeExternalUrl((p.mapsLinks as any)?.placeUri) ??
+    safeExternalUrl(p.mapsLinks);
+  if (stored) return stored;
   if (p.googlePlaceId) return `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(p.googlePlaceId)}`;
   if (p.lat != null && p.lng != null) return `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
   return null;

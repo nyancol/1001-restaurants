@@ -30,8 +30,10 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
   // Stable ref: inline `onUnauthorized` arrows in routes must not retrigger fetches.
   const unauthRef = useRef(onUnauthorized);
   unauthRef.current = onUnauthorized;
+  const seqRef = useRef(0);
 
   const fetchList = useCallback(async () => {
+    const seq = ++seqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -44,17 +46,18 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
         openNow: !openAt && openNow ? true : undefined,
         price: price || undefined,
       });
-      setPlaces(data);
+      if (seq === seqRef.current) setPlaces(data);
     } catch (err: any) {
+      if (seq !== seqRef.current) return;
       if (err instanceof UnauthorizedError) {
         unauthRef.current();
         return;
       }
       setError(err?.message ?? t["error.loadPlaces"]);
     } finally {
-      setLoading(false);
+      if (seq === seqRef.current) setLoading(false);
     }
-  }, [owner, status, tags, q, openAt, openNow, price]);
+  }, [owner, status, tags, q, openAt, openNow, price, t]);
 
   useEffect(() => {
     void fetchList();
@@ -70,6 +73,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
       } catch (err: any) {
         if (err instanceof UnauthorizedError) {
           unauthRef.current();
+          setPlaces((cur) => cur.map((x) => (x.id === p.id ? { ...x, status: p.status } : x)));
           return;
         }
         const msg = err?.message ?? t["editor.updateFailed"];
@@ -77,7 +81,7 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
         setError(msg);
       }
     },
-    [fetchList],
+    [fetchList, t],
   );
 
   const saveEdit = useCallback(
@@ -85,7 +89,6 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
       p: Place,
       patch: { tags: string[]; rating: number | null; note: string | null; icon: string },
     ) => {
-      const prev: Place = { ...p };
       setPlaces((cur) => cur.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
       try {
         const updated = await patchPlace(p.id, patch);
@@ -93,14 +96,23 @@ export function usePlaces(params: PlaceFilterParams, onUnauthorized: () => void)
       } catch (err: any) {
         if (err instanceof UnauthorizedError) {
           unauthRef.current();
+          setPlaces((cur) =>
+            cur.map((x) =>
+              x.id === p.id ? { ...x, tags: p.tags, rating: p.rating, note: p.note, icon: p.icon } : x,
+            ),
+          );
           return;
         }
-        setPlaces((cur) => cur.map((x) => (x.id === p.id ? { ...x, ...prev, id: x.id } : x)));
+        setPlaces((cur) =>
+          cur.map((x) =>
+            x.id === p.id ? { ...x, tags: p.tags, rating: p.rating, note: p.note, icon: p.icon } : x,
+          ),
+        );
         setError(err?.message ?? t["editor.updateFailed"]);
         throw err;
       }
     },
-    [],
+    [t],
   );
 
   const refreshOne = useCallback(async (p: Place): Promise<Place> => {

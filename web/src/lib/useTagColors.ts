@@ -6,8 +6,10 @@ export const TAG_COLORS_EVENT = "oyster:tags-changed";
 
 let cache: Map<string, string> | null = null;
 let inflight: Promise<Map<string, string>> | null = null;
+let generation = 0;
 
 export function invalidateTagColors() {
+  generation += 1;
   cache = null;
   inflight = null;
   try {
@@ -20,17 +22,20 @@ export function invalidateTagColors() {
 async function loadColors(): Promise<Map<string, string>> {
   if (cache) return cache;
   if (!inflight) {
+    const gen = generation;
     inflight = getTags("")
       .then((tags) => {
-        cache = new Map(tags.map((t) => [t.tag, t.color]));
-        return cache;
+        const m = new Map(tags.map((t) => [t.tag, t.color]));
+        if (gen === generation) cache = m;
+        return m;
       })
       .catch(() => {
-        cache = new Map();
-        return cache;
+        // Do not persist failures: keep `cache` null so a later
+        // mount / tags-changed event retries instead of being stuck empty.
+        return new Map<string, string>();
       })
       .finally(() => {
-        inflight = null;
+        if (gen === generation) inflight = null;
       }) as Promise<Map<string, string>>;
   }
   return inflight;

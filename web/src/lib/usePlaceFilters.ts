@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 export function useDebouncedValue<T>(value: T, ms: number): T {
@@ -60,27 +60,47 @@ export function usePlaceFilters(): PlaceFilters {
 
   // Adopt external `?owner=` changes (e.g. header user menu) so list + map
   // follow without a reload. Local picks flow through the same URL sync below.
+  const prevOwnerParam = useRef<string | null>(null);
   useEffect(() => {
-    setOwner((prev) => (prev !== ownerParam ? ownerParam : prev));
+    // Adopt only genuine external owner changes (skip mount; mount state is
+    // already initialized from the URL).
+    if (prevOwnerParam.current !== null && ownerParam !== prevOwnerParam.current) {
+      setOwner(ownerParam);
+    }
+    prevOwnerParam.current = ownerParam;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerParam]);
 
   const debouncedQ = useDebouncedValue(q, 300);
 
   // Sync state → URL. `me` is omitted to keep existing URLs clean.
-  // Legacy `placeType` param is intentionally dropped (ignored).
   useEffect(() => {
-    const next = new URLSearchParams();
-    if (owner && owner !== "me") next.set("owner", owner);
-    if (status) next.set("status", status);
-    if (tags.length) next.set("tags", tags.join(","));
-    if (debouncedQ.trim()) next.set("q", debouncedQ.trim());
-    if (openEnabled) {
-      if (openAt) next.set("openAt", openAt);
-      else next.set("openNow", "1");
-    }
-    if (price) next.set("price", price);
-    setSearchParams(next, { replace: true });
+    setSearchParams(
+      (prev) => {
+        // Keep params owned by other writers (e.g. UserMenu), overwrite only ours.
+        const next = new URLSearchParams(prev);
+        const put = (k: string, v: string | null) => (v ? next.set(k, v) : next.delete(k));
+        put("owner", owner && owner !== "me" ? owner : null);
+        put("status", status || null);
+        put("tags", tags.length ? tags.join(",") : null);
+        put("q", debouncedQ.trim() || null);
+        if (openEnabled) {
+          if (openAt) {
+            next.set("openAt", openAt);
+            next.delete("openNow");
+          } else {
+            next.set("openNow", "1");
+            next.delete("openAt");
+          }
+        } else {
+          next.delete("openAt");
+          next.delete("openNow");
+        }
+        put("price", price || null);
+        return next;
+      },
+      { replace: true },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owner, status, tags, debouncedQ, openEnabled, openAt, price]);
 
