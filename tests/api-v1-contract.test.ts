@@ -47,7 +47,7 @@ describe("api v1 contract", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("returns paginated envelope with limit/total/nextCursor on places", async () => {
+  it("returns the full filtered set as { data } on places", async () => {
     const c = await cookieFor(ALICE);
     await app.inject({
       method: "POST",
@@ -63,45 +63,52 @@ describe("api v1 contract", () => {
     });
     const res = await app.inject({
       method: "GET",
-      url: "/api/v1/places?owner=me&limit=1",
+      url: "/api/v1/places?owner=me",
       headers: { cookie: c },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(Array.isArray(body.data)).toBe(true);
-    expect(body.data).toHaveLength(1);
-    expect(body.pagination.limit).toBe(1);
-    expect(body.pagination.total).toBe(2);
-    expect(typeof body.pagination.nextCursor).toBe("string");
-    const p2 = await app.inject({
+    expect(body.data).toHaveLength(2);
+    expect(body.data.map((p: any) => p.name).sort()).toEqual(["A1", "A2"]);
+    expect(body.pagination).toBeUndefined();
+  });
+
+  it("ignores stray limit/cursor params on places", async () => {
+    const c = await cookieFor(ALICE);
+    for (const name of ["S1", "S2", "S3"]) {
+      await app.inject({
+        method: "POST",
+        url: "/api/v1/places",
+        headers: { cookie: c },
+        payload: { name, icon: "fork" },
+      });
+    }
+    const res = await app.inject({
       method: "GET",
-      url: `/api/v1/places?owner=me&limit=1&cursor=${encodeURIComponent(body.pagination.nextCursor)}`,
+      url: "/api/v1/places?owner=me&limit=1&cursor=nope",
       headers: { cookie: c },
     });
-    expect(p2.statusCode).toBe(200);
-    expect(p2.json().data).toHaveLength(1);
-    expect(p2.json().data[0].name).not.toBe(body.data[0].name);
-    expect(p2.json().pagination.nextCursor).toBeNull();
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.data).toHaveLength(3);
+    expect(body.pagination).toBeUndefined();
   });
 
   it("rejects invalid cursor with 400", async () => {
     const c = await cookieFor(ALICE);
-    for (const u of [
-      "/api/v1/places?cursor=nope",
-      "/api/v1/tags?cursor=nope",
-      "/api/v1/users?cursor=nope",
-    ]) {
+    for (const u of ["/api/v1/tags?cursor=nope", "/api/v1/users?cursor=nope"]) {
       const res = await app.inject({ method: "GET", url: u, headers: { cookie: c } });
       expect(res.statusCode).toBe(400);
       expect(res.json().error).toBe("invalid_cursor");
     }
   });
 
-  it("clamps limit to max and echoes effective value", async () => {
+  it("clamps limit to max and echoes effective value on paginated endpoints", async () => {
     const c = await cookieFor(ALICE);
     const res = await app.inject({
       method: "GET",
-      url: "/api/v1/places?limit=9999",
+      url: "/api/v1/tags?limit=9999",
       headers: { cookie: c },
     });
     expect(res.statusCode).toBe(200);

@@ -130,7 +130,7 @@ run automatically at container start; `/api/health` reports `db: ok` once applie
 - `GET /api/auth/callback` → code+PKCE exchange, user upsert by `sub`, sets `oyster_session` cookie (`HttpOnly/Secure/SameSite=Lax`)
 - `POST /api/auth/logout`, `GET /api/auth/me`
 - `POST /api/v1/places` (owner forced to session user; `status` defaults `WANT_TO_GO`; `rating` 0–5 or null; tags normalized)
-- `GET /api/v1/places?owner=me|all|<userId>&status=&tags=&q=&price=&limit=&cursor=` → `{ data, pagination: { limit, nextCursor, total } }` in `(updatedAt DESC, id DESC)` order (defaults to own; each place includes `ownerDisplayName`; `openAt/openNow` may short-fill pages)
+- `GET /api/v1/places?owner=me|all|<userId>&status=&tags=&q=&price=&openAt=&openNow=` → `{ data }` with the full filtered set in `(updatedAt DESC, id DESC)` order (defaults to own; each place includes `ownerDisplayName`; no pagination — `limit`/`cursor` are not parameters)
 - `GET /api/v1/users?limit=&cursor=` → `{ data, pagination }` sorted by display name (all app users are friends)
 - `GET/PATCH/DELETE /api/v1/places/:id` (read-any, edit-own → `403` for others)
 - `GET /api/v1/tags?q=&limit=&cursor=` → `{ data, pagination }` (frequency then recency, counts)
