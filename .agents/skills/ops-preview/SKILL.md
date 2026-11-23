@@ -6,6 +6,12 @@ disable-model-invocation: true
 
 # Places Preview Skill
 
+> Orca guardrail: **Places Builder** uses this skill verify-only
+> (`preprod-verify`, local preprod-up equivalent). Never add the `preview`
+> label, never run `preprod-deploy --evict`, never tear down another branch's
+> slot. Prepare the claim/teardown commands; the human executes. See
+> `.agents/SPEC_GATED_WORKFLOW.md` + router `ops` skill.
+
 Deploy a branch to the single staging slot for requestor validation.
 Project `places-preprod`, container `places-staging`, volume
 `places-preprod-data`. The slot file records `SLOT_BRANCH` / `SLOT_SHA` /
