@@ -5,6 +5,23 @@ All notable changes to this project are documented here, following
 [Semantic Versioning](https://semver.org/).
 Releases are cut by pushing a `v*` tag — see `.github/workflows/release.yml`.
 
+## [Unreleased]
+
+## [0.1.4] - 2026-11-22
+
+### Changed
+
+- Places list/map API returns the full filtered set — pagination dropped (#44).
+
+### Added
+
+- Orca spec-to-implement workflow documentation (#42).
+
+### Fixed
+
+- CI: point preprod-preview workflow at ops scripts moved under `.agents/skills`.
+- Ops: correct repo-root `cd` in scripts moved under `.agents/skills`.
+
 ## [0.1.3] - 2026-11-22
 
 ### Added
