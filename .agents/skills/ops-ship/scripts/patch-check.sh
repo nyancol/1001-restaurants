@@ -9,7 +9,7 @@
 # (SAST failed on main, or dependabot.yml missing from the checkout),
 # 2 = check errored (indeterminate — NOT a verdict, fix access and re-run).
 set -euo pipefail
-cd "$(dirname "$0")/../../.." # repo root (gh resolves the repo from cwd)
+cd "$(dirname "$0")/../../../.." # repo root (gh resolves the repo from cwd)
 FAIL=0
 CHECK_ERR=0
 say() { printf '%s\n' "$*"; }
