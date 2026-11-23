@@ -4,7 +4,7 @@
 # Exit 0 = green, 1 = red, 2 = check errored (docker unreachable, indeterminate
 # — NOT a red: do not alert as down, fix access and re-run).
 set -euo pipefail
-cd "$(dirname "$0")/../../.."
+cd "$(dirname "$0")/../../../.."
 # shellcheck disable=SC1091
 . .agents/skills/ops-preview/scripts/lib-docker.sh # sets SUDO/COMPOSE, auto-detecting docker access
 FAIL=0

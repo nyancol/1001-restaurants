@@ -8,7 +8,6 @@ import { ensureTagDefinitions } from "../tags/definitions.js";
 import { deletePlaceTags, syncPlaceTags } from "../db/index.js";
 import { normalizeIcon, isValidIcon } from "../place-icons/infer.js";
 import { isOpenAt, parseHoursJson } from "./open.js";
-import { decodeCursor, encodeCursor, envelope, parseLimit } from "../pagination.js";
 import { withSpan } from "../observability/trace.js";
 
 export const STATUSES = ["WANT_TO_GO", "BEEN_TO"] as const;
@@ -367,8 +366,6 @@ export function registerPlaceRoutes(
             openAt: { type: "string" },
             openNow: { type: "string" },
             price: { type: "string" },
-            limit: { type: "string" },
-            cursor: { type: "string" },
           },
         },
       },
@@ -377,13 +374,7 @@ export function registerPlaceRoutes(
       const userId = (req as any).userId as string | undefined;
       const servicePrincipal = (req as any).servicePrincipal as { scopes: string[] } | undefined;
       const q = req.query as any;
-      if (q.cursor !== undefined) {
-        const c = decodeCursor(q.cursor);
-        if (!c) return reply.code(400).send({ error: "invalid_cursor" });
-      }
       const owner: string = q.owner ?? "me";
-      const limit = parseLimit(q.limit);
-      const cursor = q.cursor ? decodeCursor(q.cursor)! : null;
       const wantedTags = q.tags ? normalizeTags(String(q.tags).split(",")) : [];
       const status = typeof q.status === "string" && q.status ? q.status : null;
       const needle = typeof q.q === "string" && q.q ? String(q.q).toLowerCase() : null;
@@ -429,34 +420,17 @@ export function registerPlaceRoutes(
         );
         params.push(t);
       }
-      if (cursor) {
-        where.push(`(updated_at < ? OR (updated_at = ? AND id < ?))`);
-        params.push(cursor.updatedAt, cursor.updatedAt, cursor.id);
-      }
       const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
-      let total = 0;
-      try {
-        // total excludes cursor slice but includes all filters
-        const totalWhereParts = where.filter((w) => !w.startsWith("(updated_at < ?"));
-        const totalSql = `SELECT COUNT(*) AS c FROM places ${totalWhereParts.length ? `WHERE ${totalWhereParts.join(" AND ")}` : ""}`;
-        const totalParams = params.slice(0, params.length - (cursor ? 3 : 0));
-        const row: any = sqlite.prepare(totalSql).get(...totalParams);
-        total = Number(row?.c ?? 0);
-      } catch {
-        total = 0;
-      }
       let rows: any[] = [];
       try {
         rows = sqlite
-          .prepare(`SELECT * FROM places ${whereSql} ORDER BY updated_at DESC, id DESC LIMIT ?`)
-          .all(...params, limit + 1);
+          .prepare(`SELECT * FROM places ${whereSql} ORDER BY updated_at DESC, id DESC`)
+          .all(...params);
       } catch {
         rows = [];
       }
-      const hasMore = rows.length > limit;
-      const pageRows = hasMore ? rows.slice(0, limit) : rows;
       const names = await ownerNameMap(db);
-      let items = pageRows.map((r: any) =>
+      let items = rows.map((r: any) =>
         toPlace(
           {
             id: r.id,
@@ -504,9 +478,7 @@ export function registerPlaceRoutes(
           return atValid ? isOpenAt(periods, at) : false;
         });
       }
-      const last = pageRows[pageRows.length - 1];
-      const nextCursor = hasMore && last ? encodeCursor(last.updated_at, last.id) : null;
-      return envelope(items, limit, nextCursor, total);
+      return { data: items };
     },
   );
 

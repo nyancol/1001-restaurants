@@ -20,7 +20,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$BRANCH" ] || { echo "Missing --branch" >&2; exit 2; }
 
-cd "$(dirname "$0")/../../.."
+cd "$(dirname "$0")/../../../.."
 # shellcheck disable=SC1091
 . .agents/skills/ops-preview/scripts/lib-docker.sh # sets SUDO/COMPOSE/SLOT_FILE (auto-detects docker access)
 
