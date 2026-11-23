@@ -4,7 +4,7 @@
 
 ### Requirement: Place CRUD with ownership
 
-The system SHALL store places with Google link fields, status, icon, tags, rating, note, snapshotted Google enrichment (hours, businessStatus, priceLevel, priceRange, Google rating and count, website, Maps links), `ownerId`, and `ownerDisplayName` on read, forcing `ownerId` to the authenticated user on create. Listing SHALL support `owner=me|all|<userId>` with `owner=all` returning every user's places via `GET /api/v1/places` with server-side filtering returning the full filtered set in a single response as `{ data, pagination: { limit, nextCursor: null, total } }` in stable `(updatedAt DESC, id DESC)` order, backed by SQL predicates plus a `place_tags` join table for `tags`. `limit` and `cursor` query params on this endpoint SHALL be accepted-and-ignored with no effect. Owner `DELETE` SHALL permanently remove the owned place.
+The system SHALL store places with Google link fields, status, icon, tags, rating, note, snapshotted Google enrichment (hours, businessStatus, priceLevel, priceRange, Google rating and count, website, Maps links), `ownerId`, and `ownerDisplayName` on read, forcing `ownerId` to the authenticated user on create. Listing SHALL support `owner=me|all|<userId>` with `owner=all` returning every user's places via `GET /api/v1/places` with server-side filtering returning the full filtered set in a single response as `{ data: [...] }` (no `pagination` object) in stable `(updatedAt DESC, id DESC)` order, backed by SQL predicates plus a `place_tags` join table for `tags`. `limit` and `cursor` are not parameters of this endpoint. Owner `DELETE` SHALL permanently remove the owned place.
 
 #### Scenario: Create own place
 
@@ -43,13 +43,13 @@ The system SHALL store places with Google link fields, status, icon, tags, ratin
 
 #### Scenario: Paginated list envelope
 
-- **WHEN** an authenticated user sends `GET /api/v1/places?owner=me&limit=20` with more than 20 matches
-- **THEN** the system ignores `limit` and returns `{ data, pagination }` with every match in `data`, `pagination.nextCursor` `null`, and `pagination.total` equal to `data.length` (cursor pagination retired)
+- **WHEN** an authenticated user sends `GET /api/v1/places?owner=me` with more matches than the former page size
+- **THEN** the system returns `{ data }` containing every match in `(updatedAt DESC, id DESC)` order with no `pagination` object (pagination fully dropped, not retired)
 
 #### Scenario: Retired params ignored
 
 - **WHEN** a caller sends `GET /api/v1/places?owner=me&limit=5&cursor=<anything>`
-- **THEN** the system ignores both params and returns the full filtered set with `200` (never `400 invalid_cursor` for this endpoint)
+- **THEN** the system treats neither param as a contract parameter and returns the full filtered set with `200`
 
 #### Scenario: Tags filter uses join table
 
@@ -58,7 +58,7 @@ The system SHALL store places with Google link fields, status, icon, tags, ratin
 
 ### Requirement: Open-state inference and filtering
 
-The system SHALL infer open or closed from snapshotted hours periods for a given datetime, and list filtering SHALL support `openAt` (ISO datetime, default now when the open filter is enabled) with no `placeType` parameter; places with unknown hours SHALL be excluded whenever the open filter is active, and places with `businessStatus` closed (temporary or permanent) SHALL be excluded from open-filtered results. The open filter SHALL apply as a post-filter over the full filtered set, so `data` contains exactly the open matches and `pagination.total` equals `data.length`.
+The system SHALL infer open or closed from snapshotted hours periods for a given datetime, and list filtering SHALL support `openAt` (ISO datetime, default now when the open filter is enabled) with no `placeType` parameter; places with unknown hours SHALL be excluded whenever the open filter is active, and places with `businessStatus` closed (temporary or permanent) SHALL be excluded from open-filtered results. The open filter SHALL apply as a post-filter over the full filtered set, so `data` contains exactly the open matches.
 
 #### Scenario: Filter open now
 
@@ -83,4 +83,4 @@ The system SHALL infer open or closed from snapshotted hours periods for a given
 #### Scenario: Short page documents post-filter
 
 - **WHEN** a `GET /api/v1/places` request carries the open filter
-- **THEN** `data` contains exactly the open matches with `pagination.nextCursor` `null` and `pagination.total` equal to `data.length` (no pages, so no short pages)
+- **THEN** `data` contains exactly the open matches (no pagination, so no short pages or pre-filter totals)

@@ -4,7 +4,7 @@
 
 ### Requirement: Own list with filters
 
-The system SHALL show the user's own places by default with filters for status, tags, free text, price level ($–$$$$), and open-now/open-at datetime (no place-type filter) backed by `GET /api/v1/places` server-side filtering returning the full result set in one response. The system SHALL also support viewing a specific user via a Users scope picker (`Me (<name>)`, each other user) persisted in the URL (`owner=me|<userId>`), applying the same filters to the selected scope newest first. The list SHALL render and scroll all matching places with no paging.
+The system SHALL show the user's own places by default with filters for status, tags, free text, price level ($–$$$$), and open-now/open-at datetime (no place-type filter) backed by `GET /api/v1/places` server-side filtering returning the full result set in one response as `{ data }`. The system SHALL also support viewing a specific user via a Users scope picker (`Me (<name>)`, each other user) persisted in the URL (`owner=me|<userId>`), applying the same filters to the selected scope newest first. The list SHALL render and scroll all matching places with no paging.
 
 #### Scenario: Default is own places
 
@@ -38,12 +38,12 @@ The system SHALL show the user's own places by default with filters for status, 
 
 #### Scenario: Paged list walks cursor
 
-- **WHEN** the filtered result set exceeds the former page size
-- **THEN** the list shows every matching place in a single scrollable view with no next-page fetch (cursor pagination retired)
+- **WHEN** the filtered result set has any number of matches
+- **THEN** the list shows every matching place in a single scrollable view backed by the one `GET /api/v1/places` response (pagination fully dropped, not retired — no next-page fetch)
 
 #### Scenario: Open filter may short-fill pages
 
 - **WHEN** the open filter is active
-- **THEN** the list shows exactly the open matches with no short-page or next-page affordance (no pages remain)
+- **THEN** the list shows exactly the open matches with no short-page or next-page affordance (no pages exist)
 
-> Note: supersedes the former cursor-walk behavior: the `Paged list walks cursor` and `Open filter may short-fill pages` scenarios above now assert full-set rendering since pagination is retired.
+> Note: supersedes the former cursor-walk behavior: the `Paged list walks cursor` and `Open filter may short-fill pages` scenarios above now assert full-set rendering since pagination is fully dropped.

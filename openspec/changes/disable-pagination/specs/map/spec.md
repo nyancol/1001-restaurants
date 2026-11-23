@@ -18,8 +18,8 @@ The system SHALL display a Map tab showing tip-anchored drop pins for exactly th
 
 #### Scenario: Full set pinned without paging
 
-- **WHEN** the filtered result set exceeds the former page size
-- **THEN** the map pins every matching place from the single shared fetch
+- **WHEN** the filtered result set has any number of matches
+- **THEN** the map pins every matching place from the single shared fetch (pagination on the backing endpoint is fully dropped)
 
 #### Scenario: Filter change refreshes pins without moving viewport
 

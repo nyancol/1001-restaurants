@@ -6,11 +6,11 @@
 
 ## What Changes
 
-- **BREAKING** `GET /api/v1/places` returns the full filtered result set in a single response: no page slicing, `pagination.nextCursor` is always `null`, `pagination.total` equals `data.length`.
-- **BREAKING** `limit` and `cursor` query params on `GET /api/v1/places` are retired: silently accepted-and-ignored (no `400`), removed from the route schema/OpenAPI so clients stop sending them.
+- **BREAKING** `GET /api/v1/places` returns the full filtered result set in a single response as `{ data: [...] }`: no page slicing and no `pagination` object at all (per owner directive: the app is not live yet, so pagination is fully dropped rather than shimmed).
+- **BREAKING** `limit` and `cursor` query params on `GET /api/v1/places` are removed from the route schema/OpenAPI and from the contract; no accept-and-ignore layer and no `400` special-casing — unknown query params are simply ignored by the framework.
 - `web/src/lib/api.ts` `listPlaces` drops `limit`/`cursor` params; `usePlaces` keeps its single-fetch shape and now receives all matches for both list and map panes.
-- `src/pagination.ts` helpers (`parseLimit`, cursor encode/decode, `envelope`) stay for the remaining paginated endpoints (`GET /api/v1/tags`, `GET /api/v1/users`); `DEFAULT_LIMIT`/`MAX_LIMIT` remain their bounds.
-- Tests updated: places contract tests assert full-set responses instead of cursor walking; tags/users pagination tests unchanged.
+- `src/pagination.ts` is untouched: `parseLimit`, cursor/offset codecs, `envelope`, and `DEFAULT_LIMIT`/`MAX_LIMIT` remain the shared implementation for `GET /api/v1/tags` and `GET /api/v1/users`; the places handler just stops importing them.
+- Tests updated: places contract tests assert the full-set `{ data }` response instead of cursor walking; tags/users pagination tests unchanged.
 
 ## Capabilities
 
@@ -20,15 +20,15 @@ None.
 
 ### Modified Capabilities
 
-- `places`: list returns the complete filtered set in one response; `limit`/`cursor` retired on this endpoint.
+- `places`: list returns the complete filtered set in one response as `{ data }` with no `pagination` object; `limit`/`cursor` are no longer parameters of this endpoint.
 - `places-list`: list scrolls all matching places; cursor-walk and short-page scenarios removed.
 - `map`: map pins cover the full filtered result set from the shared single fetch.
 - `api-contract`: paginated-envelope requirement scoped to tags/users; places returns the full-set shape.
 
 ## Impact
 
-- Affected code: `src/places/routes.ts` (list handler), `src/pagination.ts` (kept, narrowed usage), `web/src/lib/api.ts` (`listPlaces` signature), `tests/api-v1-contract.test.ts` (places pagination tests rewritten).
-- API consumers: M2M bearer clients of `GET /api/v1/places` get full sets instead of pages; `limit`/`cursor` they still send are ignored.
+- Affected code: `src/places/routes.ts` (list handler: slice and COUNT query dropped, `pagination.*` imports removed), `web/src/lib/api.ts` (`listPlaces` signature), `tests/api-v1-contract.test.ts` (places pagination tests rewritten). `src/pagination.ts` unchanged.
+- API consumers: none to migrate — the app is pre-live. `GET /api/v1/places` responses lose the `pagination` object; the only existing consumer (web client) reads `body.data` only.
 - Payload size: full-set responses grow linearly with place count (see design.md for dataset-scale considerations); tags/users endpoints unchanged.
 
 ## Out of scope
