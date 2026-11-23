@@ -5,6 +5,12 @@ description: Prod incident handling for "places" — Hermes health/version watch
 
 # Places Incident Skill
 
+> Orca guardrail: incident rollback is the ONLY path that pushes to `main`
+> directly (`git revert` + push so Arcane redeploys) — the spec gate does not
+> apply to prod-down recovery. Still never merge a PR, never claim preprod,
+> never push `v*` tags. Runs ONLY on explicit order; otherwise assess +
+> prepare commands, do not execute. See `.agents/SPEC_GATED_WORKFLOW.md`.
+
 Prod health + version watch (Hermes) and git-revert rollback. The agent
 verifies and prepares — Arcane owns deploys. Rollback runs ONLY on explicit
 order.
