@@ -14,9 +14,10 @@ function priceLabel(level: unknown): string | null {
 }
 
 /**
- * "Venue data (auto-fetched)" card: Google rating chip, price indicator chip
- * and expandable weekly opening hours. Shared by the phone add sheet and the
- * desktop add page so both show the same visuals.
+ * "Venue data (auto-fetched)" card: venue type label, Google rating chip,
+ * price indicator chip and expandable weekly opening hours. Shared by the
+ * phone add sheet and the desktop add page so both show the same visuals.
+ * The type label is display-only (Google details, never persisted).
  */
 export default function VenueDataCard({ enrichment }: { enrichment: PlaceDetails }) {
   const { t } = useLanguage();
@@ -57,6 +58,11 @@ export default function VenueDataCard({ enrichment }: { enrichment: PlaceDetails
         {price && (
           <span className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-bold text-ink">
             <span className="text-want-ink">{price}</span>
+          </span>
+        )}
+        {typeof enrichment.venueTypeLabel === "string" && enrichment.venueTypeLabel && (
+          <span className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-medium text-muted">
+            <span aria-hidden>✦</span> {enrichment.venueTypeLabel}
           </span>
         )}
       </div>

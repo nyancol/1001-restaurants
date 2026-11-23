@@ -234,6 +234,7 @@ export interface PlaceDetails {
   lat: number | null;
   lng: number | null;
   icon?: string | null;
+  venueTypeLabel?: string | null;
   hours?: any;
   businessStatus?: string | null;
   priceLevel?: string | null;
@@ -290,6 +291,51 @@ export function inferIcon(primaryType: unknown, types: unknown): string {
   );
 }
 
+const GENERIC_VENUE_TYPES = new Set(["point_of_interest", "establishment"]);
+
+export function prettifyVenueType(code: unknown): string | null {
+  if (typeof code !== "string") return null;
+  const clean = code.trim().toLowerCase();
+  if (!clean || GENERIC_VENUE_TYPES.has(clean)) return null;
+  return clean
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+export function venueTypeLabelFromDetails(body: any): string | null {
+  const display = body?.primaryTypeDisplayName;
+  const displayText =
+    typeof display === "string" ? display : typeof display?.text === "string" ? display.text : null;
+  if (typeof displayText === "string" && displayText.trim()) return displayText.trim();
+  const primary = prettifyVenueType(body?.primaryType);
+  if (primary) return primary;
+  const types = Array.isArray(body?.types)
+    ? body.types
+    : Array.isArray(body?.result?.types)
+      ? body.result.types
+      : [];
+  for (const t of types) {
+    const label = prettifyVenueType(t);
+    if (label) return label;
+  }
+  return null;
+}
+
+/**
+ * Duplicate-merge rule for the nullable star rating on add surfaces.
+ * A null/undefined draft means "untouched" and must preserve the stored
+ * rating; an explicit 1-5 wins. Used by the mobile add sheet (and mirrors
+ * desktop intent) on both pre-check and 409 duplicate paths.
+ */
+export function mergeDuplicateRating(
+  draft: number | null | undefined,
+  existing: number | null | undefined,
+): number | null {
+  return draft ?? existing ?? null;
+}
+
 export function parseDetails(
   body: any,
   fallbackPlaceId: string,
@@ -322,6 +368,7 @@ export function parseDetails(
     lat: typeof lat === "number" ? lat : null,
     lng: typeof lng === "number" ? lng : null,
     icon: inferIcon(rawType, rawTypes),
+    venueTypeLabel: venueTypeLabelFromDetails(body),
     hours: hours
       ? { periods: hours.periods ?? [], weekdayDescriptions: hours.weekdayDescriptions ?? [] }
       : null,

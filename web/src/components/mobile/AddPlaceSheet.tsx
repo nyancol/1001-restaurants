@@ -3,6 +3,7 @@ import {
   apiFetch,
   createPlace,
   listPlaces,
+  mergeDuplicateRating,
   parseAutocomplete,
   parseDetails,
   patchPlace,
@@ -12,6 +13,7 @@ import {
 } from "../../lib/api";
 import BottomSheet from "./BottomSheet";
 import IconGlyph from "../IconGlyph";
+import Stars from "../Stars";
 import VenueDataCard from "../VenueDataCard";
 import TagCombobox, { type TagMutation } from "../TagCombobox";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -51,6 +53,7 @@ export default function AddPlaceSheet({
   const [icon, setIcon] = useState("wine");
   const [status, setStatus] = useState<"WANT_TO_GO" | "BEEN_TO">("BEEN_TO");
   const [tags, setTags] = useState<string[]>([]);
+  const [rating, setRating] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [enrichment, setEnrichment] = useState<PlaceDetails | null>(null);
   const [saving, setSaving] = useState(false);
@@ -73,6 +76,7 @@ export default function AddPlaceSheet({
       setIcon("wine");
       setStatus("BEEN_TO");
       setTags([]);
+      setRating(null);
       setNote("");
       setEnrichment(null);
       setSaving(false);
@@ -148,10 +152,12 @@ export default function AddPlaceSheet({
    * Lenient variant for the 409 path where the existing record could not be
    * fetched: omit (rather than null) every field that would wipe stored data,
    * so the PATCH only touches values the user/form actually provided.
+   * Rating follows the same rule: a null draft means "untouched" and must not
+   * wipe the stored rating; an explicit 1-5 is sent through.
    */
   function duplicatePatchLenient(payload: any) {
     const p: any = { ...payload };
-    delete p.rating; // this form has no rating input; never wipe it on duplicates
+    if (p.rating == null) delete p.rating;
     if (!tags.length) delete p.tags;
     if (!note) delete p.note;
     if (!address) delete p.address;
@@ -179,12 +185,12 @@ export default function AddPlaceSheet({
    * Build a duplicate-update patch that never wipes stored data the user was
    * not asked about: keep the existing rating/tags/note/address/coords unless
    * the form provides a new value, and keep stored Google snapshot fields
-   * unless fresh enrichment was fetched.
+   * unless fresh enrichment was fetched. A null draft rating means untouched.
    */
   function duplicatePatch(existing: Place, payload: any) {
     return {
       ...payload,
-      rating: existing.rating,
+      rating: mergeDuplicateRating(payload.rating, existing.rating),
       tags: tags.length ? tags : (existing.tags ?? []),
       note: note ? note : (existing.note ?? null),
       address: address ? address : (existing.address ?? null),
@@ -221,7 +227,7 @@ export default function AddPlaceSheet({
         icon: (icon || "fork").trim().toLowerCase() || "fork",
         status,
         tags,
-        rating: null,
+        rating,
         note: note ? note : null,
         googlePlaceId,
         address: address ? address : null,
@@ -544,6 +550,8 @@ export default function AddPlaceSheet({
                 />
               </div>
             </div>
+
+            <Stars value={rating} onChange={setRating} />
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
