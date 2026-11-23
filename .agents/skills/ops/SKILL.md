@@ -9,6 +9,16 @@ Operate the production `places` app ("In my Belly", 1001-restaurants).
 This skill is an index — the runbooks now live in dedicated skills.
 Load the one you need; do not load all six.
 
+All ops work runs inside the spec-gated workflow (`.agents/SPEC_GATED_WORKFLOW.md`):
+1 OpenSpec change = 1 worktree = 1 branch, `main` stays clean. Two named
+agents: **Places Planner** (Role A, `/spec` — creates the spec, docs only)
+and **Places Builder** (Role B, `/implement` — implements the spec change
+against the locked spec). Orca hard stops apply to every ops-* agent: never
+merge, never claim preprod (the `preview` label evicts the single slot —
+human decides), never push `v*` tags. Exception: `ops-incident` rollback
+(`git revert` + push to `main`) and `ops-data` zerobyte restore run ONLY on
+explicit human order. Arcane owns deploys; prod follows `main`.
+
 Sources of truth mirrored by this family: `compose.yaml`, `compose.preprod.yaml`,
 `hermes.yaml`, `.github/` (workflows + dependabot.yml), `Dockerfile`.
 
@@ -37,7 +47,14 @@ router whenever you act under an ops-* skill and it is not already loaded.
 
 * **Deploy ownership:** the agent verifies and prepares — Arcane owns
 deploys. Never build, restart, or `exec` into prod; never touch prod
-`/data` directly.
+`/data` directly. Sole exception: the `ops-data` zerobyte restore path
+(`docker stop` / restore into `places_places-data` / `docker start` +
+integrity check), which runs ONLY on explicit order.
+* **Spec-gated workflow (Orca):** every ops-* agent also obeys `.agents/SPEC_GATED_WORKFLOW.md`.
+**Places Planner** never loads ops-preview/ops-ship and never touches deploys.
+**Places Builder** uses ops-preview for verify-only (`preprod-verify`, local
+`preprod-up` equivalent) and ops-ship for release prep-only — it prepares the
+`preview` claim, merge, archive, and tag-push commands but never executes them.
 * **Explicit-order gates:** rollback (`ops-incident`), restore
 (`ops-data`), eviction (`ops-preview`), and tag pushes (`ops-ship`) run
 ONLY on explicit order. Without one: produce the assessment and prepare

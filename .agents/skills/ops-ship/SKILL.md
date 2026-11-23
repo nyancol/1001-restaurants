@@ -6,6 +6,11 @@ disable-model-invocation: true
 
 # Places Ship Skill
 
+> Orca guardrail: **Places Builder** uses this skill prep-only. Prepare the
+> release branch/PR and the post-merge `git tag vX.Y.Z && git push` commands;
+> never push a `v*` tag, never merge the release PR. The human merges and
+> pushes tags. See `.agents/SPEC_GATED_WORKFLOW.md` + router `ops` skill.
+
 Monthly patching inspection (read-only) and version cuts (release PR +
 tag). Patching never merges, rebuilds, or deploys; releases never bundle
 feature code with the version bump and never move a pushed tag.

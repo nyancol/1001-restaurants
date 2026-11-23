@@ -5,6 +5,13 @@ description: Ad-hoc Google refresh sweeps (per-place snapshot rewrites) and SQLi
 
 # Places Data Skill
 
+> Orca guardrail: the `docker stop` / zerobyte-restore-into-volume /
+> `docker start` + `docker exec` integrity-check sequence below is the SOLE
+> exception to the router's "never restart/exec prod" rule, and runs ONLY on
+> explicit order. Without one: assess + prepare the exact steps, do not
+> execute. **Places Planner** never touches this skill. See
+> `.agents/SPEC_GATED_WORKFLOW.md` + router `ops` skill.
+
 Google snapshot refresh sweeps and SQLite backup / restore. These are the
 only writers to app data outside the app itself — and both stay narrow:
 the refresh endpoint rewrites snapshots only, restores replace the prod
